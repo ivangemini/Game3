@@ -21,7 +21,9 @@ Before substantial work, read the relevant file(s) under `skills/`:
 - Moment-to-moment controls, combat, inventory interactions: `skills/gameplay/SKILL.md`
 - UI, visual hierarchy, responsive layout, art direction: `skills/visual-design/SKILL.md`
 - Motion, feedback, transitions, VFX timing: `skills/animation/SKILL.md`
+- Music, SFX, audio feedback and browser audio behavior: `skills/audio/SKILL.md`
 - Economy, rewards, ads, retention systems: `skills/economy-retention/SKILL.md`
+- Metrics, funnels, experiments and tuning decisions: `skills/analytics-experiments/SKILL.md`
 - Performance, portal SDK boundaries and web constraints: `skills/web-platform/SKILL.md`
 - Testing, balancing, regressions and acceptance: `skills/qa-balancing/SKILL.md`
 

@@ -1,0 +1,7 @@
+---
+description: Canonical Game3 project instructions
+globs:
+alwaysApply: true
+---
+
+Read and follow `AGENTS.md`. For each task also read the relevant `skills/*/SKILL.md` files and source-of-truth documents referenced there. Keep `AGENTS.md` canonical; do not duplicate or contradict it in Cursor-specific rules.

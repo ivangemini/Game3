@@ -1,0 +1,1 @@
+`AGENTS.md` is the canonical project instruction file. Follow it and the relevant `skills/*/SKILL.md` files before proposing or editing code. Preserve the roadmap scope, deterministic domain architecture, web-first performance requirements, and premium presentation quality bar.
