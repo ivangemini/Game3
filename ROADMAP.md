@@ -14,7 +14,8 @@
 - [x] Valid/invalid cell preview and snap-back
 - [x] Selected-item rotation with placement validation
 - [x] 8 prototype absurd-junk items
-- [ ] 4 real gameplay synergies (currently visual labels only)
+- [x] 5 real side-contact gameplay synergies with deterministic derived bonuses
+- [x] Live synergy links, active-link badges and activation feedback
 - [ ] Basic shop/reward choice
 - [ ] Save current run/settings/progress locally
 - [ ] Full interaction/animation polish pass

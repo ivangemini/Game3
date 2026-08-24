@@ -10,7 +10,10 @@ export type ItemTag =
   | 'poison'
   | 'metal'
   | 'pet'
+  | 'cat'
+  | 'duck'
   | 'laser'
+  | 'magnet'
   | 'chaos'
   | 'food';
 

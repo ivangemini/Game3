@@ -1,4 +1,4 @@
-# Junkpack: Boss Rush — Game Design v0.1
+# Junkpack: Boss Rush — Game Design v0.2
 
 ## Elevator pitch
 A compact roguelite inventory autobattler where the player packs absurd junk into a constrained backpack, discovers synergies and fusion recipes, then fights surreal bosses that directly interfere with the backpack's rules.
@@ -29,7 +29,18 @@ Grid-based item shapes, rotation, blocked/locked cells and deterministic placeme
 Launch target: 35–45 base items across weapons, devices, materials/potions, defensive junk and pets/creatures. Each item has stable ID, shape, tags, rarity and effects.
 
 ### Synergies
-Readable relationships such as CAT → LASER, BATTERY → DEVICE, POISON → WEAPON, DUCK → CHAOS. Directional and adjacency rules should produce spatial puzzles.
+The first implemented synergy family uses **orthogonal side contact** between occupied item cells. Diagonal proximity does not count. This makes placement itself part of build power rather than treating the backpack as passive storage.
+
+Prototype rules:
+- `CAT → LASER`: an adjacent laser-compatible item grants the Cat +1 laser shot.
+- `BATTERY → DEVICE`: an adjacent Battery makes a Device trigger 25% faster.
+- `POISON → WEAPON`: adjacent Poison makes a Weapon apply +2 poison.
+- `DUCK → CHAOS`: touching a Chaos item grants the Duck +1 chaos power.
+- `MAGNET → METAL`: each adjacent Metal item grants the Magnet +1 scrap armor.
+
+Rules resolve deterministically from stable item instance IDs. Multiple valid contacts may stack where the rule is designed to stack. The combat system consumes these derived bonuses later; Phaser rendering is not the source of truth.
+
+Future synergy families may add directional arcs or row/column rules, but they must stay visually readable and testable without Phaser.
 
 ### Fusion/discovery
 20–30 launch recipes. Some are obvious; some appear as `???` in a Recipe Book until discovered. Fusion should create meaningful build branches rather than linear +1 tiers only.

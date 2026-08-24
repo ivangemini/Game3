@@ -50,10 +50,18 @@ export class PrototypeScene extends Phaser.Scene {
   }
 
   private drawSynergies(): void {
-    this.add.text(90, 165, 'BACKPACK 6×5  •  DRAG + ROTATE', { fontSize: '21px', color: COLORS.text, fontStyle: 'bold' });
-    this.add.text(90, 660, 'PROTOTYPE SYNERGIES', { fontSize: '18px', color: '#ffcf69', fontStyle: 'bold' });
-    this.add.text(90, 692, 'CAT → LASER    BATTERY → DEVICE    POISON → WEAPON    DUCK → CHAOS', {
-      fontSize: '15px',
+    this.add.text(90, 165, 'BACKPACK 6×5  •  DRAG + ROTATE  •  SIDE-CONTACT BUILDS', {
+      fontSize: '21px',
+      color: COLORS.text,
+      fontStyle: 'bold',
+    });
+    this.add.text(90, 660, 'LIVE SYNERGIES — MOVE JUNK TO BREAK / REBUILD LINKS', {
+      fontSize: '18px',
+      color: '#ffcf69',
+      fontStyle: 'bold',
+    });
+    this.add.text(90, 692, 'CAT → LASER    BATTERY → DEVICE    POISON → WEAPON    DUCK → CHAOS    MAGNET → METAL', {
+      fontSize: '14px',
       color: COLORS.muted,
     });
   }

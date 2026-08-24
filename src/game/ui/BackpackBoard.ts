@@ -5,6 +5,14 @@ import {
   validatePlacement,
   type InventoryState,
 } from '../domain/inventory';
+import {
+  evaluateSynergies,
+  SYNERGY_RULE_MAP,
+  type ItemBonuses,
+  type SynergyConnection,
+  type SynergyId,
+  type SynergySnapshot,
+} from '../domain/synergies';
 import type { Cell, ItemDefinition, PlacedItem, Rarity } from '../domain/types';
 
 interface ItemView {
@@ -20,6 +28,14 @@ const RARITY_COLORS: Record<Rarity, number> = {
   epic: 0xd87bff,
 };
 
+const SYNERGY_COLORS: Record<SynergyId, number> = {
+  'cat-laser': 0xff5577,
+  'battery-device': 0xc9ff58,
+  'poison-weapon': 0xb967ff,
+  'duck-chaos': 0xffa64d,
+  'magnet-metal': 0x58d7ff,
+};
+
 const ITEM_LABELS: Readonly<Record<string, string>> = {
   'laser-cat': 'CAT\nLASER',
   'angry-battery': 'ANGRY\nBATTERY',
@@ -30,6 +46,9 @@ const ITEM_LABELS: Readonly<Record<string, string>> = {
   'poison-flask': 'POISON',
   'scrap-magnet': 'SCRAP\nMAGNET',
 };
+
+const connectionKey = (connection: SynergyConnection): string =>
+  `${connection.ruleId}:${connection.sourceInstanceId}:${connection.targetInstanceId}`;
 
 export class BackpackBoard {
   private readonly cellSize = 76;
@@ -43,8 +62,10 @@ export class BackpackBoard {
   private readonly itemViews = new Map<string, ItemView>();
   private readonly previewCells: Phaser.GameObjects.Rectangle[] = [];
   private readonly statusText: Phaser.GameObjects.Text;
+  private readonly synergyGraphics: Phaser.GameObjects.Graphics;
   private selectedInstanceId: string | null = null;
   private state: InventoryState;
+  private synergySnapshot: SynergySnapshot;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -58,17 +79,26 @@ export class BackpackBoard {
       blockedCells: this.blockedCells,
       items: this.initialItems(),
     };
+    this.synergySnapshot = evaluateSynergies(this.state, this.definitions);
 
     this.drawFrame();
     this.drawGrid();
+    this.synergyGraphics = this.scene.add.graphics().setDepth(12);
     this.createPreviewLayer();
-    this.statusText = this.scene.add.text(this.gridLeft, this.gridTop + this.height * this.cellSize + 18, 'Drag junk. Tap an item, then ROTATE.', {
-      fontSize: '16px',
-      color: '#b7b0bd',
-    });
+    this.statusText = this.scene.add.text(
+      this.gridLeft,
+      this.gridTop + this.height * this.cellSize + 13,
+      'Drag junk. Side-contact creates live synergies.',
+      {
+        fontSize: '15px',
+        color: '#b7b0bd',
+        wordWrap: { width: 290 },
+      },
+    );
     this.createRotateButton();
 
     for (const item of this.state.items) this.createItemView(item);
+    this.refreshSynergies(false);
   }
 
   private initialItems(): PlacedItem[] {
@@ -77,8 +107,8 @@ export class BackpackBoard {
       { instanceId: 'toaster-1', definitionId: 'cursed-toaster', origin: { x: 2, y: 0 }, rotation: 0 },
       { instanceId: 'cat-1', definitionId: 'laser-cat', origin: { x: 4, y: 0 }, rotation: 0 },
       { instanceId: 'duck-1', definitionId: 'mutant-duck', origin: { x: 0, y: 1 }, rotation: 0 },
-      { instanceId: 'poison-1', definitionId: 'poison-flask', origin: { x: 3, y: 2 }, rotation: 0 },
-      { instanceId: 'fish-1', definitionId: 'fish-blaster', origin: { x: 4, y: 2 }, rotation: 0 },
+      { instanceId: 'poison-1', definitionId: 'poison-flask', origin: { x: 4, y: 2 }, rotation: 0 },
+      { instanceId: 'fish-1', definitionId: 'fish-blaster', origin: { x: 4, y: 1 }, rotation: 0 },
       { instanceId: 'magnet-1', definitionId: 'scrap-magnet', origin: { x: 2, y: 2 }, rotation: 0 },
       { instanceId: 'fan-1', definitionId: 'toxic-fan', origin: { x: 0, y: 4 }, rotation: 0 },
     ];
@@ -160,6 +190,7 @@ export class BackpackBoard {
       this.select(item.instanceId);
       view.dragStartItem = view.item;
       container.setDepth(100).setScale(1.05);
+      this.synergyGraphics.setAlpha(0.35);
     });
     this.scene.input.on('drag', (_pointer: Phaser.Input.Pointer, target: Phaser.GameObjects.GameObject, dragX: number, dragY: number) => {
       if (target !== container) return;
@@ -167,21 +198,32 @@ export class BackpackBoard {
       const candidate = this.candidateFromWorld(view, dragX, dragY);
       const result = validatePlacement(this.state, this.definitions, candidate, view.item.instanceId);
       this.showPreview(result.occupiedCells, result.ok);
+      this.drawSynergyLinks();
     });
     this.scene.input.on('dragend', (_pointer: Phaser.Input.Pointer, target: Phaser.GameObjects.GameObject) => {
       if (target !== container) return;
       this.hidePreview();
       container.setDepth(20).setScale(1);
+      this.synergyGraphics.setAlpha(1);
       const candidate = this.candidateFromWorld(view, container.x, container.y);
       const result = validatePlacement(this.state, this.definitions, candidate, view.item.instanceId);
       if (result.ok) {
         view.item = candidate;
         this.replaceStateItem(candidate);
+        const newConnections = this.refreshSynergies(true);
         this.snapView(view, true);
-        this.setStatus(`${this.definitionFor(view.item).name} packed.`, '#b8ff8e');
+        if (newConnections.length > 0) {
+          this.setStatus(this.synergyActivationText(newConnections), '#ffe477');
+        } else {
+          this.setStatus(
+            `${this.definitionFor(view.item).name} packed • ${this.synergySnapshot.connections.length} active links.`,
+            '#b8ff8e',
+          );
+        }
       } else {
         view.item = view.dragStartItem;
         this.snapView(view, true);
+        this.drawSynergyLinks();
         this.setStatus(this.reasonText(result.reason), '#ff8a9b');
       }
     });
@@ -196,6 +238,7 @@ export class BackpackBoard {
     const heightPx = shapeHeight * this.cellSize;
     const color = RARITY_COLORS[definition.rarity];
     const selected = view.item.instanceId === this.selectedInstanceId;
+    const activeLinkCount = this.activeConnectionsFor(view.item.instanceId).length;
 
     view.container.removeAll(true);
     view.container.setSize(widthPx, heightPx);
@@ -203,8 +246,14 @@ export class BackpackBoard {
     for (const cell of shape) {
       const localX = (cell.x + 0.5) * this.cellSize - widthPx / 2;
       const localY = (cell.y + 0.5) * this.cellSize - heightPx / 2;
-      const tile = this.scene.add.rectangle(localX, localY, this.cellSize - 12, this.cellSize - 12, color, 0.2)
-        .setStrokeStyle(selected ? 4 : 3, selected ? 0xffffff : color);
+      const tile = this.scene.add.rectangle(
+        localX,
+        localY,
+        this.cellSize - 12,
+        this.cellSize - 12,
+        color,
+        activeLinkCount > 0 ? 0.28 : 0.2,
+      ).setStrokeStyle(selected ? 4 : 3, selected ? 0xffffff : color);
       view.container.add(tile);
     }
 
@@ -218,7 +267,19 @@ export class BackpackBoard {
     }).setOrigin(0.5);
     view.container.add(label);
 
-    // Rebuild the hit area after a rotation changes the dimensions.
+    if (activeLinkCount > 0) {
+      const badgeX = widthPx / 2 - 16;
+      const badgeY = -heightPx / 2 + 16;
+      const badge = this.scene.add.circle(badgeX, badgeY, 13, 0xffd85d, 1)
+        .setStrokeStyle(3, 0x2c2134);
+      const badgeText = this.scene.add.text(badgeX, badgeY, `×${activeLinkCount}`, {
+        fontSize: '10px',
+        color: '#241a20',
+        fontStyle: 'bold',
+      }).setOrigin(0.5);
+      view.container.add([badge, badgeText]);
+    }
+
     view.container.disableInteractive();
     view.container.setInteractive({ useHandCursor: true });
     this.scene.input.setDraggable(view.container);
@@ -235,7 +296,12 @@ export class BackpackBoard {
     if (view) {
       this.renderItem(view);
       const definition = this.definitionFor(view.item);
-      this.setStatus(`${definition.name}: ${definition.description}`, '#e8ddf2');
+      const links = this.activeConnectionsFor(instanceId).length;
+      const bonusSummary = this.bonusSummaryFor(instanceId);
+      const activeText = links > 0
+        ? ` • ${links} link${links === 1 ? '' : 's'}${bonusSummary ? ` • ${bonusSummary}` : ''}`
+        : '';
+      this.setStatus(`${definition.name}: ${definition.description}${activeText}`, '#e8ddf2');
     }
   }
 
@@ -252,15 +318,30 @@ export class BackpackBoard {
     const result = validatePlacement(this.state, this.definitions, candidate, view.item.instanceId);
     if (!result.ok) {
       this.setStatus(`Cannot rotate: ${this.reasonText(result.reason).toLowerCase()}`, '#ff8a9b');
-      this.scene.tweens.add({ targets: view.container, angle: { from: -2, to: 2 }, yoyo: true, repeat: 2, duration: 55, onComplete: () => view.container.setAngle(0) });
+      this.scene.tweens.add({
+        targets: view.container,
+        angle: { from: -2, to: 2 },
+        yoyo: true,
+        repeat: 2,
+        duration: 55,
+        onComplete: () => view.container.setAngle(0),
+      });
       return;
     }
 
     view.item = candidate;
     this.replaceStateItem(candidate);
+    const newConnections = this.refreshSynergies(true);
     this.renderItem(view);
     this.snapView(view, true);
-    this.setStatus(`${this.definitionFor(view.item).name} rotated.`, '#b8ff8e');
+    if (newConnections.length > 0) {
+      this.setStatus(this.synergyActivationText(newConnections), '#ffe477');
+    } else {
+      this.setStatus(
+        `${this.definitionFor(view.item).name} rotated • ${this.synergySnapshot.connections.length} active links.`,
+        '#b8ff8e',
+      );
+    }
   }
 
   private candidateFromWorld(view: ItemView, worldX: number, worldY: number): PlacedItem {
@@ -282,7 +363,15 @@ export class BackpackBoard {
     const y = this.gridTop + (view.item.origin.y + shapeHeight / 2) * this.cellSize;
 
     if (animate) {
-      this.scene.tweens.add({ targets: view.container, x, y, duration: 150, ease: 'Back.Out' });
+      this.scene.tweens.add({
+        targets: view.container,
+        x,
+        y,
+        duration: 150,
+        ease: 'Back.Out',
+        onUpdate: () => this.drawSynergyLinks(),
+        onComplete: () => this.drawSynergyLinks(),
+      });
     } else {
       view.container.setPosition(x, y);
     }
@@ -307,6 +396,90 @@ export class BackpackBoard {
 
   private hidePreview(): void {
     for (const preview of this.previewCells) preview.setVisible(false);
+  }
+
+  private refreshSynergies(pulseNew: boolean): SynergyConnection[] {
+    const previousKeys = new Set(this.synergySnapshot.connections.map(connectionKey));
+    this.synergySnapshot = evaluateSynergies(this.state, this.definitions);
+    const newConnections = this.synergySnapshot.connections.filter(
+      (connection) => !previousKeys.has(connectionKey(connection)),
+    );
+
+    for (const view of this.itemViews.values()) this.renderItem(view);
+    this.drawSynergyLinks();
+
+    if (pulseNew) {
+      for (const connection of newConnections) this.pulseConnection(connection);
+    }
+    return newConnections;
+  }
+
+  private drawSynergyLinks(): void {
+    this.synergyGraphics.clear();
+    for (const connection of this.synergySnapshot.connections) {
+      const source = this.itemViews.get(connection.sourceInstanceId);
+      const target = this.itemViews.get(connection.targetInstanceId);
+      if (!source || !target) continue;
+      const color = SYNERGY_COLORS[connection.ruleId];
+
+      this.synergyGraphics.lineStyle(8, color, 0.12);
+      this.synergyGraphics.lineBetween(source.container.x, source.container.y, target.container.x, target.container.y);
+      this.synergyGraphics.lineStyle(3, color, 0.92);
+      this.synergyGraphics.lineBetween(source.container.x, source.container.y, target.container.x, target.container.y);
+      this.synergyGraphics.fillStyle(color, 1);
+      this.synergyGraphics.fillCircle(source.container.x, source.container.y, 5);
+      this.synergyGraphics.fillCircle(target.container.x, target.container.y, 5);
+    }
+  }
+
+  private pulseConnection(connection: SynergyConnection): void {
+    const source = this.itemViews.get(connection.sourceInstanceId);
+    const target = this.itemViews.get(connection.targetInstanceId);
+    if (!source || !target) return;
+    this.scene.tweens.add({
+      targets: [source.container, target.container],
+      scaleX: 1.07,
+      scaleY: 1.07,
+      yoyo: true,
+      duration: 120,
+      ease: 'Sine.Out',
+      onComplete: () => {
+        source.container.setScale(1);
+        target.container.setScale(1);
+      },
+    });
+  }
+
+  private activeConnectionsFor(instanceId: string): readonly SynergyConnection[] {
+    return this.synergySnapshot.connections.filter(
+      (connection) =>
+        connection.sourceInstanceId === instanceId || connection.targetInstanceId === instanceId,
+    );
+  }
+
+  private bonusSummaryFor(instanceId: string): string {
+    const bonuses = this.synergySnapshot.bonusesByInstanceId[instanceId];
+    if (!bonuses) return '';
+    return this.formatBonuses(bonuses);
+  }
+
+  private formatBonuses(bonuses: ItemBonuses): string {
+    const parts: string[] = [];
+    if (bonuses.triggerSpeedPct > 0) parts.push(`+${bonuses.triggerSpeedPct}% speed`);
+    if (bonuses.poisonOnHit > 0) parts.push(`+${bonuses.poisonOnHit} poison`);
+    if (bonuses.bonusLaserShots > 0) parts.push(`+${bonuses.bonusLaserShots} laser shot`);
+    if (bonuses.chaosPower > 0) parts.push(`+${bonuses.chaosPower} chaos`);
+    if (bonuses.scrapArmor > 0) parts.push(`+${bonuses.scrapArmor} scrap armor`);
+    return parts.join(', ');
+  }
+
+  private synergyActivationText(connections: readonly SynergyConnection[]): string {
+    const first = connections[0];
+    if (!first) return 'Synergy activated.';
+    const rule = SYNERGY_RULE_MAP.get(first.ruleId);
+    if (!rule) return 'Synergy activated.';
+    const extra = connections.length > 1 ? ` +${connections.length - 1} more` : '';
+    return `SYNERGY! ${rule.label} • ${rule.effectText}${extra}`;
   }
 
   private replaceStateItem(item: PlacedItem): void {
