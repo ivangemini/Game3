@@ -8,7 +8,7 @@ import {
   loadSave,
   writeSave,
   type ActiveRunSave,
-  type SaveV2,
+  type SaveV3,
 } from '../../persistence/save';
 
 const PROTOTYPE_RUN_SEED = 'prototype-run-001';
@@ -28,7 +28,7 @@ export class PrototypeScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(COLORS.background);
     this.drawHeader();
 
-    let save: SaveV2 = loadSave();
+    let save: SaveV3 = loadSave();
     const hadActiveRun = save.activeRun !== null;
     let activeRun: ActiveRunSave = save.activeRun ?? {
       runSeed: PROTOTYPE_RUN_SEED,
@@ -37,6 +37,7 @@ export class PrototypeScene extends Phaser.Scene {
       soldOfferIds: [],
       backpackItems: [],
       nextLootSequence: 1,
+      claimedEncounterIds: [],
     };
 
     const persistRun = (): void => {
@@ -65,10 +66,6 @@ export class PrototypeScene extends Phaser.Scene {
     };
 
     this.drawSynergies();
-    new CombatPanel(this, 1140, 445, {
-      getBackpackItems: () => board.getSnapshot().items,
-      reducedMotion: save.settings.reducedMotion,
-    });
 
     const shop = new ShopPanel(
       this,
@@ -100,6 +97,23 @@ export class PrototypeScene extends Phaser.Scene {
       shopIndex: shopSnapshot.shopIndex,
       soldOfferIds: shopSnapshot.soldOfferIds,
     };
+
+    new CombatPanel(this, 1140, 445, {
+      getBackpackItems: () => board.getSnapshot().items,
+      reducedMotion: save.settings.reducedMotion,
+      onVictoryReward: ({ enemyId, coins }) => {
+        if (activeRun.claimedEncounterIds.includes(enemyId)) return false;
+
+        activeRun = {
+          ...activeRun,
+          claimedEncounterIds: [...activeRun.claimedEncounterIds, enemyId].sort(),
+        };
+        persistRun();
+        shop.addCoins(coins, enemyId === 'tv-tyrant' ? 'TV Tyrant bounty' : 'Combat bounty');
+        return true;
+      },
+    });
+
     persistRun();
     this.createNewRunButton();
   }

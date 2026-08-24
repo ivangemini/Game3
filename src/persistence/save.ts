@@ -7,14 +7,10 @@ export interface SaveV1 {
   readonly discoveredItemIds: readonly string[];
   readonly discoveredRecipeIds: readonly string[];
   readonly bestEndlessWave: number;
-  readonly settings: {
-    readonly musicVolume: number;
-    readonly sfxVolume: number;
-    readonly reducedMotion: boolean;
-  };
+  readonly settings: SaveSettings;
 }
 
-export interface ActiveRunSave {
+export interface ActiveRunSaveV2 {
   readonly runSeed: string;
   readonly shopIndex: number;
   readonly coins: number;
@@ -28,18 +24,33 @@ export interface SaveV2 {
   readonly discoveredItemIds: readonly string[];
   readonly discoveredRecipeIds: readonly string[];
   readonly bestEndlessWave: number;
-  readonly settings: {
-    readonly musicVolume: number;
-    readonly sfxVolume: number;
-    readonly reducedMotion: boolean;
-  };
+  readonly settings: SaveSettings;
+  readonly activeRun: ActiveRunSaveV2 | null;
+}
+
+export interface ActiveRunSave extends ActiveRunSaveV2 {
+  readonly claimedEncounterIds: readonly string[];
+}
+
+export interface SaveV3 {
+  readonly version: 3;
+  readonly discoveredItemIds: readonly string[];
+  readonly discoveredRecipeIds: readonly string[];
+  readonly bestEndlessWave: number;
+  readonly settings: SaveSettings;
   readonly activeRun: ActiveRunSave | null;
 }
 
-export type GameSave = SaveV2;
+export interface SaveSettings {
+  readonly musicVolume: number;
+  readonly sfxVolume: number;
+  readonly reducedMotion: boolean;
+}
 
-export const DEFAULT_SAVE: SaveV2 = {
-  version: 2,
+export type GameSave = SaveV3;
+
+export const DEFAULT_SAVE: SaveV3 = {
+  version: 3,
   discoveredItemIds: [],
   discoveredRecipeIds: [],
   bestEndlessWave: 0,
@@ -51,14 +62,15 @@ export const DEFAULT_SAVE: SaveV2 = {
   activeRun: null,
 };
 
-export function loadSave(storage: Storage = localStorage): SaveV2 {
+export function loadSave(storage: Storage = localStorage): SaveV3 {
   const raw = storage.getItem(SAVE_KEY);
   if (!raw) return DEFAULT_SAVE;
 
   try {
     const parsed: unknown = JSON.parse(raw);
-    if (isSaveV2(parsed)) return parsed;
-    if (isSaveV1(parsed)) return migrateV1ToV2(parsed);
+    if (isSaveV3(parsed)) return parsed;
+    if (isSaveV2(parsed)) return migrateV2ToV3(parsed);
+    if (isSaveV1(parsed)) return migrateV2ToV3(migrateV1ToV2(parsed));
   } catch {
     // Corrupted local data falls back safely; recovery UI can be added later.
   }
@@ -66,11 +78,11 @@ export function loadSave(storage: Storage = localStorage): SaveV2 {
   return DEFAULT_SAVE;
 }
 
-export function writeSave(save: SaveV2, storage: Storage = localStorage): void {
+export function writeSave(save: SaveV3, storage: Storage = localStorage): void {
   storage.setItem(SAVE_KEY, JSON.stringify(save));
 }
 
-export function clearActiveRun(save: SaveV2): SaveV2 {
+export function clearActiveRun(save: SaveV3): SaveV3 {
   return { ...save, activeRun: null };
 }
 
@@ -82,6 +94,19 @@ function migrateV1ToV2(save: SaveV1): SaveV2 {
     bestEndlessWave: save.bestEndlessWave,
     settings: save.settings,
     activeRun: null,
+  };
+}
+
+function migrateV2ToV3(save: SaveV2): SaveV3 {
+  return {
+    version: 3,
+    discoveredItemIds: save.discoveredItemIds,
+    discoveredRecipeIds: save.discoveredRecipeIds,
+    bestEndlessWave: save.bestEndlessWave,
+    settings: save.settings,
+    activeRun: save.activeRun
+      ? { ...save.activeRun, claimedEncounterIds: [] }
+      : null,
   };
 }
 
@@ -103,12 +128,23 @@ function isSaveV2(value: unknown): value is SaveV2 {
     && isStringArray(candidate.discoveredRecipeIds)
     && isNonNegativeFiniteNumber(candidate.bestEndlessWave)
     && isSettings(candidate.settings)
-    && (candidate.activeRun === null || isActiveRun(candidate.activeRun));
+    && (candidate.activeRun === null || isActiveRunV2(candidate.activeRun));
 }
 
-function isActiveRun(value: unknown): value is ActiveRunSave {
+function isSaveV3(value: unknown): value is SaveV3 {
   if (!value || typeof value !== 'object') return false;
-  const candidate = value as Partial<ActiveRunSave>;
+  const candidate = value as Partial<SaveV3>;
+  return candidate.version === 3
+    && isStringArray(candidate.discoveredItemIds)
+    && isStringArray(candidate.discoveredRecipeIds)
+    && isNonNegativeFiniteNumber(candidate.bestEndlessWave)
+    && isSettings(candidate.settings)
+    && (candidate.activeRun === null || isActiveRunV3(candidate.activeRun));
+}
+
+function isActiveRunV2(value: unknown): value is ActiveRunSaveV2 {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as Partial<ActiveRunSaveV2>;
   return typeof candidate.runSeed === 'string'
     && isNonNegativeInteger(candidate.shopIndex)
     && isNonNegativeInteger(candidate.coins)
@@ -116,6 +152,12 @@ function isActiveRun(value: unknown): value is ActiveRunSave {
     && Array.isArray(candidate.backpackItems)
     && candidate.backpackItems.every(isPlacedItem)
     && isPositiveInteger(candidate.nextLootSequence);
+}
+
+function isActiveRunV3(value: unknown): value is ActiveRunSave {
+  if (!isActiveRunV2(value)) return false;
+  const candidate = value as Partial<ActiveRunSave>;
+  return isStringArray(candidate.claimedEncounterIds);
 }
 
 function isPlacedItem(value: unknown): value is PlacedItem {
@@ -129,9 +171,9 @@ function isPlacedItem(value: unknown): value is PlacedItem {
     && (candidate.rotation === 0 || candidate.rotation === 1 || candidate.rotation === 2 || candidate.rotation === 3);
 }
 
-function isSettings(value: unknown): value is SaveV2['settings'] {
+function isSettings(value: unknown): value is SaveSettings {
   if (!value || typeof value !== 'object') return false;
-  const candidate = value as Partial<SaveV2['settings']>;
+  const candidate = value as Partial<SaveSettings>;
   return isUnitInterval(candidate.musicVolume)
     && isUnitInterval(candidate.sfxVolume)
     && typeof candidate.reducedMotion === 'boolean';

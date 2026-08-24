@@ -79,6 +79,15 @@ export class ShopPanel {
     };
   }
 
+  addCoins(amount: number, reason = 'Reward'): void {
+    const safeAmount = Math.max(0, Math.floor(amount));
+    if (safeAmount === 0) return;
+    this.coins += safeAmount;
+    this.setStatus(`${reason}  •  +${safeAmount} coins`, '#ffd56e');
+    this.renderOffers();
+    this.notifyStateChanged();
+  }
+
   private createRerollButton(): void {
     const x = this.left + 142;
     const y = this.top + 88;

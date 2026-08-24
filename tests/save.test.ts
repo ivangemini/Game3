@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_SAVE, loadSave, writeSave, type SaveV2 } from '../src/persistence/save';
+import { DEFAULT_SAVE, loadSave, writeSave, type SaveV3 } from '../src/persistence/save';
 
 class MemoryStorage implements Storage {
   private readonly values = new Map<string, string>();
@@ -30,9 +30,9 @@ class MemoryStorage implements Storage {
 }
 
 describe('save persistence', () => {
-  it('round-trips active run inventory and shop state', () => {
+  it('round-trips active run inventory, shop and encounter-claim state', () => {
     const storage = new MemoryStorage();
-    const save: SaveV2 = {
+    const save: SaveV3 = {
       ...DEFAULT_SAVE,
       activeRun: {
         runSeed: 'daily-seed',
@@ -40,6 +40,7 @@ describe('save persistence', () => {
         coins: 73,
         soldOfferIds: ['shop-4-0-laser-cat'],
         nextLootSequence: 6,
+        claimedEncounterIds: ['tv-tyrant'],
         backpackItems: [
           {
             instanceId: 'loot-5-laser-cat',
@@ -55,7 +56,7 @@ describe('save persistence', () => {
     expect(loadSave(storage)).toEqual(save);
   });
 
-  it('migrates v1 meta saves into v2 without inventing a run', () => {
+  it('migrates v1 meta saves into v3 without inventing a run', () => {
     const storage = new MemoryStorage();
     storage.setItem('junkpack.save', JSON.stringify({
       version: 1,
@@ -70,10 +71,34 @@ describe('save persistence', () => {
     }));
 
     const migrated = loadSave(storage);
-    expect(migrated.version).toBe(2);
+    expect(migrated.version).toBe(3);
     expect(migrated.discoveredItemIds).toEqual(['laser-cat']);
     expect(migrated.bestEndlessWave).toBe(12);
     expect(migrated.activeRun).toBeNull();
+  });
+
+  it('migrates v2 active runs with an empty encounter-claim set', () => {
+    const storage = new MemoryStorage();
+    storage.setItem('junkpack.save', JSON.stringify({
+      version: 2,
+      discoveredItemIds: [],
+      discoveredRecipeIds: [],
+      bestEndlessWave: 0,
+      settings: DEFAULT_SAVE.settings,
+      activeRun: {
+        runSeed: 'old-run',
+        shopIndex: 1,
+        coins: 44,
+        soldOfferIds: [],
+        backpackItems: [],
+        nextLootSequence: 2,
+      },
+    }));
+
+    const migrated = loadSave(storage);
+    expect(migrated.version).toBe(3);
+    expect(migrated.activeRun?.runSeed).toBe('old-run');
+    expect(migrated.activeRun?.claimedEncounterIds).toEqual([]);
   });
 
   it('falls back safely when persisted run data is malformed', () => {
@@ -85,6 +110,7 @@ describe('save persistence', () => {
         shopIndex: -2,
         coins: 10,
         soldOfferIds: [],
+        claimedEncounterIds: [],
         backpackItems: [],
         nextLootSequence: 0,
       },

@@ -17,14 +17,21 @@ import { createCombatBuild } from '../domain/combatBuild';
 import type { InventoryState } from '../domain/inventory';
 import type { PlacedItem } from '../domain/types';
 
+export interface CombatVictoryReward {
+  readonly enemyId: string;
+  readonly coins: number;
+}
+
 export interface CombatPanelOptions {
   readonly getBackpackItems: () => readonly PlacedItem[];
   readonly reducedMotion?: boolean;
+  readonly onVictoryReward?: (reward: CombatVictoryReward) => boolean;
 }
 
 export class CombatPanel {
   private readonly reducedMotion: boolean;
   private readonly getBackpackItems: () => readonly PlacedItem[];
+  private readonly onVictoryReward?: (reward: CombatVictoryReward) => boolean;
   private readonly barGraphics: Phaser.GameObjects.Graphics;
   private readonly enemyBody: Phaser.GameObjects.Rectangle;
   private readonly enemyNameText: Phaser.GameObjects.Text;
@@ -52,6 +59,7 @@ export class CombatPanel {
   ) {
     this.reducedMotion = options.reducedMotion ?? false;
     this.getBackpackItems = options.getBackpackItems;
+    this.onVictoryReward = options.onVictoryReward;
 
     this.scene.add.rectangle(centerX, centerY, 720, 530, 0x211d28, 1)
       .setStrokeStyle(5, 0x55365e);
@@ -274,8 +282,18 @@ export class CombatPanel {
 
     const won = event.outcome === 'victory';
     this.pushLog(`${this.seconds(event.atMs)} • ${won ? 'VICTORY' : 'DEFEAT'}`);
+    let rewardSuffix = '';
+    if (won && this.setup && this.onVictoryReward) {
+      const rewardCoins = this.rewardCoinsFor(this.setup.enemy);
+      const granted = this.onVictoryReward({ enemyId: this.setup.enemy.id, coins: rewardCoins });
+      rewardSuffix = granted
+        ? `  +${rewardCoins} SCRAP COINS.`
+        : '  Encounter reward already claimed this run.';
+    }
     this.setStatus(
-      won ? 'VICTORY — the build cleared the fight.' : 'DEFEAT — rearrange or buy better junk and retry.',
+      won
+        ? `VICTORY — the build cleared the fight.${rewardSuffix}`
+        : 'DEFEAT — rearrange or buy better junk and retry.',
       won ? '#c8ff83' : '#ff8a9b',
     );
     this.bossStatusText.setText('');
@@ -326,9 +344,13 @@ export class CombatPanel {
     const nextAttack = state.queue.find((effect) => effect.kind === 'enemy-attack');
     const nextJam = state.queue.find((effect) => effect.kind === 'boss-interference');
     const parts: string[] = [];
-    if (nextAttack) parts.push(`NEXT HIT ${Math.max(0, nextAttack.dueAtMs - state.timeMs) / 1000}s`);
-    if (nextJam) parts.push(`NEXT JAM ${Math.max(0, nextJam.dueAtMs - state.timeMs) / 1000}s`);
+    if (nextAttack) parts.push(`NEXT HIT ${(Math.max(0, nextAttack.dueAtMs - state.timeMs) / 1000).toFixed(1)}s`);
+    if (nextJam) parts.push(`NEXT JAM ${(Math.max(0, nextJam.dueAtMs - state.timeMs) / 1000).toFixed(1)}s`);
     this.nextActionText.setText(parts.join('   •   '));
+  }
+
+  private rewardCoinsFor(enemy: EnemyCombatDefinition): number {
+    return enemy.id === TV_TYRANT.id ? 25 : 10;
   }
 
   private punchEnemy(targetScale: number): void {

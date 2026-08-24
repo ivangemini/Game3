@@ -19,7 +19,7 @@
 - [x] Basic seeded shop/reward choice with run currency and deterministic rerolls
 - [x] Purchased junk enters the real backpack through deterministic legal placement
 - [x] Save/restore current run: backpack, rotations, loot sequence, seed, coins, shop step and sold offers
-- [x] Versioned save v2 with v1 migration and corrupted-data fallback
+- [x] Versioned save v3 with v1/v2 migrations, encounter claims and corrupted-data fallback
 - [ ] Final interaction polish against real runtime/assets
 
 **Gate:** arranging items is satisfying before combat exists. Current prototype has drag lift, placement previews, elastic snap, invalid-action feedback and synergy activation feedback; final polish remains tied to runtime visual review.
@@ -36,16 +36,17 @@
 - [x] First boss prototype: TV Tyrant with deterministic Channel Jam
 - [x] Boss telegraph event before interference impact
 - [x] Jammed items lose scheduled triggers in domain simulation, not just visually
+- [x] Victory rewards feed the real run/shop economy
+- [x] Encounter rewards are claim-once per run and persisted
 - [ ] Second TV Tyrant interference: slime/block backpack cells
 - [ ] Third TV Tyrant interference: telegraphed row scramble / magnet displacement
 - [ ] Audio hooks
-- [ ] Win/loss reward/result flow into the run
 
 **Gate:** one full mini-run is understandable and fun.
 
-## P3 — Roguelite run
-- [ ] Seeded shops/rewards
-- [ ] 3-choice perk flow
+## P3 — Roguelite run [NEXT]
+- [x] Seeded shops/rewards foundation
+- [ ] 3-choice perk flow after boss victory
 - [ ] world modifier system
 - [ ] events
 - [ ] run end + restart
