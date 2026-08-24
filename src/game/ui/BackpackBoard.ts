@@ -22,6 +22,17 @@ interface ItemView {
   dragStartItem: PlacedItem;
 }
 
+export interface BackpackBoardSnapshot {
+  readonly items: readonly PlacedItem[];
+  readonly nextLootSequence: number;
+}
+
+export interface BackpackBoardOptions {
+  readonly initialItems?: readonly PlacedItem[];
+  readonly nextLootSequence?: number;
+  readonly onStateChanged?: (snapshot: BackpackBoardSnapshot) => void;
+}
+
 const RARITY_COLORS: Record<Rarity, number> = {
   common: 0xb9b5aa,
   uncommon: 0x94df68,
@@ -64,8 +75,9 @@ export class BackpackBoard {
   private readonly previewCells: Phaser.GameObjects.Rectangle[] = [];
   private readonly statusText: Phaser.GameObjects.Text;
   private readonly synergyGraphics: Phaser.GameObjects.Graphics;
+  private readonly onStateChanged?: (snapshot: BackpackBoardSnapshot) => void;
   private selectedInstanceId: string | null = null;
-  private nextLootSequence = 1;
+  private nextLootSequence: number;
   private state: InventoryState;
   private synergySnapshot: SynergySnapshot;
 
@@ -74,12 +86,18 @@ export class BackpackBoard {
     private readonly definitions: ReadonlyMap<string, ItemDefinition>,
     private readonly gridLeft: number,
     private readonly gridTop: number,
+    options: BackpackBoardOptions = {},
   ) {
+    this.nextLootSequence = Math.max(1, options.nextLootSequence ?? 1);
+    this.onStateChanged = options.onStateChanged;
+    const items = options.initialItems === undefined
+      ? this.initialItems()
+      : this.sanitizeInitialItems(options.initialItems);
     this.state = {
       width: this.width,
       height: this.height,
       blockedCells: this.blockedCells,
-      items: this.initialItems(),
+      items,
     };
     this.synergySnapshot = evaluateSynergies(this.state, this.definitions);
 
@@ -103,6 +121,13 @@ export class BackpackBoard {
     this.refreshSynergies(false);
   }
 
+  getSnapshot(): BackpackBoardSnapshot {
+    return {
+      items: this.state.items.map((item) => ({ ...item, origin: { ...item.origin } })),
+      nextLootSequence: this.nextLootSequence,
+    };
+  }
+
   addRewardItem(definitionId: string): boolean {
     const definition = this.definitions.get(definitionId);
     if (!definition) throw new Error(`Unknown reward item definition: ${definitionId}`);
@@ -122,6 +147,7 @@ export class BackpackBoard {
       ? ` • ${newConnections.length} new synergy link${newConnections.length === 1 ? '' : 's'}`
       : '';
     this.setStatus(`${definition.name} auto-packed${synergyText}.`, '#b8ff8e');
+    this.notifyStateChanged();
     return true;
   }
 
@@ -136,6 +162,32 @@ export class BackpackBoard {
       { instanceId: 'magnet-1', definitionId: 'scrap-magnet', origin: { x: 2, y: 2 }, rotation: 0 },
       { instanceId: 'fan-1', definitionId: 'toxic-fan', origin: { x: 0, y: 4 }, rotation: 0 },
     ];
+  }
+
+  private sanitizeInitialItems(items: readonly PlacedItem[]): PlacedItem[] {
+    const accepted: PlacedItem[] = [];
+    const instanceIds = new Set<string>();
+
+    for (const item of items) {
+      if (instanceIds.has(item.instanceId) || !this.definitions.has(item.definitionId)) continue;
+      const candidate: PlacedItem = {
+        instanceId: item.instanceId,
+        definitionId: item.definitionId,
+        origin: { x: item.origin.x, y: item.origin.y },
+        rotation: item.rotation,
+      };
+      const candidateState: InventoryState = {
+        width: this.width,
+        height: this.height,
+        blockedCells: this.blockedCells,
+        items: accepted,
+      };
+      if (!validatePlacement(candidateState, this.definitions, candidate).ok) continue;
+      accepted.push(candidate);
+      instanceIds.add(candidate.instanceId);
+    }
+
+    return accepted;
   }
 
   private drawFrame(): void {
@@ -244,6 +296,7 @@ export class BackpackBoard {
             '#b8ff8e',
           );
         }
+        this.notifyStateChanged();
       } else {
         view.item = view.dragStartItem;
         this.snapView(view, true);
@@ -366,6 +419,7 @@ export class BackpackBoard {
         '#b8ff8e',
       );
     }
+    this.notifyStateChanged();
   }
 
   private candidateFromWorld(view: ItemView, worldX: number, worldY: number): PlacedItem {
@@ -511,6 +565,10 @@ export class BackpackBoard {
       ...this.state,
       items: this.state.items.map((current) => current.instanceId === item.instanceId ? item : current),
     };
+  }
+
+  private notifyStateChanged(): void {
+    this.onStateChanged?.(this.getSnapshot());
   }
 
   private definitionFor(item: PlacedItem): ItemDefinition {

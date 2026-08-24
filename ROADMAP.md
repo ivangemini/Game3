@@ -18,7 +18,8 @@
 - [x] Live synergy links, active-link badges and activation feedback
 - [x] Basic seeded shop/reward choice with run currency and deterministic rerolls
 - [x] Purchased junk enters the real backpack through deterministic legal placement
-- [ ] Save current run/settings/progress locally
+- [x] Save/restore current run: backpack, rotations, loot sequence, seed, coins, shop step and sold offers
+- [x] Versioned save v2 with v1 migration and corrupted-data fallback
 - [ ] Full interaction/animation polish pass
 
 **Gate:** arranging items is satisfying before combat exists.

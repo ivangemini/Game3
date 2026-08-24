@@ -9,14 +9,30 @@ const RARITY_COLORS: Record<Rarity, number> = {
   epic: 0xd87bff,
 };
 
+export interface ShopPanelSnapshot {
+  readonly coins: number;
+  readonly shopIndex: number;
+  readonly soldOfferIds: readonly string[];
+}
+
+export interface ShopPanelOptions {
+  readonly runSeed?: string | number;
+  readonly initialCoins?: number;
+  readonly initialShopIndex?: number;
+  readonly initialSoldOfferIds?: readonly string[];
+  readonly onStateChanged?: (snapshot: ShopPanelSnapshot) => void;
+}
+
 export class ShopPanel {
   private readonly definitionsById: ReadonlyMap<string, ItemDefinition>;
   private readonly offerObjects: Phaser.GameObjects.GameObject[] = [];
-  private readonly soldOfferIds = new Set<string>();
+  private readonly soldOfferIds: Set<string>;
   private readonly coinText: Phaser.GameObjects.Text;
   private readonly statusText: Phaser.GameObjects.Text;
-  private shopIndex = 0;
-  private coins = 110;
+  private readonly runSeed: string | number;
+  private readonly onStateChanged?: (snapshot: ShopPanelSnapshot) => void;
+  private shopIndex: number;
+  private coins: number;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -24,9 +40,14 @@ export class ShopPanel {
     private readonly left: number,
     private readonly top: number,
     private readonly onPurchase: (definitionId: string) => boolean,
-    private readonly runSeed: string | number = 'prototype-run-001',
+    options: ShopPanelOptions = {},
   ) {
     this.definitionsById = new Map(definitions.map((definition) => [definition.id, definition]));
+    this.runSeed = options.runSeed ?? 'prototype-run-001';
+    this.coins = Math.max(0, Math.floor(options.initialCoins ?? 110));
+    this.shopIndex = Math.max(0, Math.floor(options.initialShopIndex ?? 0));
+    this.soldOfferIds = new Set(options.initialSoldOfferIds ?? []);
+    this.onStateChanged = options.onStateChanged;
 
     this.scene.add.rectangle(left + 705, top + 72, 1410, 144, 0x141720, 1)
       .setStrokeStyle(4, 0x66533d);
@@ -48,6 +69,14 @@ export class ShopPanel {
 
     this.createRerollButton();
     this.renderOffers();
+  }
+
+  getSnapshot(): ShopPanelSnapshot {
+    return {
+      coins: this.coins,
+      shopIndex: this.shopIndex,
+      soldOfferIds: [...this.soldOfferIds].sort(),
+    };
   }
 
   private createRerollButton(): void {
@@ -80,6 +109,7 @@ export class ShopPanel {
       this.soldOfferIds.clear();
       this.setStatus(`Shop rerolled • seed step ${this.shopIndex}.`, '#b8ff8e');
       this.renderOffers();
+      this.notifyStateChanged();
     });
   }
 
@@ -94,6 +124,11 @@ export class ShopPanel {
       this.shopIndex,
       3,
     );
+
+    const activeOfferIds = new Set(offers.map((offer) => offer.id));
+    for (const soldId of [...this.soldOfferIds]) {
+      if (!activeOfferIds.has(soldId)) this.soldOfferIds.delete(soldId);
+    }
 
     offers.forEach((offer, index) => this.createOfferCard(offer, index));
   }
@@ -162,6 +197,11 @@ export class ShopPanel {
     this.soldOfferIds.add(offer.id);
     this.setStatus(`${definition.name} bought and packed.`, '#b8ff8e');
     this.renderOffers();
+    this.notifyStateChanged();
+  }
+
+  private notifyStateChanged(): void {
+    this.onStateChanged?.(this.getSnapshot());
   }
 
   private setStatus(message: string, color: string): void {
