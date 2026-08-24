@@ -5,6 +5,7 @@ import { PROTOTYPE_PERK_MAP } from '../data/perks';
 import {
   advanceCombat,
   createCombatState,
+  type CombatOutcome,
   type CombatPresentationEvent,
   type CombatSetup,
   type CombatState,
@@ -15,8 +16,15 @@ import type { InventoryState } from '../domain/inventory';
 import type { Cell, PlacedItem } from '../domain/types';
 
 export interface CombatVictoryReward {
+  readonly encounterId: string;
   readonly enemyId: string;
   readonly coins: number;
+}
+
+export interface CombatOutcomeNotice {
+  readonly encounterId: string;
+  readonly enemyId: string;
+  readonly outcome: Exclude<CombatOutcome, 'active'>;
 }
 
 export interface CombatPanelOptions {
@@ -24,8 +32,10 @@ export interface CombatPanelOptions {
   readonly getSelectedPerkIds?: () => readonly string[];
   readonly reducedMotion?: boolean;
   readonly onVictoryReward?: (reward: CombatVictoryReward) => boolean;
-  readonly onBossVictory?: (enemyId: string) => void;
+  readonly onBossVictory?: (encounterId: string, enemyId: string) => void;
+  readonly onOutcome?: (notice: CombatOutcomeNotice) => void;
   readonly backpackGrid?: { readonly left: number; readonly top: number; readonly cellSize: number };
+  readonly showDebugButtons?: boolean;
 }
 
 export class CombatPanel {
@@ -33,7 +43,8 @@ export class CombatPanel {
   private readonly getBackpackItems: () => readonly PlacedItem[];
   private readonly getSelectedPerkIds: () => readonly string[];
   private readonly onVictoryReward?: (reward: CombatVictoryReward) => boolean;
-  private readonly onBossVictory?: (enemyId: string) => void;
+  private readonly onBossVictory?: (encounterId: string, enemyId: string) => void;
+  private readonly onOutcome?: (notice: CombatOutcomeNotice) => void;
   private readonly backpackGrid: { readonly left: number; readonly top: number; readonly cellSize: number };
   private readonly barGraphics: Phaser.GameObjects.Graphics;
   private readonly enemyBody: Phaser.GameObjects.Rectangle;
@@ -50,6 +61,8 @@ export class CombatPanel {
   private setup: CombatSetup | null = null;
   private state: CombatState | null = null;
   private running = false;
+  private currentEncounterId = 'debug:none';
+  private currentRewardCoins = 0;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -62,13 +75,14 @@ export class CombatPanel {
     this.getSelectedPerkIds = options.getSelectedPerkIds ?? (() => []);
     this.onVictoryReward = options.onVictoryReward;
     this.onBossVictory = options.onBossVictory;
+    this.onOutcome = options.onOutcome;
     this.backpackGrid = options.backpackGrid ?? { left: 90, top: 225, cellSize: 76 };
 
     scene.add.rectangle(centerX, centerY, 720, 530, 0x211d28, 1).setStrokeStyle(5, 0x55365e);
-    scene.add.text(centerX - 325, centerY - 250, 'LIVE COMBAT + BOSS LAB', {
+    scene.add.text(centerX - 325, centerY - 250, 'LIVE COMBAT', {
       fontSize: '25px', color: '#ff91e6', fontStyle: 'bold',
     });
-    scene.add.text(centerX - 325, centerY - 216, 'Build + perks snapshot at fight start. Boss attacks the backpack rules.', {
+    scene.add.text(centerX - 325, centerY - 216, 'Build + perks snapshot at fight start. Bosses attack backpack rules.', {
       fontSize: '13px', color: '#aaa5b2',
     });
 
@@ -79,7 +93,7 @@ export class CombatPanel {
     scene.add.circle(centerX + 48, centerY - 58, 6, 0x1a1922);
     scene.add.circle(centerX + 121, centerY - 54, 8, 0x1a1922);
     scene.add.text(centerX + 85, centerY - 15, '▂▂▂', { fontSize: '30px', color: '#302038' }).setOrigin(0.5);
-    this.enemyNameText = scene.add.text(centerX + 85, centerY + 80, SCRAP_DUMMY.name.toUpperCase(), {
+    this.enemyNameText = scene.add.text(centerX + 85, centerY + 80, 'WAITING FOR ENCOUNTER', {
       fontSize: '15px', color: '#f5f0e7', fontStyle: 'bold',
     }).setOrigin(0.5);
 
@@ -91,15 +105,18 @@ export class CombatPanel {
     this.bossStatusText = scene.add.text(centerX - 325, centerY + 110, '', {
       fontSize: '12px', color: '#f08cff', fontStyle: 'bold', wordWrap: { width: 610 },
     });
-    this.statusText = scene.add.text(centerX - 325, centerY + 134, 'Ready. Rearrange the backpack, then choose a fight.', {
+    this.statusText = scene.add.text(centerX - 325, centerY + 134, 'Ready. Use the RUN panel to start the next encounter.', {
       fontSize: '13px', color: '#d8d1df', wordWrap: { width: 610 },
     });
     this.eventLogText = scene.add.text(centerX - 325, centerY + 166, '', {
       fontSize: '10px', color: '#aaa5b2', lineSpacing: 3, wordWrap: { width: 610 },
     });
 
-    this.createFightButton(centerX + 98, centerY + 222, 'FIGHT DUMMY', SCRAP_DUMMY, 0x354157, 0x68a8ff);
-    this.createFightButton(centerX + 270, centerY + 222, 'TV TYRANT', TV_TYRANT, 0x533152, 0xf06cff);
+    if (options.showDebugButtons) {
+      this.createFightButton(centerX + 98, centerY + 222, 'DEBUG DUMMY', 'debug:dummy', SCRAP_DUMMY, 0x354157, 0x68a8ff);
+      this.createFightButton(centerX + 270, centerY + 222, 'DEBUG BOSS', 'debug:tv', TV_TYRANT, 0x533152, 0xf06cff);
+    }
+
     scene.events.on('update', this.updateCombat, this);
     scene.events.once('shutdown', () => {
       scene.events.off('update', this.updateCombat, this);
@@ -108,33 +125,58 @@ export class CombatPanel {
     this.renderState();
   }
 
-  private createFightButton(x: number, y: number, title: string, enemy: EnemyCombatDefinition, fill: number, stroke: number): void {
-    const button = this.scene.add.rectangle(x, y, 160, 42, fill, 1).setStrokeStyle(2, stroke).setInteractive({ useHandCursor: true });
-    const label = this.scene.add.text(x, y, title, { fontSize: '13px', color: '#f5eaff', fontStyle: 'bold' }).setOrigin(0.5);
-    button.on('pointerover', () => button.setAlpha(0.82));
-    button.on('pointerout', () => button.setAlpha(1));
-    button.on('pointerdown', () => { button.setScale(0.97); label.setScale(0.97); });
-    button.on('pointerup', () => { button.setScale(1); label.setScale(1); this.startFight(enemy); });
+  isRunning(): boolean {
+    return this.running;
   }
 
-  private startFight(enemy: EnemyCombatDefinition): void {
+  startEncounter(encounterId: string, enemy: EnemyCombatDefinition, rewardCoins: number): boolean {
+    if (this.running) return false;
     const inventory: InventoryState = { width: 6, height: 5, blockedCells: [], items: this.getBackpackItems() };
     const selectedPerks = this.getSelectedPerkIds();
     const build = createCombatBuild(inventory, PROTOTYPE_ITEM_MAP, PROTOTYPE_COMBAT_PROFILE_MAP, PROTOTYPE_PERK_MAP, selectedPerks);
-    if (build.items.size === 0) { this.setStatus('No combat-capable junk in the backpack.', '#ff9aab'); return; }
+    if (build.items.size === 0) {
+      this.setStatus('No combat-capable junk in the backpack.', '#ff9aab');
+      return false;
+    }
+
+    this.currentEncounterId = encounterId;
+    this.currentRewardCoins = Math.max(0, Math.floor(rewardCoins));
     this.setBackpackLocked(true);
     this.setup = { playerMaxHp: 100, items: build.items, enemy };
     this.state = createCombatState(this.setup);
     this.running = true;
     this.eventLog.length = 0;
     this.eventLogText.setText('');
-    this.bossStatusText.setText(enemy.id === TV_TYRANT.id ? 'CHANNEL JAM + SLIME SIGNAL armed.' : '');
+    const boss = this.isBoss(enemy);
+    this.bossStatusText.setText(boss ? 'CHANNEL JAM + SLIME SIGNAL armed.' : '');
     this.enemyNameText.setText(enemy.name.toUpperCase());
-    this.enemyBody.setFillStyle(enemy.id === TV_TYRANT.id ? 0x697f45 : 0x6f8f50);
-    this.enemyBody.setStrokeStyle(8, enemy.id === TV_TYRANT.id ? 0x9b4aa7 : 0x2a2732);
+    this.enemyBody.setFillStyle(boss ? 0x697f45 : 0x6f8f50);
+    this.enemyBody.setStrokeStyle(8, boss ? 0x9b4aa7 : 0x2a2732);
     this.setStatus(`${enemy.name} • ${build.items.size} items • ${build.synergies.connections.length} links • ${selectedPerks.length} perks.`, '#b8ff8e');
     this.renderState();
     this.punchEnemy(1.03);
+    return true;
+  }
+
+  private createFightButton(
+    x: number,
+    y: number,
+    title: string,
+    encounterId: string,
+    enemy: EnemyCombatDefinition,
+    fill: number,
+    stroke: number,
+  ): void {
+    const button = this.scene.add.rectangle(x, y, 160, 42, fill, 1).setStrokeStyle(2, stroke).setInteractive({ useHandCursor: true });
+    const label = this.scene.add.text(x, y, title, { fontSize: '13px', color: '#f5eaff', fontStyle: 'bold' }).setOrigin(0.5);
+    button.on('pointerover', () => button.setAlpha(0.82));
+    button.on('pointerout', () => button.setAlpha(1));
+    button.on('pointerdown', () => { button.setScale(0.97); label.setScale(0.97); });
+    button.on('pointerup', () => {
+      button.setScale(1);
+      label.setScale(1);
+      this.startEncounter(encounterId, enemy, enemy.id === TV_TYRANT.id ? 25 : 10);
+    });
   }
 
   private updateCombat(_time: number, deltaMs: number): void {
@@ -186,16 +228,18 @@ export class CombatPanel {
     }
 
     const won = event.outcome === 'victory';
+    const encounterId = this.currentEncounterId;
+    const enemyId = this.setup?.enemy.id ?? 'unknown';
     this.pushLog(`${this.seconds(event.atMs)} • ${won ? 'VICTORY' : 'DEFEAT'}`);
     let rewardSuffix = '';
-    if (won && this.setup && this.onVictoryReward) {
-      const rewardCoins = this.setup.enemy.id === TV_TYRANT.id ? 25 : 10;
-      const granted = this.onVictoryReward({ enemyId: this.setup.enemy.id, coins: rewardCoins });
-      rewardSuffix = granted ? ` +${rewardCoins} COINS.` : ' Reward already claimed.';
+    if (won && this.setup && this.onVictoryReward && this.currentRewardCoins > 0) {
+      const granted = this.onVictoryReward({ encounterId, enemyId, coins: this.currentRewardCoins });
+      rewardSuffix = granted ? ` +${this.currentRewardCoins} COINS.` : ' Reward already claimed.';
     }
     this.setStatus(won ? `VICTORY.${rewardSuffix}` : 'DEFEAT — rearrange or buy better junk and retry.', won ? '#c8ff83' : '#ff8a9b');
     this.bossStatusText.setText('');
-    if (won && this.setup?.enemy.id === TV_TYRANT.id) this.onBossVictory?.(this.setup.enemy.id);
+    if (won && this.setup && this.isBoss(this.setup.enemy)) this.onBossVictory?.(encounterId, enemyId);
+    this.onOutcome?.({ encounterId, enemyId, outcome: event.outcome });
   }
 
   private setBackpackLocked(locked: boolean): void {
@@ -231,9 +275,10 @@ export class CombatPanel {
     this.enemyText.setText(`${enemy.name} ${enemyHp}/${enemy.maxHp}`);
     this.poisonText.setText(`☣ POISON ${state?.enemyPoison ?? 0}`);
     const left = this.centerX - 325;
+    const boss = this.isBoss(enemy);
     this.barGraphics.clear();
     this.drawBar(left, this.centerY - 184, 280, playerHp / 100, 0xff5b72);
-    this.drawBar(left, this.centerY - 150, 280, enemyHp / enemy.maxHp, enemy.id === TV_TYRANT.id ? 0xf06cff : 0xb96cff);
+    this.drawBar(left, this.centerY - 150, 280, enemyHp / enemy.maxHp, boss ? 0xf06cff : 0xb96cff);
     if (!state || state.outcome !== 'active') { this.nextActionText.setText(''); return; }
     const entries: string[] = [];
     const labels: Array<[string, string]> = [['enemy-attack', 'HIT'], ['boss-interference', 'JAM'], ['boss-cell-interference', 'SLIME']];
@@ -245,8 +290,14 @@ export class CombatPanel {
   }
 
   private drawBar(x: number, y: number, width: number, ratio: number, color: number): void {
-    this.barGraphics.fillStyle(0x35242b, 1); this.barGraphics.fillRoundedRect(x, y, width, 14, 6);
-    this.barGraphics.fillStyle(color, 1); this.barGraphics.fillRoundedRect(x, y, width * Math.max(0, Math.min(1, ratio)), 14, 6);
+    this.barGraphics.fillStyle(0x35242b, 1);
+    this.barGraphics.fillRoundedRect(x, y, width, 14, 6);
+    this.barGraphics.fillStyle(color, 1);
+    this.barGraphics.fillRoundedRect(x, y, width * Math.max(0, Math.min(1, ratio)), 14, 6);
+  }
+
+  private isBoss(enemy: EnemyCombatDefinition): boolean {
+    return !!enemy.interference || !!enemy.cellInterference;
   }
 
   private punchEnemy(scale: number): void {

@@ -1,17 +1,25 @@
 import * as Phaser from 'phaser';
 import { PROTOTYPE_ITEM_MAP, PROTOTYPE_ITEMS } from '../data/items';
 import { PROTOTYPE_PERKS, PROTOTYPE_PERK_MAP } from '../data/perks';
+import { getRunEncounter } from '../data/runEncounters';
 import { generatePerkChoices } from '../domain/perks';
+import {
+  cashOutRun,
+  createInitialRunProgress,
+  enterEndless,
+  registerRunVictory,
+} from '../domain/runProgression';
 import { BackpackBoard } from '../ui/BackpackBoard';
 import { CombatPanel } from '../ui/CombatPanel';
 import { PerkChoiceOverlay } from '../ui/PerkChoiceOverlay';
+import { RunProgressPanel } from '../ui/RunProgressPanel';
 import { ShopPanel } from '../ui/ShopPanel';
 import {
   clearActiveRun,
   loadSave,
   writeSave,
   type ActiveRunSave,
-  type SaveV4,
+  type SaveV5,
 } from '../../persistence/save';
 
 const PROTOTYPE_RUN_SEED = 'prototype-run-001';
@@ -31,7 +39,7 @@ export class PrototypeScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(COLORS.background);
     this.drawHeader();
 
-    let save: SaveV4 = loadSave();
+    let save: SaveV5 = loadSave();
     const hadActiveRun = save.activeRun !== null;
     let activeRun: ActiveRunSave = save.activeRun ?? {
       runSeed: PROTOTYPE_RUN_SEED,
@@ -45,6 +53,7 @@ export class PrototypeScene extends Phaser.Scene {
       perkChoiceIndex: 0,
       pendingPerkOfferIds: [],
       offeredPerkEncounterIds: [],
+      progress: createInitialRunProgress(),
     };
 
     const persistRun = (): void => {
@@ -95,24 +104,26 @@ export class PrototypeScene extends Phaser.Scene {
       };
       persistRun();
       perkOverlay.hide();
+      runPanel.refresh('Perk locked in. Repack, shop, then continue.');
     });
 
-    new CombatPanel(this, 1140, 445, {
+    let runPanel!: RunProgressPanel;
+    const combatPanel = new CombatPanel(this, 1140, 445, {
       getBackpackItems: () => board.getSnapshot().items,
       getSelectedPerkIds: () => activeRun.selectedPerkIds,
       reducedMotion: save.settings.reducedMotion,
-      onVictoryReward: ({ enemyId, coins }) => {
-        if (activeRun.claimedEncounterIds.includes(enemyId)) return false;
+      onVictoryReward: ({ encounterId, coins }) => {
+        if (activeRun.claimedEncounterIds.includes(encounterId)) return false;
         activeRun = {
           ...activeRun,
-          claimedEncounterIds: [...activeRun.claimedEncounterIds, enemyId].sort(),
+          claimedEncounterIds: [...activeRun.claimedEncounterIds, encounterId].sort(),
         };
         persistRun();
-        shop.addCoins(coins, enemyId === 'tv-tyrant' ? 'TV Tyrant bounty' : 'Combat bounty');
+        shop.addCoins(coins, 'Encounter bounty');
         return true;
       },
-      onBossVictory: (enemyId) => {
-        if (activeRun.offeredPerkEncounterIds.includes(enemyId) || activeRun.pendingPerkOfferIds.length > 0) return;
+      onBossVictory: (encounterId) => {
+        if (activeRun.offeredPerkEncounterIds.includes(encounterId) || activeRun.pendingPerkOfferIds.length > 0) return;
         const choices = generatePerkChoices(
           PROTOTYPE_PERKS,
           activeRun.runSeed,
@@ -124,10 +135,52 @@ export class PrototypeScene extends Phaser.Scene {
         activeRun = {
           ...activeRun,
           pendingPerkOfferIds: choices.map((perk) => perk.id),
-          offeredPerkEncounterIds: [...activeRun.offeredPerkEncounterIds, enemyId].sort(),
+          offeredPerkEncounterIds: [...activeRun.offeredPerkEncounterIds, encounterId].sort(),
         };
         persistRun();
         perkOverlay.show(activeRun.pendingPerkOfferIds);
+      },
+      onOutcome: ({ encounterId, outcome }) => {
+        if (outcome !== 'victory') {
+          runPanel.refresh('Defeat. Repack or shop, then retry the same encounter.');
+          return;
+        }
+        const current = getRunEncounter(activeRun.progress);
+        if (!current || current.encounterId !== encounterId) return;
+        const completedEndlessWave = activeRun.progress.mode === 'endless' ? activeRun.progress.endlessWave : 0;
+        activeRun = {
+          ...activeRun,
+          progress: registerRunVictory(activeRun.progress, current.scoreValue),
+        };
+        if (completedEndlessWave > 0) {
+          save = { ...save, bestEndlessWave: Math.max(save.bestEndlessWave, completedEndlessWave) };
+        }
+        persistRun();
+        runPanel.refresh(activeRun.progress.mode === 'cashout'
+          ? 'Campaign cleared. Cash out or risk the build in Endless.'
+          : 'Victory. Repack and spend your reward before the next encounter.');
+      },
+    });
+
+    runPanel = new RunProgressPanel(this, 570, 225, {
+      getProgress: () => activeRun.progress,
+      onStartEncounter: (encounter) => {
+        if (activeRun.pendingPerkOfferIds.length > 0 || combatPanel.isRunning()) return false;
+        const current = getRunEncounter(activeRun.progress);
+        if (!current || current.encounterId !== encounter.encounterId) return false;
+        return combatPanel.startEncounter(encounter.encounterId, encounter.enemy, encounter.rewardCoins);
+      },
+      onEnterEndless: () => {
+        if (combatPanel.isRunning() || activeRun.pendingPerkOfferIds.length > 0) return;
+        activeRun = { ...activeRun, progress: enterEndless(activeRun.progress) };
+        persistRun();
+        runPanel.refresh('Endless started. Every fifth wave is a corrupted boss.');
+      },
+      onCashOut: () => {
+        if (combatPanel.isRunning()) return;
+        activeRun = { ...activeRun, progress: cashOutRun(activeRun.progress) };
+        persistRun();
+        runPanel.refresh('Run complete. Score and best Endless wave are saved.');
       },
     });
 
@@ -148,7 +201,7 @@ export class PrototypeScene extends Phaser.Scene {
     }).setOrigin(0.5, 0);
     this.add.text(48, 38, 'SCRAPSTER', { fontSize: '25px', color: COLORS.text, fontStyle: 'bold' });
     this.add.text(48, 73, '♥ 96 / 100', { fontSize: '22px', color: '#ff6578' });
-    this.add.text(1370, 48, 'COMBAT LAB  •  BUILD TEST', { fontSize: '21px', color: '#ff91e6', fontStyle: 'bold' });
+    this.add.text(1320, 48, '3 WORLDS  •  9 ENCOUNTERS  •  ENDLESS', { fontSize: '18px', color: '#ff91e6', fontStyle: 'bold' });
   }
 
   private createNewRunButton(): void {
@@ -182,7 +235,7 @@ export class PrototypeScene extends Phaser.Scene {
   }
 
   private drawActivePerks(getPerkIds: () => readonly string[]): void {
-    const text = this.add.text(540, 151, '', { fontSize: '12px', color: '#cfa8ff', fontStyle: 'bold' });
+    const text = this.add.text(570, 151, '', { fontSize: '12px', color: '#cfa8ff', fontStyle: 'bold' });
     const update = (): void => {
       const names = getPerkIds().map((id) => PROTOTYPE_PERK_MAP.get(id)?.name ?? id);
       text.setText(names.length > 0 ? `RUN PERKS  •  ${names.join('  •  ')}` : 'RUN PERKS  •  none yet');

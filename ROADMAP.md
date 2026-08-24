@@ -19,7 +19,7 @@
 - [x] Basic seeded shop/reward choice with run currency and deterministic rerolls
 - [x] Purchased junk enters the real backpack through deterministic legal placement
 - [x] Save/restore current run: backpack, rotations, loot sequence, seed, coins, shop step and sold offers
-- [x] Versioned save v4 with v1/v2/v3 migrations, encounter claims and perk state
+- [x] Versioned save v5 with legacy migrations, encounter claims, perk state and run progression
 - [ ] Final interaction polish against real runtime/assets
 
 **Gate:** arranging items is satisfying before combat exists. Current prototype has drag lift, placement previews, elastic snap, invalid-action feedback and synergy activation feedback; final polish remains tied to runtime visual review.
@@ -30,8 +30,8 @@
 - [x] Item trigger system consuming backpack-derived speed/poison/laser/chaos/armor bonuses
 - [x] Poison tick clock, stable equal-time effect ordering and victory/defeat outcomes
 - [x] Presentation-event stream for Phaser VFX/UI without putting rules in the scene
-- [x] Rendered normal test enemy with live HP/shield/poison HUD
-- [x] Start/restart combat from the current backpack snapshot
+- [x] Rendered enemy with live HP/shield/poison HUD
+- [x] Combat starts from immutable backpack/perk snapshot and locks inventory input until result
 - [x] Lightweight hit/outcome feedback with reduced-motion behavior
 - [x] TV Tyrant interference 1: deterministic Channel Jam with telegraph
 - [x] TV Tyrant interference 2: Slime Signal targets an occupied backpack cell, telegraphs it, then suppresses touching item triggers
@@ -49,10 +49,15 @@
 - [x] Boss-victory perk overlay with persisted pending choice
 - [x] Six prototype perks that modify tagged combat items
 - [x] Selected perks persist and affect subsequent combat snapshots
+- [x] Three-world campaign skeleton: 3 encounters per world / 9 total
+- [x] Unique encounter IDs, per-encounter rewards and score progression
+- [x] Difficulty/reward escalation across the three worlds
+- [x] Campaign clear decision: cash out or keep the current build
+- [x] Endless mode foundation with scaling HP/damage/reward multiplier and a corrupted boss every fifth wave
+- [x] Best Endless wave persisted in meta save
 - [ ] world modifier system
-- [ ] events
-- [ ] run end + restart
-- [ ] first-boss target pacing 3–5 min
+- [ ] lightweight events between selected encounters
+- [ ] target pacing validation: first boss 3–5 min, base run 12–18 min, strong session 20–40+ min
 
 ## P4 — Content-efficient depth
 - [ ] 35–45 launch items
@@ -67,7 +72,7 @@
 - [ ] Itemdex + Recipe Book
 - [ ] unlock milestones
 - [ ] Daily seeded run
-- [ ] Endless mode + score
+- [x] Endless mode + score foundation
 - [ ] achievements
 
 ## P6 — Presentation pass

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_SAVE, loadSave, writeSave, type SaveV4 } from '../src/persistence/save';
+import { createInitialRunProgress } from '../src/game/domain/runProgression';
+import { DEFAULT_SAVE, loadSave, writeSave, type SaveV5 } from '../src/persistence/save';
 
 class MemoryStorage implements Storage {
   private readonly values = new Map<string, string>();
@@ -12,17 +13,18 @@ class MemoryStorage implements Storage {
 }
 
 describe('save persistence', () => {
-  it('round-trips active run inventory, rewards and perk state', () => {
+  it('round-trips active run inventory, rewards, perks and progression', () => {
     const storage = new MemoryStorage();
-    const save: SaveV4 = {
+    const save: SaveV5 = {
       ...DEFAULT_SAVE,
       activeRun: {
         runSeed: 'daily-seed', shopIndex: 4, coins: 73,
         soldOfferIds: ['shop-4-0-laser-cat'], nextLootSequence: 6,
-        claimedEncounterIds: ['tv-tyrant'],
+        claimedEncounterIds: ['w1-tv-tyrant'],
         selectedPerkIds: ['overclock'], perkChoiceIndex: 1,
         pendingPerkOfferIds: ['laser-pet', 'chaos-license', 'scrap-plating'],
-        offeredPerkEncounterIds: ['tv-tyrant'],
+        offeredPerkEncounterIds: ['w1-tv-tyrant'],
+        progress: { mode: 'campaign', campaignEncounterIndex: 3, endlessWave: 0, score: 550 },
         backpackItems: [{
           instanceId: 'loot-5-laser-cat', definitionId: 'laser-cat',
           origin: { x: 2, y: 1 }, rotation: 1,
@@ -33,7 +35,7 @@ describe('save persistence', () => {
     expect(loadSave(storage)).toEqual(save);
   });
 
-  it('migrates v1 meta saves into v4 without inventing a run', () => {
+  it('migrates v1 meta saves into v5 without inventing a run', () => {
     const storage = new MemoryStorage();
     storage.setItem('junkpack.save', JSON.stringify({
       version: 1,
@@ -41,13 +43,13 @@ describe('save persistence', () => {
       settings: { musicVolume: 0.5, sfxVolume: 0.75, reducedMotion: true },
     }));
     const migrated = loadSave(storage);
-    expect(migrated.version).toBe(4);
+    expect(migrated.version).toBe(5);
     expect(migrated.discoveredItemIds).toEqual(['laser-cat']);
     expect(migrated.activeRun).toBeNull();
   });
 
-  it('migrates v2 and v3 active runs with safe perk defaults', () => {
-    for (const version of [2, 3] as const) {
+  it('migrates v2-v4 active runs with safe progression defaults', () => {
+    for (const version of [2, 3, 4] as const) {
       const storage = new MemoryStorage();
       storage.setItem('junkpack.save', JSON.stringify({
         version,
@@ -56,25 +58,28 @@ describe('save persistence', () => {
         activeRun: {
           runSeed: `old-v${version}`, shopIndex: 1, coins: 44,
           soldOfferIds: [], backpackItems: [], nextLootSequence: 2,
-          ...(version === 3 ? { claimedEncounterIds: ['scrap-dummy'] } : {}),
+          ...(version >= 3 ? { claimedEncounterIds: ['scrap-dummy'] } : {}),
+          ...(version >= 4 ? {
+            selectedPerkIds: [], perkChoiceIndex: 0,
+            pendingPerkOfferIds: [], offeredPerkEncounterIds: [],
+          } : {}),
         },
       }));
       const migrated = loadSave(storage);
-      expect(migrated.version).toBe(4);
-      expect(migrated.activeRun?.selectedPerkIds).toEqual([]);
-      expect(migrated.activeRun?.pendingPerkOfferIds).toEqual([]);
-      expect(migrated.activeRun?.perkChoiceIndex).toBe(0);
+      expect(migrated.version).toBe(5);
+      expect(migrated.activeRun?.progress).toEqual(createInitialRunProgress());
     }
   });
 
-  it('falls back safely when persisted run data is malformed', () => {
+  it('falls back safely when persisted progression is malformed', () => {
     const storage = new MemoryStorage();
     storage.setItem('junkpack.save', JSON.stringify({
       ...DEFAULT_SAVE,
       activeRun: {
-        runSeed: 'bad', shopIndex: -2, coins: 10, soldOfferIds: [], claimedEncounterIds: [],
+        runSeed: 'bad', shopIndex: 0, coins: 10, soldOfferIds: [], claimedEncounterIds: [],
         selectedPerkIds: [], perkChoiceIndex: 0, pendingPerkOfferIds: [], offeredPerkEncounterIds: [],
-        backpackItems: [], nextLootSequence: 0,
+        backpackItems: [], nextLootSequence: 1,
+        progress: { mode: 'campaign', campaignEncounterIndex: 99, endlessWave: 0, score: 0 },
       },
     }));
     expect(loadSave(storage)).toEqual(DEFAULT_SAVE);

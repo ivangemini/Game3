@@ -1,3 +1,4 @@
+import { createInitialRunProgress, isRunProgressState, type RunProgressState } from '../game/domain/runProgression';
 import type { PlacedItem } from '../game/domain/types';
 
 const SAVE_KEY = 'junkpack.save';
@@ -47,7 +48,7 @@ export interface SaveV3 {
   readonly activeRun: ActiveRunSaveV3 | null;
 }
 
-export interface ActiveRunSave extends ActiveRunSaveV3 {
+export interface ActiveRunSaveV4 extends ActiveRunSaveV3 {
   readonly selectedPerkIds: readonly string[];
   readonly perkChoiceIndex: number;
   readonly pendingPerkOfferIds: readonly string[];
@@ -60,13 +61,26 @@ export interface SaveV4 {
   readonly discoveredRecipeIds: readonly string[];
   readonly bestEndlessWave: number;
   readonly settings: SaveSettings;
+  readonly activeRun: ActiveRunSaveV4 | null;
+}
+
+export interface ActiveRunSave extends ActiveRunSaveV4 {
+  readonly progress: RunProgressState;
+}
+
+export interface SaveV5 {
+  readonly version: 5;
+  readonly discoveredItemIds: readonly string[];
+  readonly discoveredRecipeIds: readonly string[];
+  readonly bestEndlessWave: number;
+  readonly settings: SaveSettings;
   readonly activeRun: ActiveRunSave | null;
 }
 
-export type GameSave = SaveV4;
+export type GameSave = SaveV5;
 
-export const DEFAULT_SAVE: SaveV4 = {
-  version: 4,
+export const DEFAULT_SAVE: SaveV5 = {
+  version: 5,
   discoveredItemIds: [],
   discoveredRecipeIds: [],
   bestEndlessWave: 0,
@@ -78,16 +92,17 @@ export const DEFAULT_SAVE: SaveV4 = {
   activeRun: null,
 };
 
-export function loadSave(storage: Storage = localStorage): SaveV4 {
+export function loadSave(storage: Storage = localStorage): SaveV5 {
   const raw = storage.getItem(SAVE_KEY);
   if (!raw) return DEFAULT_SAVE;
 
   try {
     const parsed: unknown = JSON.parse(raw);
-    if (isSaveV4(parsed)) return parsed;
-    if (isSaveV3(parsed)) return migrateV3ToV4(parsed);
-    if (isSaveV2(parsed)) return migrateV3ToV4(migrateV2ToV3(parsed));
-    if (isSaveV1(parsed)) return migrateV3ToV4(migrateV2ToV3(migrateV1ToV2(parsed)));
+    if (isSaveV5(parsed)) return parsed;
+    if (isSaveV4(parsed)) return migrateV4ToV5(parsed);
+    if (isSaveV3(parsed)) return migrateV4ToV5(migrateV3ToV4(parsed));
+    if (isSaveV2(parsed)) return migrateV4ToV5(migrateV3ToV4(migrateV2ToV3(parsed)));
+    if (isSaveV1(parsed)) return migrateV4ToV5(migrateV3ToV4(migrateV2ToV3(migrateV1ToV2(parsed))));
   } catch {
     // Corrupted local data falls back safely; recovery UI can be added later.
   }
@@ -95,11 +110,11 @@ export function loadSave(storage: Storage = localStorage): SaveV4 {
   return DEFAULT_SAVE;
 }
 
-export function writeSave(save: SaveV4, storage: Storage = localStorage): void {
+export function writeSave(save: SaveV5, storage: Storage = localStorage): void {
   storage.setItem(SAVE_KEY, JSON.stringify(save));
 }
 
-export function clearActiveRun(save: SaveV4): SaveV4 {
+export function clearActiveRun(save: SaveV5): SaveV5 {
   return { ...save, activeRun: null };
 }
 
@@ -121,9 +136,7 @@ function migrateV2ToV3(save: SaveV2): SaveV3 {
     discoveredRecipeIds: save.discoveredRecipeIds,
     bestEndlessWave: save.bestEndlessWave,
     settings: save.settings,
-    activeRun: save.activeRun
-      ? { ...save.activeRun, claimedEncounterIds: [] }
-      : null,
+    activeRun: save.activeRun ? { ...save.activeRun, claimedEncounterIds: [] } : null,
   };
 }
 
@@ -146,6 +159,19 @@ function migrateV3ToV4(save: SaveV3): SaveV4 {
   };
 }
 
+function migrateV4ToV5(save: SaveV4): SaveV5 {
+  return {
+    version: 5,
+    discoveredItemIds: save.discoveredItemIds,
+    discoveredRecipeIds: save.discoveredRecipeIds,
+    bestEndlessWave: save.bestEndlessWave,
+    settings: save.settings,
+    activeRun: save.activeRun
+      ? { ...save.activeRun, progress: createInitialRunProgress() }
+      : null,
+  };
+}
+
 function isSaveV1(value: unknown): value is SaveV1 {
   if (!value || typeof value !== 'object') return false;
   const candidate = value as Partial<SaveV1>;
@@ -159,25 +185,25 @@ function isSaveV1(value: unknown): value is SaveV1 {
 function isSaveV2(value: unknown): value is SaveV2 {
   if (!value || typeof value !== 'object') return false;
   const candidate = value as Partial<SaveV2>;
-  return candidate.version === 2
-    && isMeta(candidate)
-    && (candidate.activeRun === null || isActiveRunV2(candidate.activeRun));
+  return candidate.version === 2 && isMeta(candidate) && (candidate.activeRun === null || isActiveRunV2(candidate.activeRun));
 }
 
 function isSaveV3(value: unknown): value is SaveV3 {
   if (!value || typeof value !== 'object') return false;
   const candidate = value as Partial<SaveV3>;
-  return candidate.version === 3
-    && isMeta(candidate)
-    && (candidate.activeRun === null || isActiveRunV3(candidate.activeRun));
+  return candidate.version === 3 && isMeta(candidate) && (candidate.activeRun === null || isActiveRunV3(candidate.activeRun));
 }
 
 function isSaveV4(value: unknown): value is SaveV4 {
   if (!value || typeof value !== 'object') return false;
   const candidate = value as Partial<SaveV4>;
-  return candidate.version === 4
-    && isMeta(candidate)
-    && (candidate.activeRun === null || isActiveRunV4(candidate.activeRun));
+  return candidate.version === 4 && isMeta(candidate) && (candidate.activeRun === null || isActiveRunV4(candidate.activeRun));
+}
+
+function isSaveV5(value: unknown): value is SaveV5 {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as Partial<SaveV5>;
+  return candidate.version === 5 && isMeta(candidate) && (candidate.activeRun === null || isActiveRunV5(candidate.activeRun));
 }
 
 function isMeta(value: {
@@ -205,17 +231,20 @@ function isActiveRunV2(value: unknown): value is ActiveRunSaveV2 {
 }
 
 function isActiveRunV3(value: unknown): value is ActiveRunSaveV3 {
-  if (!isActiveRunV2(value)) return false;
-  return isStringArray((value as Partial<ActiveRunSaveV3>).claimedEncounterIds);
+  return isActiveRunV2(value) && isStringArray((value as Partial<ActiveRunSaveV3>).claimedEncounterIds);
 }
 
-function isActiveRunV4(value: unknown): value is ActiveRunSave {
+function isActiveRunV4(value: unknown): value is ActiveRunSaveV4 {
   if (!isActiveRunV3(value)) return false;
-  const candidate = value as Partial<ActiveRunSave>;
+  const candidate = value as Partial<ActiveRunSaveV4>;
   return isStringArray(candidate.selectedPerkIds)
     && isNonNegativeInteger(candidate.perkChoiceIndex)
     && isStringArray(candidate.pendingPerkOfferIds)
     && isStringArray(candidate.offeredPerkEncounterIds);
+}
+
+function isActiveRunV5(value: unknown): value is ActiveRunSave {
+  return isActiveRunV4(value) && isRunProgressState((value as Partial<ActiveRunSave>).progress);
 }
 
 function isPlacedItem(value: unknown): value is PlacedItem {
