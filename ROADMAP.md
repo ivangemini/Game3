@@ -33,13 +33,12 @@
 - [x] Rendered normal test enemy with live HP/shield/poison HUD
 - [x] Start/restart combat from the current backpack snapshot
 - [x] Lightweight hit/outcome feedback with reduced-motion behavior
-- [x] First boss prototype: TV Tyrant with deterministic Channel Jam
-- [x] Boss telegraph event before interference impact
-- [x] Jammed items lose scheduled triggers in domain simulation, not just visually
+- [x] TV Tyrant interference 1: deterministic Channel Jam with telegraph
+- [x] TV Tyrant interference 2: Slime Signal targets an occupied backpack cell, telegraphs it, then suppresses touching item triggers
+- [x] Slime Signal is visualized directly over the backpack grid
 - [x] Victory rewards feed the real run/shop economy
 - [x] Encounter rewards are claim-once per run and persisted
-- [ ] Second TV Tyrant interference: slime/block backpack cells
-- [ ] Third TV Tyrant interference: telegraphed row scramble / magnet displacement
+- [ ] TV Tyrant interference 3: telegraphed row scramble / magnet displacement
 - [ ] Audio hooks
 
 **Gate:** one full mini-run is understandable and fun.

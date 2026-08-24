@@ -1,4 +1,4 @@
-import type { InventoryState } from './inventory';
+import { cellsForPlacement, type InventoryState } from './inventory';
 import {
   createCombatBuildItem,
   type CombatItemProfile,
@@ -36,7 +36,12 @@ export function createCombatBuild(
     );
     items.set(
       placement.instanceId,
-      createCombatBuildItem(placement.instanceId, profile, bonuses),
+      createCombatBuildItem(
+        placement.instanceId,
+        profile,
+        bonuses,
+        cellsForPlacement(definition, placement.origin, placement.rotation),
+      ),
     );
   }
 
