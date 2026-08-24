@@ -55,7 +55,7 @@
 - [x] Campaign clear decision: cash out or keep the current build
 - [x] Endless mode foundation with scaling HP/damage/reward multiplier and a corrupted boss every fifth wave
 - [x] Best Endless wave persisted in meta save
-- [ ] world modifier system
+- [x] Seeded world mutation system with six prototype risk/reward rules that modify real encounter stats and payouts
 - [ ] lightweight events between selected encounters
 - [ ] target pacing validation: first boss 3–5 min, base run 12–18 min, strong session 20–40+ min
 
