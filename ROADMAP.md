@@ -1,21 +1,23 @@
 # Game3 Roadmap
 
-## P0 — Foundation [IN PROGRESS]
+## P0 — Foundation [DONE]
 - [x] Product concept and scope boundaries
 - [x] Agent operating manual
 - [x] Specialized design/gameplay/animation/economy/web/QA skills
 - [x] Architecture + art direction sources of truth
-- [ ] Phaser/Vite/TypeScript scaffold
-- [ ] CI quality gates
+- [x] Phaser/Vite/TypeScript scaffold
+- [x] CI quality gates
 
-## P1 — Backpack vertical slice
-- [ ] Deterministic grid/shape/rotation placement
-- [ ] Mouse + touch drag/drop
-- [ ] Valid/invalid cell preview
-- [ ] 8–10 prototype items
-- [ ] 4 prototype synergies
+## P1 — Backpack vertical slice [IN PROGRESS]
+- [x] Deterministic grid/shape/rotation placement
+- [x] Mouse + touch drag/drop foundation
+- [x] Valid/invalid cell preview and snap-back
+- [x] Selected-item rotation with placement validation
+- [x] 8 prototype absurd-junk items
+- [ ] 4 real gameplay synergies (currently visual labels only)
 - [ ] Basic shop/reward choice
-- [ ] Save current settings/progress locally
+- [ ] Save current run/settings/progress locally
+- [ ] Full interaction/animation polish pass
 
 **Gate:** arranging items is satisfying before combat exists.
 
