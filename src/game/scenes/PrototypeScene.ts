@@ -58,14 +58,12 @@ export class PrototypeScene extends Phaser.Scene {
       },
     });
 
-    if (!hadActiveRun) {
-      const boardSnapshot = board.getSnapshot();
-      activeRun = {
-        ...activeRun,
-        backpackItems: boardSnapshot.items,
-        nextLootSequence: boardSnapshot.nextLootSequence,
-      };
-    }
+    const boardSnapshot = board.getSnapshot();
+    activeRun = {
+      ...activeRun,
+      backpackItems: boardSnapshot.items,
+      nextLootSequence: boardSnapshot.nextLootSequence,
+    };
 
     this.drawBossPanel();
     this.drawSynergies();
