@@ -30,10 +30,13 @@
 - [x] Item trigger system consuming backpack-derived speed/poison/laser/chaos/armor bonuses
 - [x] Poison tick clock, stable equal-time effect ordering and victory/defeat outcomes
 - [x] Presentation-event stream for Phaser VFX/UI without putting rules in the scene
-- [ ] Render one normal enemy and live combat HUD
+- [x] Rendered normal test enemy with live HP/shield/poison HUD
+- [x] Start/restart combat from the current backpack snapshot
+- [x] Lightweight hit/outcome feedback with reduced-motion behavior
 - [ ] One full boss: TV/Junk Magnet-style inventory interference
-- [ ] Telegraphs, impacts, VFX/audio hooks
-- [ ] Win/loss/result flow
+- [ ] Boss telegraphs and backpack-mutation impacts
+- [ ] Audio hooks
+- [ ] Win/loss reward/result flow into the run
 
 **Gate:** one full mini-run is understandable and fun.
 

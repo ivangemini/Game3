@@ -1,45 +1,31 @@
-# Synergy Design
+# Synergy Design — Canonical Spatial Rules
 
 ## Goal
-Turn inventory placement into buildcraft. Items should combine into surprising but readable strategies.
+Turn backpack placement into buildcraft. A synergy is valuable because **where** an item is packed changes the build, not merely because two tags exist somewhere in the inventory.
 
-## Rules
-- A synergy must be understandable in under 3 seconds.
-- Each synergy has a visual signature.
-- Prefer tags over hardcoded pairs.
-- One item can participate in multiple builds.
+The source of truth is:
+- `docs/GAME_DESIGN.md`
+- `src/game/domain/synergies.ts`
 
-## Initial tags
-- electronic
-- animal
-- toxic
-- food
-- mechanical
-- chaos
-- magnet
-- fire
+`src/game/domain/synergy.ts` is only a compatibility re-export and must not grow a second rule engine.
 
-## Prototype recipes
+## Prototype contact rule
+A prototype synergy activates when the source and target occupy cells that touch **orthogonally by a side**. Diagonal proximity does not count.
 
-Laser Cat
-- cat + electronic
-- creates ranged laser attacks
+Implemented rules:
+- `CAT → LASER`: Cat gets +1 laser shot from an adjacent laser-compatible item.
+- `BATTERY → DEVICE`: adjacent Device triggers 25% faster.
+- `POISON → WEAPON`: adjacent Weapon applies +2 poison.
+- `DUCK → CHAOS`: Duck gains +1 chaos power from an adjacent Chaos item.
+- `MAGNET → METAL`: Magnet gains +1 scrap armor for each adjacent Metal item.
 
-Shock Toaster
-- toaster + battery
-- periodically shocks enemies
+## Design rules
+- Readable in under three seconds once the link is shown.
+- Visual link must explain source → target.
+- One item may participate in multiple valid links.
+- Some rules may stack when each extra contact creates a meaningful spatial tradeoff.
+- Global tag-count synergies may be added later, but they are a separate mechanic and must not silently replace spatial adjacency.
+- New rules require deterministic unit coverage.
 
-Toxic Duck
-- duck + toxic
-- creates poison puddles
-
-Fish Blaster
-- fish + weapon
-- random projectile pattern
-
-Chaos Engine
-- 3+ chaos tagged items
-- unpredictable bonus effects
-
-## Future
-Add discovery system, item encyclopedia, secret combinations and daily challenges.
+## Future extensions
+Directional arcs, row/column effects, fusion recipes, discovery/Itemdex and secret combinations can extend the system after the core spatial puzzle is proven fun.
