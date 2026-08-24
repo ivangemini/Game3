@@ -46,6 +46,7 @@ export class CombatPanel {
   private readonly statusText: Phaser.GameObjects.Text;
   private readonly eventLogText: Phaser.GameObjects.Text;
   private readonly eventLog: string[] = [];
+  private readonly backpackLockObjects: Phaser.GameObjects.GameObject[] = [];
   private setup: CombatSetup | null = null;
   private state: CombatState | null = null;
   private running = false;
@@ -100,7 +101,10 @@ export class CombatPanel {
     this.createFightButton(centerX + 98, centerY + 222, 'FIGHT DUMMY', SCRAP_DUMMY, 0x354157, 0x68a8ff);
     this.createFightButton(centerX + 270, centerY + 222, 'TV TYRANT', TV_TYRANT, 0x533152, 0xf06cff);
     scene.events.on('update', this.updateCombat, this);
-    scene.events.once('shutdown', () => scene.events.off('update', this.updateCombat, this));
+    scene.events.once('shutdown', () => {
+      scene.events.off('update', this.updateCombat, this);
+      this.setBackpackLocked(false);
+    });
     this.renderState();
   }
 
@@ -118,6 +122,7 @@ export class CombatPanel {
     const selectedPerks = this.getSelectedPerkIds();
     const build = createCombatBuild(inventory, PROTOTYPE_ITEM_MAP, PROTOTYPE_COMBAT_PROFILE_MAP, PROTOTYPE_PERK_MAP, selectedPerks);
     if (build.items.size === 0) { this.setStatus('No combat-capable junk in the backpack.', '#ff9aab'); return; }
+    this.setBackpackLocked(true);
     this.setup = { playerMaxHp: 100, items: build.items, enemy };
     this.state = createCombatState(this.setup);
     this.running = true;
@@ -138,16 +143,16 @@ export class CombatPanel {
     this.state = result.state;
     for (const event of result.events) this.consumeEvent(event);
     this.renderState();
-    if (this.state.outcome !== 'active') this.running = false;
+    if (this.state.outcome !== 'active') {
+      this.running = false;
+      this.setBackpackLocked(false);
+    }
   }
 
   private consumeEvent(event: CombatPresentationEvent): void {
     if (event.kind === 'item-triggered') { this.pushLog(`${this.seconds(event.atMs)} • ${event.itemInstanceId} triggered`); return; }
     if (event.kind === 'item-jammed') { this.pushLog(`${this.seconds(event.atMs)} • ${event.itemInstanceId} JAMMED — trigger lost`); return; }
-    if (event.kind === 'item-slimed') {
-      this.pushLog(`${this.seconds(event.atMs)} • ${event.itemInstanceId} blocked by SLIME [${event.cell.x},${event.cell.y}]`);
-      return;
-    }
+    if (event.kind === 'item-slimed') { this.pushLog(`${this.seconds(event.atMs)} • ${event.itemInstanceId} blocked by SLIME [${event.cell.x},${event.cell.y}]`); return; }
     if (event.kind === 'enemy-damaged') { this.pushLog(`${this.seconds(event.atMs)} • ${event.source === 'poison' ? 'POISON' : event.itemInstanceId} dealt ${event.amount}`); this.punchEnemy(0.96); return; }
     if (event.kind === 'poison-applied') { this.pushLog(`${this.seconds(event.atMs)} • +${event.amount} poison`); return; }
     if (event.kind === 'shield-gained') { this.pushLog(`${this.seconds(event.atMs)} • +${event.amount} shield`); return; }
@@ -193,19 +198,27 @@ export class CombatPanel {
     if (won && this.setup?.enemy.id === TV_TYRANT.id) this.onBossVictory?.(this.setup.enemy.id);
   }
 
+  private setBackpackLocked(locked: boolean): void {
+    for (const object of this.backpackLockObjects) object.destroy();
+    this.backpackLockObjects.length = 0;
+    if (!locked) return;
+    const { left, top, cellSize } = this.backpackGrid;
+    const width = cellSize * 6;
+    const height = cellSize * 5;
+    const shield = this.scene.add.rectangle(left + width / 2, top + height / 2, width, height, 0x080910, 0.08)
+      .setInteractive()
+      .setDepth(150);
+    const label = this.scene.add.text(left + width / 2, top - 13, 'COMBAT SNAPSHOT LOCKED', {
+      fontSize: '12px', color: '#ffcf69', fontStyle: 'bold', stroke: '#11121a', strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(151);
+    this.backpackLockObjects.push(shield, label);
+  }
+
   private showBackpackCell(cell: Cell, color: number, durationMs: number, telegraph: boolean): void {
     const { left, top, cellSize } = this.backpackGrid;
-    const overlay = this.scene.add.rectangle(
-      left + (cell.x + 0.5) * cellSize,
-      top + (cell.y + 0.5) * cellSize,
-      cellSize - 9,
-      cellSize - 9,
-      color,
-      telegraph ? 0.16 : 0.38,
-    ).setStrokeStyle(telegraph ? 4 : 5, color).setDepth(160);
-    if (!this.reducedMotion && telegraph) {
-      this.scene.tweens.add({ targets: overlay, alpha: 0.35, yoyo: true, repeat: -1, duration: 160 });
-    }
+    const overlay = this.scene.add.rectangle(left + (cell.x + 0.5) * cellSize, top + (cell.y + 0.5) * cellSize, cellSize - 9, cellSize - 9, color, telegraph ? 0.16 : 0.38)
+      .setStrokeStyle(telegraph ? 4 : 5, color).setDepth(160);
+    if (!this.reducedMotion && telegraph) this.scene.tweens.add({ targets: overlay, alpha: 0.35, yoyo: true, repeat: -1, duration: 160 });
     this.scene.time.delayedCall(durationMs, () => overlay.destroy());
   }
 
