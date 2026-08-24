@@ -145,7 +145,7 @@ export class PrototypeScene extends Phaser.Scene {
           runPanel.refresh('Defeat. Repack or shop, then retry the same encounter.');
           return;
         }
-        const current = getRunEncounter(activeRun.progress);
+        const current = getRunEncounter(activeRun.progress, activeRun.runSeed);
         if (!current || current.encounterId !== encounterId) return;
         const completedEndlessWave = activeRun.progress.mode === 'endless' ? activeRun.progress.endlessWave : 0;
         activeRun = {
@@ -164,9 +164,10 @@ export class PrototypeScene extends Phaser.Scene {
 
     runPanel = new RunProgressPanel(this, 570, 225, {
       getProgress: () => activeRun.progress,
+      getEncounter: () => getRunEncounter(activeRun.progress, activeRun.runSeed),
       onStartEncounter: (encounter) => {
         if (activeRun.pendingPerkOfferIds.length > 0 || combatPanel.isRunning()) return false;
-        const current = getRunEncounter(activeRun.progress);
+        const current = getRunEncounter(activeRun.progress, activeRun.runSeed);
         if (!current || current.encounterId !== encounter.encounterId) return false;
         return combatPanel.startEncounter(encounter.encounterId, encounter.enemy, encounter.rewardCoins);
       },

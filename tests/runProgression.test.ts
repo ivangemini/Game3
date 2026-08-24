@@ -7,7 +7,12 @@ import {
   registerRunVictory,
   worldForCampaignEncounter,
 } from '../src/game/domain/runProgression';
-import { CAMPAIGN_ENCOUNTERS, createEndlessEncounter, getRunEncounter } from '../src/game/data/runEncounters';
+import {
+  CAMPAIGN_ENCOUNTERS,
+  createEndlessEncounter,
+  getRunEncounter,
+  modifierForWorld,
+} from '../src/game/data/runEncounters';
 
 describe('run progression', () => {
   it('uses three worlds with three encounters each', () => {
@@ -21,15 +26,34 @@ describe('run progression', () => {
   it('reaches the cashout decision only after the ninth campaign victory', () => {
     let progress = createInitialRunProgress();
     for (let index = 0; index < 8; index += 1) {
-      const encounter = getRunEncounter(progress);
+      const encounter = getRunEncounter(progress, 'route-seed');
       expect(encounter).not.toBeNull();
       progress = registerRunVictory(progress, encounter?.scoreValue ?? 0);
       expect(progress.mode).toBe('campaign');
     }
-    const finale = getRunEncounter(progress);
+    const finale = getRunEncounter(progress, 'route-seed');
     expect(finale?.encounterId).toBe('w3-final-broadcast');
     progress = registerRunVictory(progress, finale?.scoreValue ?? 0);
     expect(progress.mode).toBe('cashout');
+  });
+
+  it('keeps one deterministic mutation for every encounter in the same world', () => {
+    const worldOneMutation = modifierForWorld('same-seed', 1);
+    expect(modifierForWorld('same-seed', 1)).toEqual(worldOneMutation);
+
+    const first = getRunEncounter(createInitialRunProgress(), 'same-seed');
+    const secondProgress = registerRunVictory(createInitialRunProgress(), 0);
+    const second = getRunEncounter(secondProgress, 'same-seed');
+    expect(first?.modifier.id).toBe(worldOneMutation.id);
+    expect(second?.modifier.id).toBe(worldOneMutation.id);
+  });
+
+  it('applies mutation risk and reward to actual encounter values', () => {
+    const encounter = getRunEncounter(createInitialRunProgress(), 'mutation-test');
+    expect(encounter).not.toBeNull();
+    expect(encounter?.modifier.name.length).toBeGreaterThan(0);
+    expect(encounter?.rewardCoins).toBeGreaterThan(0);
+    expect(encounter?.enemy.maxHp).toBeGreaterThan(0);
   });
 
   it('enters endless at wave one and scales difficulty/rewards', () => {
@@ -39,8 +63,8 @@ describe('run progression', () => {
     expect(progress.mode).toBe('endless');
     expect(progress.endlessWave).toBe(1);
 
-    const wave1 = createEndlessEncounter(1);
-    const wave10 = createEndlessEncounter(10);
+    const wave1 = createEndlessEncounter(1, 'endless-seed');
+    const wave10 = createEndlessEncounter(10, 'endless-seed');
     expect(wave10.enemy.maxHp).toBeGreaterThan(wave1.enemy.maxHp);
     expect(wave10.rewardCoins).toBeGreaterThan(wave1.rewardCoins);
     expect(wave10.kind).toBe('boss');

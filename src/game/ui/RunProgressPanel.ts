@@ -1,9 +1,10 @@
 import * as Phaser from 'phaser';
-import { campaignLabel, getRunEncounter, type RunEncounterDefinition } from '../data/runEncounters';
+import { campaignLabel, type RunEncounterDefinition } from '../data/runEncounters';
 import type { RunProgressState } from '../domain/runProgression';
 
 export interface RunProgressPanelOptions {
   readonly getProgress: () => RunProgressState;
+  readonly getEncounter: () => RunEncounterDefinition | null;
   readonly onStartEncounter: (encounter: RunEncounterDefinition) => boolean;
   readonly onEnterEndless: () => void;
   readonly onCashOut: () => void;
@@ -16,6 +17,7 @@ export class RunProgressPanel {
   private readonly subtitleText: Phaser.GameObjects.Text;
   private readonly rewardText: Phaser.GameObjects.Text;
   private readonly scoreText: Phaser.GameObjects.Text;
+  private readonly mutationText: Phaser.GameObjects.Text;
   private readonly statusText: Phaser.GameObjects.Text;
   private readonly actionObjects: Phaser.GameObjects.GameObject[] = [];
 
@@ -34,8 +36,11 @@ export class RunProgressPanel {
     this.subtitleText = scene.add.text(left + 14, top + 126, '', {
       fontSize: '11px', color: '#aaa5b2', lineSpacing: 3, wordWrap: { width: 172 },
     });
-    this.rewardText = scene.add.text(left + 14, top + 198, '', { fontSize: '12px', color: '#ffd56e' });
-    this.scoreText = scene.add.text(left + 14, top + 224, '', { fontSize: '12px', color: '#cfa8ff' });
+    this.rewardText = scene.add.text(left + 14, top + 190, '', { fontSize: '12px', color: '#ffd56e' });
+    this.scoreText = scene.add.text(left + 14, top + 214, '', { fontSize: '12px', color: '#cfa8ff' });
+    this.mutationText = scene.add.text(left + 14, top + 238, '', {
+      fontSize: '10px', color: '#7edfff', fontStyle: 'bold', wordWrap: { width: 172 },
+    });
     this.statusText = scene.add.text(left + 14, top + 326, '', {
       fontSize: '10px', color: '#8e8998', wordWrap: { width: 172 },
     });
@@ -56,8 +61,9 @@ export class RunProgressPanel {
       this.encounterText.setText('Take the win or keep the build alive.');
       this.subtitleText.setText('Endless scales every wave. Every 5th wave is a corrupted boss.');
       this.rewardText.setText('ENDLESS START  ×1.50 rewards');
-      this.createActionButton(this.left + 100, this.top + 270, 'ENTER ENDLESS', 0x49305a, 0xd47cff, () => this.options.onEnterEndless());
-      this.createActionButton(this.left + 100, this.top + 310, 'CASH OUT', 0x33432a, 0xa8ff68, () => this.options.onCashOut());
+      this.mutationText.setText('Mutations keep changing in Endless blocks.');
+      this.createActionButton(this.left + 100, this.top + 280, 'ENTER ENDLESS', 0x49305a, 0xd47cff, () => this.options.onEnterEndless());
+      this.createActionButton(this.left + 100, this.top + 316, 'CASH OUT', 0x33432a, 0xa8ff68, () => this.options.onCashOut());
       return;
     }
 
@@ -65,19 +71,21 @@ export class RunProgressPanel {
       this.titleText.setText('RUN COMPLETE');
       this.stageText.setText('SCORE LOCKED');
       this.encounterText.setText('This run is finished.');
-      this.subtitleText.setText('Start a new run to chase a different backpack and perk path.');
+      this.subtitleText.setText('Start a new run to chase a different backpack, mutation and perk path.');
       this.rewardText.setText('');
+      this.mutationText.setText('');
       return;
     }
 
-    const encounter = getRunEncounter(progress);
+    const encounter = this.options.getEncounter();
     if (!encounter) return;
     this.titleText.setText(progress.mode === 'endless' ? 'ENDLESS' : 'RUN');
     this.stageText.setText(progress.mode === 'campaign' ? campaignLabel(progress.campaignEncounterIndex) : `WAVE ${progress.endlessWave}`);
     this.encounterText.setText(encounter.title.toUpperCase());
     this.subtitleText.setText(encounter.subtitle);
     this.rewardText.setText(`REWARD  +${encounter.rewardCoins} coins`);
-    this.createActionButton(this.left + 100, this.top + 282, progress.mode === 'endless' ? `START WAVE ${progress.endlessWave}` : 'START ENCOUNTER', 0x3a324d, 0xb96cff, () => {
+    this.mutationText.setText(`MUTATION • ${encounter.modifier.name}\n${encounter.modifier.description}`);
+    this.createActionButton(this.left + 100, this.top + 286, progress.mode === 'endless' ? `START WAVE ${progress.endlessWave}` : 'START ENCOUNTER', 0x3a324d, 0xb96cff, () => {
       const started = this.options.onStartEncounter(encounter);
       this.statusText.setText(started ? 'Fight running — backpack snapshot locked.' : 'Cannot start now. Finish the current choice/fight first.');
     });
@@ -94,7 +102,7 @@ export class RunProgressPanel {
     stroke: number,
     onClick: () => void,
   ): void {
-    const button = this.scene.add.rectangle(x, y, 170, 32, fill, 1).setStrokeStyle(2, stroke).setInteractive({ useHandCursor: true });
+    const button = this.scene.add.rectangle(x, y, 170, 30, fill, 1).setStrokeStyle(2, stroke).setInteractive({ useHandCursor: true });
     const label = this.scene.add.text(x, y, labelText, { fontSize: '11px', color: '#f7f2e8', fontStyle: 'bold' }).setOrigin(0.5);
     button.on('pointerover', () => button.setAlpha(0.82));
     button.on('pointerout', () => button.setAlpha(1));
