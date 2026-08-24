@@ -1,13 +1,11 @@
 import * as Phaser from 'phaser';
-import { PROTOTYPE_ITEM_MAP } from '../data/items';
+import { PROTOTYPE_ITEM_MAP, PROTOTYPE_ITEMS } from '../data/items';
 import { BackpackBoard } from '../ui/BackpackBoard';
+import { ShopPanel } from '../ui/ShopPanel';
 
 const COLORS = {
   background: 0x0b0d13,
   panelAlt: 0x211d28,
-  lime: 0xa8ff55,
-  purple: 0xc36cff,
-  orange: 0xff9838,
   danger: 0xff4f64,
   text: '#f7f2e8',
   muted: '#aaa5b2',
@@ -21,10 +19,10 @@ export class PrototypeScene extends Phaser.Scene {
   create(): void {
     this.cameras.main.setBackgroundColor(COLORS.background);
     this.drawHeader();
-    new BackpackBoard(this, PROTOTYPE_ITEM_MAP, 90, 225);
+    const board = new BackpackBoard(this, PROTOTYPE_ITEM_MAP, 90, 225);
     this.drawBossPanel();
     this.drawSynergies();
-    this.drawFooter();
+    new ShopPanel(this, PROTOTYPE_ITEMS, 90, 735, (definitionId) => board.addRewardItem(definitionId));
   }
 
   private drawHeader(): void {
@@ -45,7 +43,7 @@ export class PrototypeScene extends Phaser.Scene {
     }).setOrigin(0.5, 0);
 
     this.add.text(48, 38, 'SCRAPSTER', { fontSize: '25px', color: COLORS.text, fontStyle: 'bold' });
-    this.add.text(48, 73, '♥ 96 / 100     ◈ 312', { fontSize: '22px', color: '#ff6578' });
+    this.add.text(48, 73, '♥ 96 / 100', { fontSize: '22px', color: '#ff6578' });
     this.add.text(1370, 48, 'BOSS  •  ROUND 1', { fontSize: '25px', color: '#ff7083', fontStyle: 'bold' });
   }
 
@@ -91,19 +89,5 @@ export class PrototypeScene extends Phaser.Scene {
       fontSize: '16px',
       color: COLORS.muted,
     });
-  }
-
-  private drawFooter(): void {
-    const cards: Array<[number, string, string, number]> = [
-      [470, 'BIG POCKETS', '+4 usable cells', COLORS.lime],
-      [800, 'LASER PET', 'Cats fire twice', 0x56b9ff],
-      [1130, 'CHAOS COOKER', 'Creates weird junk', COLORS.orange],
-    ];
-
-    for (const [x, title, detail, color] of cards) {
-      this.add.rectangle(x, 815, 285, 104, 0x171a24, 1).setStrokeStyle(4, color);
-      this.add.text(x, 787, title, { fontSize: '20px', color: `#${color.toString(16).padStart(6, '0')}`, fontStyle: 'bold' }).setOrigin(0.5);
-      this.add.text(x, 827, detail, { fontSize: '17px', color: COLORS.text }).setOrigin(0.5);
-    }
   }
 }

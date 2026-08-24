@@ -16,7 +16,8 @@
 - [x] 8 prototype absurd-junk items
 - [x] 5 real side-contact gameplay synergies with deterministic derived bonuses
 - [x] Live synergy links, active-link badges and activation feedback
-- [ ] Basic shop/reward choice
+- [x] Basic seeded shop/reward choice with run currency and deterministic rerolls
+- [x] Purchased junk enters the real backpack through deterministic legal placement
 - [ ] Save current run/settings/progress locally
 - [ ] Full interaction/animation polish pass
 

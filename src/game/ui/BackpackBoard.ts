@@ -1,6 +1,7 @@
 import * as Phaser from 'phaser';
 import {
   cellsForPlacement,
+  findFirstValidPlacement,
   rotateShape,
   validatePlacement,
   type InventoryState,
@@ -64,6 +65,7 @@ export class BackpackBoard {
   private readonly statusText: Phaser.GameObjects.Text;
   private readonly synergyGraphics: Phaser.GameObjects.Graphics;
   private selectedInstanceId: string | null = null;
+  private nextLootSequence = 1;
   private state: InventoryState;
   private synergySnapshot: SynergySnapshot;
 
@@ -99,6 +101,28 @@ export class BackpackBoard {
 
     for (const item of this.state.items) this.createItemView(item);
     this.refreshSynergies(false);
+  }
+
+  addRewardItem(definitionId: string): boolean {
+    const definition = this.definitions.get(definitionId);
+    if (!definition) throw new Error(`Unknown reward item definition: ${definitionId}`);
+
+    const instanceId = `loot-${this.nextLootSequence}-${definitionId}`;
+    const placement = findFirstValidPlacement(this.state, this.definitions, definitionId, instanceId);
+    if (!placement) {
+      this.setStatus(`No legal space for ${definition.name}. Rearrange the backpack first.`, '#ffbd72');
+      return false;
+    }
+
+    this.nextLootSequence += 1;
+    this.state = { ...this.state, items: [...this.state.items, placement] };
+    this.createItemView(placement);
+    const newConnections = this.refreshSynergies(true);
+    const synergyText = newConnections.length > 0
+      ? ` • ${newConnections.length} new synergy link${newConnections.length === 1 ? '' : 's'}`
+      : '';
+    this.setStatus(`${definition.name} auto-packed${synergyText}.`, '#b8ff8e');
+    return true;
   }
 
   private initialItems(): PlacedItem[] {

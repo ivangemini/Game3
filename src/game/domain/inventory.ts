@@ -79,3 +79,31 @@ export function validatePlacement(
 
   return { ok: true, occupiedCells: candidateCells };
 }
+
+export function findFirstValidPlacement(
+  state: InventoryState,
+  definitions: ReadonlyMap<string, ItemDefinition>,
+  definitionId: string,
+  instanceId: string,
+): PlacedItem | null {
+  if (!definitions.has(definitionId)) {
+    throw new Error(`Unknown item definition: ${definitionId}`);
+  }
+
+  const rotations: readonly (0 | 1 | 2 | 3)[] = [0, 1, 2, 3];
+  for (const rotation of rotations) {
+    for (let y = 0; y < state.height; y += 1) {
+      for (let x = 0; x < state.width; x += 1) {
+        const candidate: PlacedItem = {
+          instanceId,
+          definitionId,
+          origin: { x, y },
+          rotation,
+        };
+        if (validatePlacement(state, definitions, candidate).ok) return candidate;
+      }
+    }
+  }
+
+  return null;
+}

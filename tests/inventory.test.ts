@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeShape, rotateShape, validatePlacement } from '../src/game/domain/inventory';
+import {
+  findFirstValidPlacement,
+  normalizeShape,
+  rotateShape,
+  validatePlacement,
+} from '../src/game/domain/inventory';
 import type { ItemDefinition, PlacedItem } from '../src/game/domain/types';
 
 const lItem: ItemDefinition = {
@@ -25,5 +30,21 @@ describe('inventory geometry', () => {
     expect(validatePlacement(state, definitions, { instanceId: 'two', definitionId: 'l-item', origin: { x: 0, y: 0 }, rotation: 0 }).reason).toBe('occupied');
     expect(validatePlacement(state, definitions, { instanceId: 'two', definitionId: 'l-item', origin: { x: 4, y: 3 }, rotation: 0 }).reason).toBe('blocked');
     expect(validatePlacement(state, definitions, { instanceId: 'two', definitionId: 'l-item', origin: { x: 2, y: 1 }, rotation: 1 }).ok).toBe(true);
+  });
+
+  it('finds the first deterministic legal placement across rotations', () => {
+    const state = {
+      width: 3,
+      height: 2,
+      blockedCells: [{ x: 0, y: 0 }, { x: 0, y: 1 }],
+      items: [] as readonly PlacedItem[],
+    } as const;
+
+    expect(findFirstValidPlacement(state, definitions, 'l-item', 'loot')).toEqual({
+      instanceId: 'loot',
+      definitionId: 'l-item',
+      origin: { x: 1, y: 0 },
+      rotation: 0,
+    });
   });
 });
