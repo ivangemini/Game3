@@ -1,4 +1,4 @@
-# Architecture v0.2
+# Architecture v0.3
 
 ## Stack
 - Phaser 4.2.1
@@ -10,13 +10,13 @@ Phaser 4 uses namespace imports from npm (`import * as Phaser from 'phaser'`).
 
 ## Layers
 ### `src/game/domain/`
-Pure TypeScript simulation and rules. No Phaser imports. Inventory geometry, seeded shop generation, synergies, RNG, item/effect data structures, recipes, combat resolution and run state belong here.
+Pure TypeScript simulation and rules. No Phaser imports. Inventory geometry, seeded shop generation, synergies, RNG, combat/effect ordering and run state belong here.
 
 ### `src/game/data/`
-Declarative content: items, bosses, perks, balance tables. Stable IDs only.
+Declarative content: items, combat profiles, enemies, bosses, perks and balance tables. Stable IDs only.
 
 ### `src/game/scenes/`
-Phaser presentation/orchestration. Scenes translate domain state into visuals/input and coordinate persistence without making persistence the source of gameplay rules.
+Phaser presentation/orchestration. Scenes translate domain state into visuals/input and coordinate persistence without making presentation the source of gameplay rules.
 
 ### `src/game/ui/`
 Reusable game UI components/widgets. Components expose serializable state snapshots rather than scene-object references.
@@ -32,6 +32,20 @@ All run-affecting randomness comes from a seeded RNG instance passed to systems.
 
 ## Inventory rules
 Backpack geometry and synergy evaluation are deterministic domain rules. UI coordinates never determine whether an item fits or whether a synergy is active. Purchased prototype junk uses deterministic first-fit placement until a dedicated staging tray is promoted.
+
+## Combat
+`src/game/domain/combat.ts` owns the combat clock and ordered effect queue. The queue resolves by `dueAtMs`, then stable `sequence`, so equal-time effects have a documented deterministic order.
+
+The render loop passes explicit elapsed milliseconds to `advanceCombat`; render FPS never determines trigger count, damage or outcome. A single large advance and many smaller advances over the same simulated duration must converge to the same state.
+
+Backpack effects are converted into combat stats before simulation:
+- Battery synergy modifies trigger interval;
+- Poison adds poison-on-hit;
+- Cat/Laser adds additional laser shots;
+- Duck/Chaos adds provisional chaos damage;
+- Magnet/Metal scrap armor becomes opening shield.
+
+Combat emits presentation events (`item-triggered`, damage, poison, shield, player hit, outcome). Phaser consumes those events for animation/audio/UI but cannot modify the combat result through presentation timing.
 
 ## Time
 Simulation receives explicit delta/ticks. Do not encode damage or trigger counts directly from render FPS.
@@ -58,4 +72,4 @@ Capabilities may include init, player identity when available, locale, storage/c
 Use generated/source art → reviewed final exports → atlases where beneficial. Keep source assets separate from runtime-optimized assets. Never bind gameplay rules to filename semantics.
 
 ## Quality gates
-Typecheck + unit tests + production build on every main-branch push. Browser smoke verification is added once the first interactive scene lands.
+Typecheck + unit tests + production build on every main-branch push. Browser smoke verification is required once a connected/runnable browser environment is available.

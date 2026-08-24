@@ -20,14 +20,17 @@
 - [x] Purchased junk enters the real backpack through deterministic legal placement
 - [x] Save/restore current run: backpack, rotations, loot sequence, seed, coins, shop step and sold offers
 - [x] Versioned save v2 with v1 migration and corrupted-data fallback
-- [ ] Full interaction/animation polish pass
+- [ ] Final interaction polish against real runtime/assets
 
-**Gate:** arranging items is satisfying before combat exists.
+**Gate:** arranging items is satisfying before combat exists. Current prototype has drag lift, placement previews, elastic snap, invalid-action feedback and synergy activation feedback; final polish remains tied to runtime visual review.
 
-## P2 — Combat vertical slice
-- [ ] Deterministic combat clock/effect queue
-- [ ] Player HP/defense and item trigger system
-- [ ] One normal enemy
+## P2 — Combat vertical slice [IN PROGRESS]
+- [x] Deterministic combat clock/effect queue independent of render FPS
+- [x] Player HP/shield, enemy HP and recurring enemy attacks in domain logic
+- [x] Item trigger system consuming backpack-derived speed/poison/laser/chaos/armor bonuses
+- [x] Poison tick clock, stable equal-time effect ordering and victory/defeat outcomes
+- [x] Presentation-event stream for Phaser VFX/UI without putting rules in the scene
+- [ ] Render one normal enemy and live combat HUD
 - [ ] One full boss: TV/Junk Magnet-style inventory interference
 - [ ] Telegraphs, impacts, VFX/audio hooks
 - [ ] Win/loss/result flow
