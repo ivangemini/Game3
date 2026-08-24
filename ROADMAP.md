@@ -19,7 +19,7 @@
 - [x] Basic seeded shop/reward choice with run currency and deterministic rerolls
 - [x] Purchased junk enters the real backpack through deterministic legal placement
 - [x] Save/restore current run: backpack, rotations, loot sequence, seed, coins, shop step and sold offers
-- [x] Versioned save v3 with v1/v2 migrations, encounter claims and corrupted-data fallback
+- [x] Versioned save v4 with v1/v2/v3 migrations, encounter claims and perk state
 - [ ] Final interaction polish against real runtime/assets
 
 **Gate:** arranging items is satisfying before combat exists. Current prototype has drag lift, placement previews, elastic snap, invalid-action feedback and synergy activation feedback; final polish remains tied to runtime visual review.
@@ -44,9 +44,12 @@
 
 **Gate:** one full mini-run is understandable and fun.
 
-## P3 — Roguelite run [NEXT]
+## P3 — Roguelite run [IN PROGRESS]
 - [x] Seeded shops/rewards foundation
-- [ ] 3-choice perk flow after boss victory
+- [x] Deterministic 3-choice perk generation excluding already-owned perks
+- [x] Boss-victory perk overlay with persisted pending choice
+- [x] Six prototype perks that modify tagged combat items
+- [x] Selected perks persist and affect subsequent combat snapshots
 - [ ] world modifier system
 - [ ] events
 - [ ] run end + restart
