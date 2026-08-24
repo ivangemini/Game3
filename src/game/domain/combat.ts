@@ -22,12 +22,20 @@ export interface CombatBuildItem {
   readonly scrapArmor: number;
 }
 
+export interface EnemyInterferenceDefinition {
+  readonly kind: 'channel-jam';
+  readonly intervalMs: number;
+  readonly telegraphMs: number;
+  readonly durationMs: number;
+}
+
 export interface EnemyCombatDefinition {
   readonly id: string;
   readonly name: string;
   readonly maxHp: number;
   readonly attackIntervalMs: number;
   readonly attackDamage: number;
+  readonly interference?: EnemyInterferenceDefinition;
 }
 
 export type CombatOutcome = 'active' | 'victory' | 'defeat';
@@ -48,11 +56,28 @@ export type CombatQueuedEffect =
       readonly kind: 'poison-tick';
       readonly dueAtMs: number;
       readonly sequence: number;
+    }
+  | {
+      readonly kind: 'boss-telegraph';
+      readonly dueAtMs: number;
+      readonly sequence: number;
+      readonly itemInstanceId: string;
+    }
+  | {
+      readonly kind: 'boss-interference';
+      readonly dueAtMs: number;
+      readonly sequence: number;
+      readonly itemInstanceId: string;
     };
 
 export type CombatPresentationEvent =
   | {
       readonly kind: 'item-triggered';
+      readonly atMs: number;
+      readonly itemInstanceId: string;
+    }
+  | {
+      readonly kind: 'item-jammed';
       readonly atMs: number;
       readonly itemInstanceId: string;
     }
@@ -82,6 +107,18 @@ export type CombatPresentationEvent =
       readonly absorbedByShield: number;
     }
   | {
+      readonly kind: 'boss-telegraph';
+      readonly atMs: number;
+      readonly itemInstanceId: string;
+      readonly impactAtMs: number;
+    }
+  | {
+      readonly kind: 'boss-jammed';
+      readonly atMs: number;
+      readonly itemInstanceId: string;
+      readonly durationMs: number;
+    }
+  | {
       readonly kind: 'outcome';
       readonly atMs: number;
       readonly outcome: Exclude<CombatOutcome, 'active'>;
@@ -102,6 +139,7 @@ export interface CombatState {
   readonly outcome: CombatOutcome;
   readonly nextSequence: number;
   readonly queue: readonly CombatQueuedEffect[];
+  readonly jammedUntilByItemId: Readonly<Record<string, number>>;
 }
 
 export interface CombatAdvanceResult {
@@ -149,6 +187,7 @@ export function createCombatState(setup: CombatSetup): CombatState {
   if (setup.enemy.maxHp <= 0 || setup.enemy.attackIntervalMs <= 0 || setup.enemy.attackDamage < 0) {
     throw new RangeError('Enemy combat values are invalid');
   }
+  if (setup.enemy.interference) validateInterference(setup.enemy.interference);
 
   let nextSequence = 0;
   const queue: CombatQueuedEffect[] = [];
@@ -180,6 +219,15 @@ export function createCombatState(setup: CombatSetup): CombatState {
   });
   nextSequence += 1;
 
+  if (setup.enemy.interference) {
+    nextSequence = scheduleInterference(
+      queue,
+      setup,
+      setup.enemy.interference.intervalMs,
+      nextSequence,
+    );
+  }
+
   return {
     timeMs: 0,
     playerHp: Math.round(setup.playerMaxHp),
@@ -189,6 +237,7 @@ export function createCombatState(setup: CombatSetup): CombatState {
     outcome: 'active',
     nextSequence,
     queue: sortQueue(queue),
+    jammedUntilByItemId: {},
   };
 }
 
@@ -211,6 +260,7 @@ export function advanceCombat(
   let outcome: CombatOutcome = inputState.outcome;
   let nextSequence = inputState.nextSequence;
   const queue = [...inputState.queue];
+  const jammedUntilByItemId: Record<string, number> = { ...inputState.jammedUntilByItemId };
   const events: CombatPresentationEvent[] = [];
 
   while (queue.length > 0 && outcome === 'active') {
@@ -224,45 +274,50 @@ export function advanceCombat(
       const item = setup.items.get(nextEffect.itemInstanceId);
       if (!item) continue;
 
-      events.push({ kind: 'item-triggered', atMs, itemInstanceId: item.instanceId });
-      const chaosDamage = item.chaosPower * 2;
-      const laserDamage = item.bonusLaserShots * item.extraLaserDamage;
-      const totalDamage = item.damage + chaosDamage + laserDamage;
+      const jammedUntil = jammedUntilByItemId[item.instanceId] ?? 0;
+      if (jammedUntil > atMs) {
+        events.push({ kind: 'item-jammed', atMs, itemInstanceId: item.instanceId });
+      } else {
+        events.push({ kind: 'item-triggered', atMs, itemInstanceId: item.instanceId });
+        const chaosDamage = item.chaosPower * 2;
+        const laserDamage = item.bonusLaserShots * item.extraLaserDamage;
+        const totalDamage = item.damage + chaosDamage + laserDamage;
 
-      if (totalDamage > 0) {
-        enemyHp = Math.max(0, enemyHp - totalDamage);
-        events.push({
-          kind: 'enemy-damaged',
-          atMs,
-          itemInstanceId: item.instanceId,
-          amount: totalDamage,
-          source: 'item',
-        });
-      }
-      if (item.poisonOnHit > 0) {
-        enemyPoison += item.poisonOnHit;
-        events.push({
-          kind: 'poison-applied',
-          atMs,
-          itemInstanceId: item.instanceId,
-          amount: item.poisonOnHit,
-        });
-      }
-      if (item.shieldOnTrigger > 0) {
-        playerShield += item.shieldOnTrigger;
-        events.push({
-          kind: 'shield-gained',
-          atMs,
-          itemInstanceId: item.instanceId,
-          amount: item.shieldOnTrigger,
-        });
-      }
+        if (totalDamage > 0) {
+          enemyHp = Math.max(0, enemyHp - totalDamage);
+          events.push({
+            kind: 'enemy-damaged',
+            atMs,
+            itemInstanceId: item.instanceId,
+            amount: totalDamage,
+            source: 'item',
+          });
+        }
+        if (item.poisonOnHit > 0) {
+          enemyPoison += item.poisonOnHit;
+          events.push({
+            kind: 'poison-applied',
+            atMs,
+            itemInstanceId: item.instanceId,
+            amount: item.poisonOnHit,
+          });
+        }
+        if (item.shieldOnTrigger > 0) {
+          playerShield += item.shieldOnTrigger;
+          events.push({
+            kind: 'shield-gained',
+            atMs,
+            itemInstanceId: item.instanceId,
+            amount: item.shieldOnTrigger,
+          });
+        }
 
-      if (enemyHp <= 0) {
-        outcome = 'victory';
-        resolvedTimeMs = atMs;
-        events.push({ kind: 'outcome', atMs, outcome });
-        break;
+        if (enemyHp <= 0) {
+          outcome = 'victory';
+          resolvedTimeMs = atMs;
+          events.push({ kind: 'outcome', atMs, outcome });
+          break;
+        }
       }
 
       queue.push({
@@ -299,6 +354,37 @@ export function advanceCombat(
       continue;
     }
 
+    if (nextEffect.kind === 'boss-telegraph') {
+      const interference = setup.enemy.interference;
+      if (!interference) continue;
+      events.push({
+        kind: 'boss-telegraph',
+        atMs,
+        itemInstanceId: nextEffect.itemInstanceId,
+        impactAtMs: atMs + interference.telegraphMs,
+      });
+      continue;
+    }
+
+    if (nextEffect.kind === 'boss-interference') {
+      const interference = setup.enemy.interference;
+      if (!interference) continue;
+      jammedUntilByItemId[nextEffect.itemInstanceId] = atMs + interference.durationMs;
+      events.push({
+        kind: 'boss-jammed',
+        atMs,
+        itemInstanceId: nextEffect.itemInstanceId,
+        durationMs: interference.durationMs,
+      });
+      nextSequence = scheduleInterference(
+        queue,
+        setup,
+        atMs + interference.intervalMs,
+        nextSequence,
+      );
+      continue;
+    }
+
     if (enemyPoison > 0) {
       const poisonDamage = enemyPoison;
       enemyHp = Math.max(0, enemyHp - poisonDamage);
@@ -326,6 +412,10 @@ export function advanceCombat(
     nextSequence += 1;
   }
 
+  for (const [itemInstanceId, jammedUntil] of Object.entries(jammedUntilByItemId)) {
+    if (jammedUntil <= resolvedTimeMs) delete jammedUntilByItemId[itemInstanceId];
+  }
+
   return {
     state: {
       timeMs: resolvedTimeMs,
@@ -336,9 +426,67 @@ export function advanceCombat(
       outcome,
       nextSequence,
       queue: sortQueue(queue),
+      jammedUntilByItemId,
     },
     events,
   };
+}
+
+function validateInterference(interference: EnemyInterferenceDefinition): void {
+  if (
+    interference.intervalMs <= 0
+    || interference.telegraphMs < 0
+    || interference.durationMs <= 0
+    || interference.telegraphMs >= interference.intervalMs
+  ) {
+    throw new RangeError('Enemy interference values are invalid');
+  }
+}
+
+function scheduleInterference(
+  queue: CombatQueuedEffect[],
+  setup: CombatSetup,
+  impactAtMs: number,
+  nextSequence: number,
+): number {
+  const interference = setup.enemy.interference;
+  if (!interference) return nextSequence;
+
+  const targetIds = interferenceTargets(setup.items);
+  if (targetIds.length === 0) return nextSequence;
+  const cycleIndex = Math.max(0, Math.round(impactAtMs / interference.intervalMs) - 1);
+  const itemInstanceId = targetIds[cycleIndex % targetIds.length];
+  if (!itemInstanceId) return nextSequence;
+
+  queue.push({
+    kind: 'boss-telegraph',
+    dueAtMs: Math.max(0, impactAtMs - interference.telegraphMs),
+    sequence: nextSequence,
+    itemInstanceId,
+  });
+  nextSequence += 1;
+  queue.push({
+    kind: 'boss-interference',
+    dueAtMs: impactAtMs,
+    sequence: nextSequence,
+    itemInstanceId,
+  });
+  return nextSequence + 1;
+}
+
+function interferenceTargets(items: ReadonlyMap<string, CombatBuildItem>): string[] {
+  const meaningful = [...items.values()]
+    .filter((item) =>
+      item.damage > 0
+      || item.poisonOnHit > 0
+      || item.shieldOnTrigger > 0
+      || item.bonusLaserShots > 0
+      || item.chaosPower > 0,
+    )
+    .map((item) => item.instanceId)
+    .sort((a, b) => a.localeCompare(b));
+  if (meaningful.length > 0) return meaningful;
+  return [...items.keys()].sort((a, b) => a.localeCompare(b));
 }
 
 function sortQueue(queue: readonly CombatQueuedEffect[]): CombatQueuedEffect[] {

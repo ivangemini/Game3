@@ -58,3 +58,17 @@ export const SCRAP_DUMMY: EnemyCombatDefinition = {
   attackIntervalMs: 1900,
   attackDamage: 7,
 };
+
+export const TV_TYRANT: EnemyCombatDefinition = {
+  id: 'tv-tyrant',
+  name: 'TV Tyrant',
+  maxHp: 145,
+  attackIntervalMs: 2200,
+  attackDamage: 9,
+  interference: {
+    kind: 'channel-jam',
+    intervalMs: 4200,
+    telegraphMs: 800,
+    durationMs: 2300,
+  },
+};

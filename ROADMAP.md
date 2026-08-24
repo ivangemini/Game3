@@ -33,8 +33,11 @@
 - [x] Rendered normal test enemy with live HP/shield/poison HUD
 - [x] Start/restart combat from the current backpack snapshot
 - [x] Lightweight hit/outcome feedback with reduced-motion behavior
-- [ ] One full boss: TV/Junk Magnet-style inventory interference
-- [ ] Boss telegraphs and backpack-mutation impacts
+- [x] First boss prototype: TV Tyrant with deterministic Channel Jam
+- [x] Boss telegraph event before interference impact
+- [x] Jammed items lose scheduled triggers in domain simulation, not just visually
+- [ ] Second TV Tyrant interference: slime/block backpack cells
+- [ ] Third TV Tyrant interference: telegraphed row scramble / magnet displacement
 - [ ] Audio hooks
 - [ ] Win/loss reward/result flow into the run
 
