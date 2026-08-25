@@ -23,6 +23,7 @@ import {
   enterCorruptedLoop,
   registerRunVictory,
 } from '../domain/runProgression';
+import { createStandardRunSeed } from '../domain/runSeed';
 import { BackpackBoard } from '../ui/BackpackBoard';
 import { CollectionOverlay } from '../ui/CollectionOverlay';
 import { CombatFeedback } from '../ui/CombatFeedback';
@@ -46,7 +47,6 @@ import {
   type SaveV8,
 } from '../../persistence/save';
 
-const PROTOTYPE_RUN_SEED = 'prototype-run-001';
 const AUDIO_REGISTRY_KEY = 'junkpack.game-audio';
 const COLORS = { background: 0x0d1117, text: '#f7f2e8', muted: '#aaa5b2' } as const;
 
@@ -106,7 +106,8 @@ export class PrototypeScene extends Phaser.Scene {
       discoveredItemCount: save.discoveredItemIds.length,
       discoveredRecipeCount: save.discoveredRecipeIds.length,
     });
-    let activeRun: ActiveRunSave = save.activeRun ?? createFreshRun(PROTOTYPE_RUN_SEED);
+    let activeRun: ActiveRunSave = save.activeRun ?? createFreshRun(createStandardRunSeed());
+    if (!hadActiveRun) telemetry.track('run_started', { mode: 'standard' });
     const todayDaily = createDailyRunIdentity();
 
     const persistRun = (): void => {
@@ -445,6 +446,7 @@ export class PrototypeScene extends Phaser.Scene {
         if (combatPanel.isRunning() || eventOverlay.isVisible() || metaBlocked()
           || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return;
         activeRun = createFreshRun(todayDaily.seed);
+        telemetry.track('run_started', { mode: 'daily' });
         persistRun();
         this.scene.restart();
       },
