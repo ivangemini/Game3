@@ -8,10 +8,11 @@ export interface RunProgressState {
   readonly score: number;
 }
 
-export const CAMPAIGN_WORLDS = 4;
+export const CAMPAIGN_WORLDS = 6;
+export const LOOP_WORLDS = 4;
 export const ENCOUNTERS_PER_WORLD = 3;
 export const CAMPAIGN_ENCOUNTER_COUNT = CAMPAIGN_WORLDS * ENCOUNTERS_PER_WORLD;
-export const LOOP_ENCOUNTER_COUNT = CAMPAIGN_ENCOUNTER_COUNT;
+export const LOOP_ENCOUNTER_COUNT = LOOP_WORLDS * ENCOUNTERS_PER_WORLD;
 export const MAX_BASE_POCKET_UNLOCKS = 3;
 
 export function createInitialRunProgress(): RunProgressState {
