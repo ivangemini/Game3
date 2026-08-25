@@ -4,7 +4,7 @@ A web-first roguelite inventory autobattler / boss-rush about packing absurd jun
 
 ## Status
 
-Soft-launch candidate hardening. The complete deterministic campaign/Corrupted Loop gameplay stack, authored item/boss UI art pipeline, versioned recovery-safe saves, portal adapters/ads, telemetry foundation and automated quality gates are implemented. Remaining work is concentrated in real-device acceptance, portal tester compliance, final audio/presentation tuning and data-driven iteration. See `ROADMAP.md`.
+Soft-launch candidate hardening. The complete deterministic campaign/Corrupted Loop gameplay stack, authored item/boss UI art pipeline, versioned recovery-safe saves, portal adapters/ads, telemetry foundation and automated quality gates are implemented. Remaining work is concentrated in real-device acceptance, real portal tester compliance, final authored audio/presentation tuning and data-driven iteration. See `ROADMAP.md`.
 
 ## Stack
 
@@ -25,9 +25,10 @@ npm run test
 npm run build
 npm run test:e2e
 npm run release:check
+npm run release:verify
 ```
 
-`npm run build` regenerates and validates runtime atlases, portal store art and bundle budgets. The GitHub Actions browser matrix exercises Chromium, Firefox and WebKit across desktop, compact/mobile landscape and portrait-orientation profiles, including a broad runtime performance regression baseline.
+`npm run build` regenerates and validates runtime atlases, portal store art and bundle budgets. The GitHub Actions browser matrix exercises Chromium, Firefox and WebKit across desktop, compact/mobile landscape and portrait-orientation profiles, including runtime responsiveness/network regression smoke, one-click first launch, context-menu suppression and browser-level Yandex/CrazyGames bootstrap contracts.
 
 ## Portal candidate package
 
@@ -35,11 +36,13 @@ npm run release:check
 npm run release:package
 ```
 
-This produces `release/junkpack-boss-rush.zip` from the production `dist` directory plus `release/portal-package.json` containing the archive SHA-256, size and file manifest. Pushes to `main` also upload the same release directory as the `junkpack-portal-candidate` GitHub Actions artifact after quality/readiness checks pass.
+This builds the production app, runs release readiness checks, writes `release/junkpack-boss-rush.zip`, copies the generated icon/cover/hero art into `release/store/`, creates a v2 manifest with SHA-256 for the archive and every packaged runtime/store file, then unpacks and verifies the candidate. Pushes to `main` upload the verified `release/` directory as the `junkpack-portal-candidate` GitHub Actions artifact.
+
+Before a real upload, follow `docs/PORTAL_SUBMISSION.md`. It separates repository-enforced requirements from the checks that can only be completed in Yandex Draft/debug mode, CrazyGames Preview/SDK tester and physical devices.
 
 ## Portal QA overrides
 
-The platform layer normally auto-detects its host. For SDK/integration testing, use:
+The platform layer normally auto-detects its host using SDK globals or parsed portal hostnames. For SDK/integration testing, use:
 
 ```text
 ?platform=local
@@ -49,9 +52,13 @@ The platform layer normally auto-detects its host. For SDK/integration testing, 
 
 See `docs/PLATFORM_INTEGRATION.md` before changing SDK or ad behavior.
 
+## First launch
+
+A new player makes one meaningful choice — pick a Junk Pilot — and enters the run immediately. The five-step Field Manual is intentionally opt-in through `HELP` so onboarding does not front-load several modal clicks before the core backpack loop.
+
 ## Soft-launch analytics
 
-Telemetry is disabled externally unless `VITE_ANALYTICS_ENDPOINT` is configured. The client records an ephemeral session funnel for onboarding, hero choice, economy, combat pacing, events, fusion, loop depth and ad outcomes without a persistent user identity. See `.env.example` and `docs/ANALYTICS.md`.
+Telemetry is disabled externally unless `VITE_ANALYTICS_ENDPOINT` is configured. The client records an ephemeral session funnel for onboarding/help, hero choice, economy, combat pacing, events, fusion, loop depth and ad outcomes without a persistent user identity. See `.env.example` and `docs/ANALYTICS.md`.
 
 ## Agent workflow
 
@@ -70,5 +77,5 @@ Read `AGENTS.md` first. It routes work to specialized files in `skills/` and the
 - autoplay-safe adaptive audio with priority-aware music ducking and portal/ad pause-resume lifecycle;
 - branded loading/store-art pipelines and asset/bundle budgets;
 - privacy-minimal soft-launch telemetry and deterministic summary tooling;
-- unit/domain tests plus multi-browser Playwright release/performance smoke coverage;
-- CI-built portal candidate ZIP with integrity manifest.
+- unit/domain tests plus multi-browser Playwright release/performance/portal smoke coverage;
+- CI-built and cryptographically verified portal candidate ZIP + store-art bundle.
