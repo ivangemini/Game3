@@ -20,7 +20,7 @@
 - [x] Purchased junk enters the real backpack through deterministic legal placement
 - [x] Save/restore current run: backpack, rotations, loot sequence, seed, coins, shop step and sold offers
 - [x] Versioned save v8 with legacy migrations, hero choice, encounter claims, perk state, long-session progression and pending events
-- [x] Progressive backpack: one lower pocket cell unlocks after Boss 1, Boss 2 and Boss 3
+- [x] Progressive backpack: one lower pocket cell unlocks after Boss 1, Boss 2 and Boss 3 each unlock one
 - [x] Shared backpack-layout domain for blocked pocket cells outside Phaser
 - [ ] Final interaction polish against real runtime/assets
 
@@ -93,11 +93,13 @@
 ## P6 — Presentation pass [IN PROGRESS]
 - [x] Responsive web-shell foundation (**safe-area insets, portrait orientation gate, compact-landscape viewport profile and resize/orientation sync**)
 - [x] Shared UI motion foundation (**120–180 ms overlay transitions, 3% press feedback, reduced-motion fallback, Archive/Trophy progress bars**)
+- [x] Responsive top action chrome (**wide/compact layouts, collision-tested hit targets, resize switching, protected reset/daily actions**)
+- [ ] Full in-game HUD reflow / small-text legibility on real mobile landscape
 - [ ] final art pipeline + atlases
-- [ ] responsive game HUD reflow / small-text legibility on real mobile landscape
 - [ ] animation/VFX pass
 - [ ] audio/music implementation
-- [ ] onboarding/tutorial polish
+- [x] First-run onboarding flow (**5-step hero → pack → synergy → fight → fusion tutorial, reduced-motion support and persistent Help entry point**)
+- [ ] Final onboarding visual polish against real browser/art assets
 - [ ] loading/thumbnail/store art
 
 ## P7 — Monetization & platform adapters
