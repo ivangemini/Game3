@@ -5,6 +5,7 @@ import {
   type ArchiveMilestoneSnapshot,
   type MetaProgressionInput,
 } from '../domain/metaProgression';
+import { dismissOverlay, pressPulse, revealOverlay } from './uiMotion';
 
 const DEPTH = 1210;
 const ACHIEVEMENT_PAGE_SIZE = 8;
@@ -35,12 +36,13 @@ export class MetaProgressOverlay {
   }
 
   show(): void {
-    this.root.setVisible(true);
     this.refresh();
+    revealOverlay(this.scene, this.root, this.content);
   }
 
   hide(): void {
-    this.root.setVisible(false);
+    if (!this.root.visible) return;
+    dismissOverlay(this.scene, this.root, this.content);
   }
 
   isVisible(): boolean {
@@ -77,6 +79,7 @@ export class MetaProgressOverlay {
     }).setOrigin(0.5);
     close.on('pointerover', () => close.setFillStyle(0x414655));
     close.on('pointerout', () => close.setFillStyle(0x2b2e3a));
+    close.on('pointerdown', () => pressPulse(this.scene, [close, closeText]));
     close.on('pointerup', () => this.hide());
     this.content.add([close, closeText]);
 
@@ -116,6 +119,7 @@ export class MetaProgressOverlay {
       fontSize: '9px', color: unlocked ? '#b6bac5' : '#777c89', wordWrap: { width: 350 },
     });
     this.content.add([card, icon, title, seal, requirement]);
+    this.drawProgressBar(x + 70, y + 84, 344, milestone.percent, unlocked ? 0xb5ff4d : 0x7f8491);
   }
 
   private drawAchievement(achievement: AchievementSnapshot, x: number, y: number): void {
@@ -132,11 +136,23 @@ export class MetaProgressOverlay {
     const description = this.scene.add.text(x + 70, y + 39, achievement.description, {
       fontSize: '10px', color: unlocked ? '#bfc3cd' : '#6e7380', wordWrap: { width: 315 },
     });
-    const progress = this.scene.add.text(x + 70, y + 82,
+    const progress = this.scene.add.text(x + 70, y + 78,
       unlocked ? 'UNLOCKED' : `${achievement.current}/${achievement.target} • ${achievement.percent}%`,
       { fontSize: '10px', color: unlocked ? '#b5ff4d' : '#8a90a0', fontStyle: 'bold' },
     );
     this.content.add([card, badge, title, description, progress]);
+    this.drawProgressBar(x + 70, y + 103, 314, achievement.percent, unlocked ? 0xff91e6 : 0x777d8c);
+  }
+
+  private drawProgressBar(x: number, y: number, width: number, percent: number, color: number): void {
+    const safePercent = Math.max(0, Math.min(100, percent));
+    const track = this.scene.add.rectangle(x + width / 2, y, width, 5, 0x0d0f15, 1)
+      .setStrokeStyle(1, 0x323643);
+    const fillWidth = Math.max(0, width * safePercent / 100);
+    this.content.add(track);
+    if (fillWidth <= 0) return;
+    const fill = this.scene.add.rectangle(x, y, fillWidth, 3, color, 1).setOrigin(0, 0.5);
+    this.content.add(fill);
   }
 
   private drawPagination(page: number, maxPage: number): void {
@@ -164,6 +180,7 @@ export class MetaProgressOverlay {
       rect.setInteractive({ useHandCursor: true });
       rect.on('pointerover', () => rect.setFillStyle(0x3a3f4d));
       rect.on('pointerout', () => rect.setFillStyle(0x2a2e3a));
+      rect.on('pointerdown', () => pressPulse(this.scene, [rect, text]));
       rect.on('pointerup', callback);
     }
     this.content.add([rect, text]);
