@@ -1,8 +1,11 @@
 import * as Phaser from 'phaser';
+import type { PlatformAdapter } from '../../platform/PlatformAdapter';
 import { generateShopOffers, type ShopOffer } from '../domain/shop';
 import type { ItemDefinition } from '../domain/types';
 import { createItemGlyph } from './ItemGlyph';
 import { PANEL_VISUALS, rarityVisual } from './visualTokens';
+
+const PLATFORM_REGISTRY_KEY = 'junkpack.platform-adapter';
 
 export interface ShopPanelSnapshot {
   readonly coins: number;
@@ -36,6 +39,7 @@ export class ShopPanel {
   private readonly onFeedback?: (event: ShopFeedbackEvent) => void;
   private shopIndex: number;
   private coins: number;
+  private rewardedRerollInFlight = false;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -62,7 +66,7 @@ export class ShopPanel {
       fontSize: '11px', color: '#bcb2a6', fontStyle: 'bold', wordWrap: { width: 288 },
     });
 
-    this.createRerollButton();
+    this.createRerollButtons();
     this.renderOffers();
   }
 
@@ -120,30 +124,92 @@ export class ShopPanel {
     }
   }
 
-  private createRerollButton(): void {
-    const x = this.left + 142;
+  private createRerollButtons(): void {
+    this.createPaidRerollButton();
+    const platform = this.platformAdapter();
+    if (platform?.id !== 'local') this.createRewardedRerollButton(platform);
+  }
+
+  private createPaidRerollButton(): void {
+    const x = this.left + 79;
     const y = this.top + 88;
-    const shadow = this.scene.add.rectangle(x + 3, y + 4, 238, 35, 0x0b0c10, 0.65);
-    const button = this.scene.add.rectangle(x, y, 238, 35, 0x33253c, 1)
-      .setStrokeStyle(3, PANEL_VISUALS.neonPurple)
+    const shadow = this.scene.add.rectangle(x + 2, y + 3, 112, 35, 0x0b0c10, 0.65);
+    const button = this.scene.add.rectangle(x, y, 112, 35, 0x33253c, 1)
+      .setStrokeStyle(2, PANEL_VISUALS.neonPurple)
       .setInteractive({ useHandCursor: true });
-    const label = this.scene.add.text(x, y, '↻  REROLL TAPE  •  7', {
-      fontSize: '13px', color: '#f0d6ff', fontStyle: 'bold', stroke: '#17121b', strokeThickness: 3,
+    const label = this.scene.add.text(x, y, '↻ REROLL • 7', {
+      fontSize: '10px', color: '#f0d6ff', fontStyle: 'bold', stroke: '#17121b', strokeThickness: 3,
     }).setOrigin(0.5);
 
     button.on('pointerover', () => button.setFillStyle(0x4d3459));
     button.on('pointerout', () => button.setFillStyle(0x33253c));
     button.on('pointerdown', () => { button.setScale(0.97); label.setScale(0.97); shadow.setScale(0.97); });
+    const restore = (): void => { button.setScale(1); label.setScale(1); shadow.setScale(1); };
+    button.on('pointerupoutside', restore);
     button.on('pointerup', () => {
-      button.setScale(1); label.setScale(1); shadow.setScale(1);
+      restore();
       if (!this.spendCoins(7, 'Shop reroll')) return;
-      this.shopIndex += 1;
-      this.soldOfferIds.clear();
-      this.onFeedback?.({ kind: 'reroll' });
-      this.setStatus(`NEW CRATE OPENED • SEED STEP ${this.shopIndex}`, '#b8ff8e');
-      this.renderOffers();
-      this.notifyStateChanged();
+      this.advanceReroll('NEW CRATE OPENED');
     });
+  }
+
+  private createRewardedRerollButton(platform: PlatformAdapter): void {
+    const x = this.left + 205;
+    const y = this.top + 88;
+    const shadow = this.scene.add.rectangle(x + 2, y + 3, 124, 35, 0x0b0c10, 0.65);
+    const button = this.scene.add.rectangle(x, y, 124, 35, 0x253c3f, 1)
+      .setStrokeStyle(2, 0x7cf2ff)
+      .setInteractive({ useHandCursor: true });
+    const label = this.scene.add.text(x, y, '▶ FREE REROLL', {
+      fontSize: '9px', color: '#d8fbff', fontStyle: 'bold', stroke: '#0f1719', strokeThickness: 3,
+    }).setOrigin(0.5);
+
+    const restore = (): void => { button.setScale(1).setAlpha(1); label.setScale(1).setAlpha(1); shadow.setScale(1); };
+    button.on('pointerover', () => { if (!this.rewardedRerollInFlight) button.setFillStyle(0x315156); });
+    button.on('pointerout', () => button.setFillStyle(0x253c3f));
+    button.on('pointerdown', () => {
+      if (this.rewardedRerollInFlight) return;
+      button.setScale(0.97); label.setScale(0.97); shadow.setScale(0.97);
+    });
+    button.on('pointerupoutside', restore);
+    button.on('pointerup', async () => {
+      restore();
+      if (this.rewardedRerollInFlight) return;
+      this.rewardedRerollInFlight = true;
+      button.setAlpha(0.58);
+      label.setAlpha(0.72).setText('AD OPENING…');
+      this.setStatus('OPTIONAL AD • FREE REROLL ONLY AFTER COMPLETION', '#9eeeff');
+      try {
+        const result = await platform.showRewarded();
+        if (result === 'rewarded') {
+          this.advanceReroll('REWARDED REROLL COMPLETE');
+          return;
+        }
+        const message = result === 'dismissed'
+          ? 'AD CLOSED • CURRENT SHOP KEPT'
+          : result === 'failed'
+            ? 'AD FAILED • NOTHING SPENT'
+            : 'NO REWARDED AD AVAILABLE • NOTHING SPENT';
+        this.setStatus(message, result === 'failed' ? '#ff9c9c' : '#c8bdba');
+      } finally {
+        this.rewardedRerollInFlight = false;
+        label.setText('▶ FREE REROLL');
+        restore();
+      }
+    });
+  }
+
+  private advanceReroll(statusPrefix: string): void {
+    this.shopIndex += 1;
+    this.soldOfferIds.clear();
+    this.onFeedback?.({ kind: 'reroll' });
+    this.setStatus(`${statusPrefix} • SEED STEP ${this.shopIndex}`, '#b8ff8e');
+    this.renderOffers();
+    this.notifyStateChanged();
+  }
+
+  private platformAdapter(): PlatformAdapter | undefined {
+    return this.scene.registry.get(PLATFORM_REGISTRY_KEY) as PlatformAdapter | undefined;
   }
 
   private renderOffers(): void {
