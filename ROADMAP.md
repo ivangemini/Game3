@@ -90,9 +90,10 @@
 - [x] Corrupted Loop + score foundation
 - [x] Achievements (**13 derived Trophy Shelf goals across items, recipes, secret evolutions and loop depth**)
 
-## P6 — Presentation pass
+## P6 — Presentation pass [IN PROGRESS]
+- [x] Responsive web-shell foundation (**safe-area insets, portrait orientation gate, compact-landscape viewport profile and resize/orientation sync**)
 - [ ] final art pipeline + atlases
-- [ ] responsive game HUD
+- [ ] responsive game HUD reflow / small-text legibility on real mobile landscape
 - [ ] animation/VFX pass
 - [ ] audio/music implementation
 - [ ] onboarding/tutorial polish
