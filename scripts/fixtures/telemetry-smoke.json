@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "events": [
+    {
+      "name": "session_start",
+      "payload": { "returning": false, "platform": "local", "viewportMode": "standard-landscape" },
+      "sessionId": "smoke-a",
+      "timestampMs": 1000
+    },
+    {
+      "name": "hero_selected",
+      "payload": { "heroId": "scrapster" },
+      "sessionId": "smoke-a",
+      "timestampMs": 4000
+    },
+    {
+      "name": "combat_started",
+      "payload": { "encounterId": "w1-1", "stage": "World 1" },
+      "sessionId": "smoke-a",
+      "timestampMs": 9000
+    },
+    {
+      "name": "combat_finished",
+      "payload": { "encounterId": "w1-1", "outcome": "victory", "durationMs": 42000 },
+      "sessionId": "smoke-a",
+      "timestampMs": 51000
+    }
+  ]
+}
