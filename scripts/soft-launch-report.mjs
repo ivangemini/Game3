@@ -42,6 +42,8 @@ export function renderMarkdown(summary) {
     '',
     `- Hero selection reach: **${percent(summary.heroSelectionSessionRate)}** (${summary.sessionsWithHeroSelection}/${summary.sessions}); p50 ${duration(summary.medianTimeToHeroMs)}, p90 ${duration(summary.p90TimeToHeroMs)}.`,
     `- First combat reach: **${percent(summary.firstCombatSessionRate)}** (${summary.sessionsWithFirstCombat}/${summary.sessions}); p50 ${duration(summary.medianTimeToFirstCombatMs)}, p90 ${duration(summary.p90TimeToFirstCombatMs)}.`,
+    `- First boss reach: **${percent(summary.firstBossSessionRate)}** (${summary.sessionsWithFirstBoss}/${summary.sessions}); p50 ${duration(summary.medianTimeToFirstBossMs)}, p90 ${duration(summary.p90TimeToFirstBossMs)}. Target p50: **3–5 min**.`,
+    `- Base campaign completion: **${percent(summary.baseCampaignCompletionRate)}** (${summary.sessionsCompletingBaseCampaign}/${summary.sessions}); p50 ${duration(summary.medianBaseCampaignDurationMs)}, p90 ${duration(summary.p90BaseCampaignDurationMs)}. Target p50: **20–25 min**.`,
     `- Field Manual opened/completed/skipped: **${summary.tutorialOpened}/${summary.tutorialCompleted}/${summary.tutorialSkipped}**; completion ${percent(summary.tutorialCompletionRate)}.`,
     '',
     '## Run systems',
