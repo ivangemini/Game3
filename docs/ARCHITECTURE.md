@@ -1,4 +1,4 @@
-# Architecture v0.13
+# Architecture v0.14
 
 ## Stack
 - Phaser 4.2.1
@@ -10,7 +10,7 @@ Phaser 4 uses namespace imports from npm (`import * as Phaser from 'phaser'`).
 
 ## Layers
 ### `src/game/domain/`
-Pure TypeScript simulation and rules. No Phaser imports. Inventory geometry, seeded shop generation, synergies, RNG, combat/effect ordering, boss-rule composition, fusions, events, perks, heroes and run state belong here.
+Pure TypeScript simulation and rules. No Phaser imports. Inventory geometry, seeded shop generation, synergies, RNG, combat/effect ordering, boss-rule composition, fusions, events, perks, heroes, collection visibility and run state belong here.
 
 ### `src/game/data/`
 Declarative content: items, combat profiles, encounters, bosses, perks, heroes, events, fusion recipes and balance tables. Stable IDs only.
@@ -27,7 +27,7 @@ Asset-agnostic semantic audio cues derived from presentation events. Cue IDs/pri
 Phaser presentation/orchestration. Scenes translate domain state into visuals/input and coordinate persistence without making presentation the source of gameplay rules.
 
 ### `src/game/ui/`
-Reusable game UI components/widgets. Components expose serializable state snapshots rather than scene-object references. Hero/perk/event overlays collect decisions; callbacks update domain/persistence state rather than owning rules.
+Reusable game UI components/widgets. Components expose serializable state snapshots rather than scene-object references. Hero/perk/event overlays collect decisions; callbacks update domain/persistence state rather than owning rules. `CollectionOverlay` is read-only and receives discovery through a scene callback instead of reading/writing persistence itself.
 
 ### `src/platform/`
 Portal abstraction and implementations. Game logic calls one adapter API.
@@ -40,7 +40,7 @@ All run-affecting randomness comes from seeded RNG. `Math.random()` is prohibite
 
 Run events use the existing `coins / item / gamble` reward algebra. Expanding the event pool is declarative: `selectRunEvent` sorts stable IDs before seeded selection and suppresses immediate repeats when alternatives exist. Item rewards resolve deterministically from sorted definition IDs. Adding event definitions therefore requires no new save schema or UI state.
 
-QA simulations also use explicit seed namespaces. A pacing or balance regression must be reproducible from its seed.
+QA simulations also use explicit seed namespaces. A pacing or balance regression must therefore be reproducible from its seed.
 
 ## Inventory rules
 Backpack geometry, blocked pocket cells, fusion placement and synergy evaluation are deterministic domain rules. UI coordinates never determine whether an item fits or whether a synergy is active. Purchased prototype junk uses deterministic legal placement until a dedicated staging tray is promoted.
@@ -63,6 +63,20 @@ Combat items retain stable definition IDs, gameplay tags and occupied cells. Bos
 Fusion remains data-driven: recipes only declare ingredient definition IDs and one result definition ID. Second-stage evolutions use exactly the same domain path as normal recipes; their distinction is that every ingredient is itself fusion-only.
 
 `SECOND_STAGE_FUSION_RECIPE_IDS` / `SECOND_STAGE_FUSION_RESULT_IDS` are declarative QA/content metadata, not save state. Runtime availability still comes from `findFusionCandidate` against the player's real inventory. This keeps secret transformations discoverable without a second fusion engine or progression flag.
+
+## Collection / meta discovery
+`src/game/domain/collection.ts` is the presentation-safe boundary for Itemdex and Recipe Book state. It combines the current item/recipe catalog with durable discovery IDs and returns tagged union entries:
+
+- undiscovered item entries contain only the stable item ID plus `discovered: false`;
+- discovered item entries additionally expose the real definition and shop-vs-fusion source;
+- undiscovered recipe entries contain only the stable recipe ID plus `discovered: false`;
+- discovered recipe entries expose ingredients/result and derive first-stage vs second-stage classification.
+
+This design deliberately prevents the Phaser UI from accidentally reading hidden names, tags, descriptions or recipe ingredients before discovery.
+
+Collection progress is derived from the current catalog, not raw save-array length. Unknown/stale IDs left by removed content are ignored instead of inflating completion or requiring an immediate save migration.
+
+`CollectionOverlay` owns pagination/rendering only. The scene supplies the current discovery IDs through a callback, and the overlay cannot mutate inventory, currency, discovery or combat state. While visible, scene actions that would advance/fuse/cash-out are gated.
 
 ## Combat
 `src/game/domain/combat.ts` owns the generic combat clock and ordered effect queue. The queue resolves by `dueAtMs`, then stable `sequence`, so equal-time effects have a documented deterministic order.
@@ -97,7 +111,7 @@ Persist IDs and values, never scene object references. Active-run persistence in
 
 Legacy v1–v7 saves migrate forward. Malformed save payloads fall back safely, and restored backpack items are sanitized against current definitions, blocked cells, duplicates and collisions before scene objects are created.
 
-Meta persistence also tracks durable discovery and deepest completed corrupted-loop progress. Content removal must continue to tolerate legacy IDs safely. Every future schema change requires migration coverage in the same change.
+Meta persistence also tracks durable item/recipe discovery and deepest completed corrupted-loop progress. Itemdex/Recipe Book are views over those existing discovery arrays and therefore required no schema bump from v8. Content removal must continue to tolerate legacy IDs safely. Every future schema change requires migration coverage in the same change.
 
 ## Platform adapter outline
 Capabilities may include init, player identity when available, locale, storage/cloud save, interstitial, rewarded ad, gameplay start/stop signals and leaderboard hooks. Every capability requires a graceful unsupported fallback.
@@ -106,4 +120,4 @@ Capabilities may include init, player identity when available, locale, storage/c
 Use generated/source art → reviewed final exports → atlases where beneficial. Keep source assets separate from runtime-optimized assets. Never bind gameplay rules to filename semantics.
 
 ## Quality gates
-Typecheck + unit tests + production build on every main-branch push. Deterministic pacing/balance/boss/event simulations run in tests as regression guards. Browser smoke verification is required once a connected/runnable browser environment is available.
+Typecheck + unit tests + production build on every main-branch push. Deterministic pacing/balance/boss/event/collection tests run as regression guards. Browser smoke verification is required once a connected/runnable browser environment is available.
