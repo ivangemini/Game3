@@ -12,7 +12,8 @@ const archiveName = 'junkpack-boss-rush.zip';
 const archivePath = path.join(releaseRoot, archiveName);
 const storeFiles = ['icon-512.png', 'cover-800x470.png', 'hero-1560x520.png'];
 
-const files = await collectFiles(distRoot);
+const allFiles = await collectFiles(distRoot);
+const files = allFiles.filter(shouldPackageRuntimeFile);
 if (files.length === 0) throw new Error('dist is empty; run the production build before packaging');
 
 const payload = {};
@@ -54,7 +55,7 @@ await fs.writeFile(path.join(releaseRoot, 'portal-package.json'), `${JSON.string
 
 console.log('[release] portal package built');
 console.log(`  ${archiveName}: ${formatBytes(archive.byteLength)}`);
-console.log(`  runtime files: ${manifestFiles.length}`);
+console.log(`  runtime files: ${manifestFiles.length} (${allFiles.length - files.length} non-runtime dist files stripped)`);
 console.log(`  store files: ${storeManifest.length}`);
 console.log(`  sha256: ${sha256}`);
 
@@ -67,6 +68,14 @@ async function collectFiles(directory, prefix = '') {
     else if (entry.isFile()) result.push(relative);
   }
   return result;
+}
+
+function shouldPackageRuntimeFile(relative) {
+  const normalized = toPosix(relative);
+  if (normalized.endsWith('.map')) return false;
+  if (normalized.startsWith('assets/art/')) return false;
+  if (normalized.startsWith('assets/store/')) return false;
+  return true;
 }
 
 function hash(bytes) {
