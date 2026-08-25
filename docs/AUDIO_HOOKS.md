@@ -1,43 +1,67 @@
-# Combat Audio Hooks
+# Audio Runtime Contract
 
 ## Scope
-P2 exposes an asset-agnostic audio contract. It does **not** ship final SFX, music, a browser audio unlock flow or a mixer yet; those remain part of the P6 presentation pass.
 
-`src/game/audio/audioCues.ts` translates deterministic combat presentation events into stable cue IDs. `CombatPanel` forwards those cues through the optional `onAudioCue` callback.
+Audio is implemented as a presentation-only WebAudio layer. Gameplay simulation, seeded RNG, combat outcomes and persistence never depend on whether audio is unlocked, muted, suspended, throttled or rendered.
 
-Gameplay rules never depend on whether a sound is loaded, muted, throttled or played.
+`src/game/audio/audioCues.ts` translates presentation events into stable semantic cue IDs. `GameAudio` consumes those IDs through an autoplay-safe runtime mixer; the cue ID describes meaning rather than a filename, so future authored samples can replace or augment synthesis without changing gameplay code.
+
+## Current runtime
+
+The shipped foundation includes:
+
+- browser-safe audio unlock on player input;
+- independently persisted Music and SFX volumes;
+- a 10-semantic-voice admission budget with priority eviction;
+- per-cue cooldowns so dense autobattler item spam remains readable;
+- deterministic source pitch variation for repeated item families;
+- tonal synthesis plus filtered deterministic-noise transients for impacts, boss mechanics, fusion, rerolls and reward moments;
+- 16-step deterministic menu/combat/boss phrases instead of the original short 8-step loop;
+- light combat/boss swing and sparse sub accents through the existing music voice path;
+- priority-aware music ducking: boss telegraphs/player hits duck moderately and priority-4 impacts/outcomes duck more strongly;
+- page-visibility suspension and portal-ad suspend/resume hooks;
+- no external audio-file request requirement for the current runtime.
 
 ## Cue contract
+
 Every cue carries:
 
 - a stable semantic `id` such as `boss.magnet.telegraph` or `combat.victory`;
 - combat timestamp `atMs`;
 - priority from 1 (frequent/noisy) to 4 (must-read impact/outcome);
-- a semantic group for future mixer voice budgets;
-- a suggested cooldown for future repetition throttling;
+- a semantic group for mixer policy;
+- cooldown metadata;
 - `sourceId` when an item/enemy source is meaningful.
 
-The ID describes **meaning**, not a filename. Final assets can therefore be swapped, randomized or localized without changing combat code.
+High-frequency item triggers remain priority 1. Direct player hits and boss telegraphs are priority 3. Boss impacts and victory/defeat are priority 4. When the voice budget is full, stronger semantic cues may evict the oldest weaker voice; equal/lower-priority spam is rejected.
 
-## Readability policy
-Frequent item triggers sit at priority 1. Direct player hits and boss telegraphs are priority 3. Boss impacts and victory/defeat are priority 4. A future mixer should allow high-priority cues to survive dense autobattler traffic while low-priority cues may be throttled or voice-limited.
+## Transient texture
 
-Boss telegraph and impact are separate cues for all three current interference systems:
+`audioSynthesis.ts` defines both tonal and optional noise layers. Noise is not downloaded: `GameAudio` creates one deterministic one-second mono noise buffer per AudioContext and starts filtered slices from deterministic cue/source offsets. Each noise layer has a low/high/band-pass sweep, Q, envelope and gain.
 
-- Channel Jam;
-- Slime Signal;
-- Magnet Scramble.
+The extra source/filter nodes remain part of the same semantic cue and therefore do not bypass the 10-voice budget. Tiny `item.trigger` feedback intentionally stays tone-only; high-salience impacts and staged UI receive transient texture.
 
-This mirrors visual anticipation → impact timing and makes boss mechanics readable without relying on screen effects alone.
+## Adaptive music
 
-## P6 implementation requirements
-When real audio is added:
+`musicPattern.ts` exposes deterministic menu/combat/boss steps. The current phrases are 16 steps long, with stronger cadence/gain as intensity rises. Combat and boss modes use a small deterministic swing; selected accent steps drop an octave for a sparse sub pulse, while other accent steps provide higher harmonic punctuation.
 
-1. unlock/resume WebAudio only after a valid user interaction where browsers require it;
-2. keep SFX/music volume separately configurable and persistent;
-3. apply per-group voice budgets and the cue cooldown metadata;
-4. pause/duck correctly for tab visibility and portal ad lifecycle;
-5. use several controlled variants/pitch offsets for high-frequency item sounds;
-6. preload only critical short SFX on mobile and load larger music assets deliberately.
+Music runs through a dedicated user-volume gain and a separate duck gain. Ducking therefore never rewrites the stored Music volume.
 
-No future mixer may feed timing or state back into the combat simulation.
+## Lifecycle contract
+
+1. AudioContext is created/unlocked only after valid player input.
+2. `visibilitychange` suspends audio while the page is hidden.
+3. Portal ad start suspends WebAudio and the Phaser loop.
+4. Portal ad completion/failure resumes only when appropriate; a hidden page cannot prematurely resume audio.
+5. `dispose()` stops semantic voices, clears timers/nodes and closes the context.
+
+## Remaining P6 creative pass
+
+The remaining open audio item is not missing infrastructure. It is a subjective authored-content/mix pass:
+
+- decide whether selected high-salience cues benefit from short authored samples over the procedural layer;
+- decide whether to keep procedural adaptive music or introduce compressed authored stems/loops;
+- tune final loudness/EQ balance on physical phone speakers and headphones;
+- confirm the final mix during real Yandex/CrazyGames ad overlays.
+
+Any authored asset addition should preserve autoplay safety, portal suspend/resume behavior, the semantic cue API and the existing asset/download budgets. Audio must never feed timing or state back into combat simulation.
