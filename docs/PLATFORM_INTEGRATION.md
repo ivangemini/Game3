@@ -86,7 +86,11 @@ Portal-side frequency controls still apply. The local policy is an additional ga
 
 ## Automated repository coverage
 
-Repository tests cover platform detection/QA overrides, Yandex and CrazyGames initialization/callback contracts, reward semantics, ad-break policy, asset-ready timing and browser-shell behavior. The Playwright release matrix is configured for Chromium, Firefox and WebKit across desktop, compact/mobile landscape and portrait/orientation transitions. Real portal SDK tester validation remains separate because repository CI does not run inside the portals' production/tester frames.
+Repository tests cover platform detection/QA overrides, Yandex and CrazyGames initialization/callback contracts, reward semantics, ad-break policy, asset-ready timing and browser-shell behavior. The Playwright release matrix covers Chromium, Firefox and WebKit across desktop, compact/mobile landscape and portrait/orientation transitions.
+
+`tests/e2e/portalCompliance.spec.ts` also boots the production app with forced portal adapters and injected SDK doubles. It verifies Yandex `YaGames.init()` → `LoadingAPI.ready()` and CrazyGames `SDK.init()` → `loadingStart()` → `loadingStop()` while proving the test path does not fetch the external SDK script when an SDK global is already available. This is a browser-level integration contract, not a substitute for the portals' own tester/debug frames.
+
+The CI quality job builds a release ZIP, copies the portal store assets, writes a v2 SHA-256 manifest for the archive and every runtime/store file, verifies the archive by unpacking it, and publishes the verified `junkpack-portal-candidate` artifact only after those checks pass.
 
 ## Remaining portal acceptance work
 
