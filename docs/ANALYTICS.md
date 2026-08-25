@@ -109,10 +109,11 @@ Start-of-session UX and run pacing intentionally use different clocks:
 
 - time-to-hero and time-to-first-combat start at `session_start`, because they measure launch friction;
 - time-to-first-boss starts at `run_started` and reaches the first `w1-tv-tyrant` `combat_started` event;
-- base-campaign duration starts at `run_started` and ends at a victorious `w4-baby-moon` `combat_finished` event;
+- six-world base-campaign duration starts at `run_started` and ends at a victorious `w6-border-shark` `combat_finished` event;
+- the World 4 `w4-baby-moon` victory is now an intermediate campaign milestone and does not count as campaign completion;
 - legacy exports without `run_started` fall back to `session_start` for the boss/campaign metrics.
 
-This avoids counting time spent on a portal page before a new run begins as campaign pacing. The report prints the current first-boss p50 target of **3–5 minutes** and base-campaign p50 target of **20–25 minutes** beside the measured distributions.
+This avoids counting time spent on a portal page before a new run begins as campaign pacing. The report prints the current first-boss p50 target of **3–5 minutes** and six-world base-campaign p50 target of **32–42 minutes** beside the measured distributions.
 
 For the first balance pass, treat median as the central pacing signal and p90 as the long-tail regression signal. Do not tune from a single encounter with only a handful of attempts; compare reach, attempt count, win rate and duration together. A high p90 with a healthy median usually indicates a long-tail problem rather than a globally slow encounter.
 
@@ -122,7 +123,7 @@ The Markdown report includes operational review signals so a small export does n
 
 - return-age coverage gate: at least **10** session starts before evaluating the 95% instrumentation target;
 - first-boss pacing gate: at least **20** sessions that reached the first boss before comparing p50 against the 3–5 minute target;
-- base-campaign pacing gate: at least **15** completed base campaigns before comparing p50 against the 20–25 minute target.
+- base-campaign pacing gate: at least **15** completed six-world campaigns before comparing p50 against the 32–42 minute target.
 
 Below a gate the report emits `[DATA]` and explicitly recommends holding tuning. Once the sample floor is met it emits `[ON TARGET]` or `[WATCH]` against the already-defined pacing targets. These floors are conservative operational review thresholds, not statistical-significance tests and not proof of causality. Balance changes still require looking at the full funnel, encounter attempts/win rates, p90 tails and the actual change made between samples.
 
@@ -131,14 +132,14 @@ Below a gate the report emits `[DATA]` and explicitly recommends holding tuning.
 1. What share of sessions reach hero choice, first combat and first boss?
 2. How quickly does a new session reach hero choice and first combat after the one-click onboarding change?
 3. How often is the optional Field Manual opened and completed?
-4. How long do real combats and full runs take versus the pacing model?
+4. How long do real combats and full six-world runs take versus the pacing model?
 5. Which encounters produce anomalous defeat rates or duration spikes?
 6. How often do players use events and fusion before entering Loop 2?
 7. What share of completed campaigns choose another loop versus cash-out?
 8. Is rewarded reroll completion healthy without becoming required for progression?
 9. Does the coarse return-age mix improve after balance/content changes without degrading the core funnel?
 
-`src/analytics/TelemetrySummary.ts` provides a deterministic first-pass aggregator. In addition to rates/counts it reports return-age instrumentation coverage, average/median/p90 time-to-hero, time-to-first-combat, time-to-first-boss, base-campaign duration and per-encounter combat duration. Median is the default central pacing signal; p90 is the long-tail regression signal; averages remain useful for continuity with earlier reports but should not be tuned in isolation.
+`src/analytics/TelemetrySummary.ts` provides a deterministic first-pass aggregator. In addition to rates/counts it reports return-age instrumentation coverage, average/median/p90 time-to-hero, time-to-first-combat, time-to-first-boss, six-world base-campaign duration and per-encounter combat duration. Median is the default central pacing signal; p90 is the long-tail regression signal; averages remain useful for continuity with earlier reports but should not be tuned in isolation.
 
 ## Guardrails
 
