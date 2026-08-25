@@ -128,6 +128,21 @@ export function renderMarkdown(summary) {
     }
   }
 
+  lines.push('', '## Campaign world funnel', '');
+  const campaignWorlds = summary.campaignWorlds ?? [];
+  if (campaignWorlds.length === 0) {
+    lines.push('No campaign-world milestones in this export.');
+  } else {
+    lines.push('| World | Boss | Cleared | Session clear | From previous | p50 from run start | p90 |');
+    lines.push('| ---: | --- | ---: | ---: | ---: | ---: | ---: |');
+    for (const world of campaignWorlds) {
+      const continuation = world.previousWorldContinuationRate === null
+        ? '—'
+        : percent(world.previousWorldContinuationRate);
+      lines.push(`| ${world.world} | ${escapeCell(world.bossEncounterId)} | ${world.sessionsCleared} | ${percent(world.sessionClearRate)} | ${continuation} | ${duration(world.medianTimeFromRunStartMs)} | ${duration(world.p90TimeFromRunStartMs)} |`);
+    }
+  }
+
   lines.push('', '## Loop entries', '');
   const loopEntries = Object.entries(summary.loopEntries);
   lines.push(loopEntries.length > 0
