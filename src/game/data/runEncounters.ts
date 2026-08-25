@@ -36,6 +36,15 @@ export interface RunEncounterDefinition {
   readonly modifier: RunWorldModifier;
 }
 
+interface LoopAnomalyVariant {
+  readonly id: string;
+  readonly title: string;
+  readonly name: string;
+  readonly hpPct: number;
+  readonly damagePct: number;
+  readonly attackSpeedPct: number;
+}
+
 const channelJam = (intervalMs: number, telegraphMs: number, durationMs: number) => ({
   kind: 'channel-jam' as const, intervalMs, telegraphMs, durationMs,
 });
@@ -54,6 +63,31 @@ export const WORLD_MODIFIERS: readonly RunWorldModifier[] = [
   { id: 'bad-reception', name: 'Bad Reception', description: 'Enemies deal +18% damage • rewards +12%.', enemyHpPct: 0, enemyDamagePct: 18, enemyAttackSpeedPct: 0, rewardPct: 12 },
   { id: 'coupon-apocalypse', name: 'Coupon Apocalypse', description: 'Enemies +10% HP • rewards +35%.', enemyHpPct: 10, enemyDamagePct: 0, enemyAttackSpeedPct: 0, rewardPct: 35 },
 ];
+
+export const LOOP_ANOMALY_MODIFIERS: readonly RunWorldModifier[] = [
+  { id: 'paperwork-storm', name: 'Paperwork Storm', description: 'Enemies -10% HP, +24% damage • rewards +22%.', enemyHpPct: -10, enemyDamagePct: 24, enemyAttackSpeedPct: 0, rewardPct: 22 },
+  { id: 'overtime-dimension', name: 'Overtime Dimension', description: 'Enemies +12% HP, damage and attack speed • rewards +32%.', enemyHpPct: 12, enemyDamagePct: 12, enemyAttackSpeedPct: 12, rewardPct: 32 },
+  { id: 'cheap-batteries', name: 'Cheap Batteries', description: 'Enemies +26% HP, -8% damage • rewards +18%.', enemyHpPct: 26, enemyDamagePct: -8, enemyAttackSpeedPct: 0, rewardPct: 18 },
+  { id: 'static-rain', name: 'Static Rain', description: 'Enemies +5% HP and attack 22% faster • rewards +22%.', enemyHpPct: 5, enemyDamagePct: 0, enemyAttackSpeedPct: 22, rewardPct: 22 },
+  { id: 'unsafe-coupon', name: 'Unsafe Coupon', description: 'Enemies -18% HP, +38% damage • rewards +28%.', enemyHpPct: -18, enemyDamagePct: 38, enemyAttackSpeedPct: 0, rewardPct: 28 },
+  { id: 'warranty-void', name: 'Warranty Void', description: 'Enemies +18% HP and +18% damage • rewards +26%.', enemyHpPct: 18, enemyDamagePct: 18, enemyAttackSpeedPct: 0, rewardPct: 26 },
+];
+
+export const LOOP_WORLD_MODIFIERS: readonly RunWorldModifier[] = [
+  ...WORLD_MODIFIERS,
+  ...LOOP_ANOMALY_MODIFIERS,
+];
+
+const LOOP_ANOMALY_VARIANTS: Readonly<Record<string, LoopAnomalyVariant>> = {
+  'static-rats': { id: 'receipt-wasps', title: 'Receipt Wasps', name: 'Receipt Wasp Swarm', hpPct: -8, damagePct: 10, attackSpeedPct: 20 },
+  'trash-brute': { id: 'dumpster-oracle', title: 'Dumpster Oracle', name: 'Dumpster Oracle', hpPct: 12, damagePct: 8, attackSpeedPct: -5 },
+  'microwave-brute': { id: 'tax-blender', title: 'Tax Blender', name: 'Tax Blender', hpPct: -5, damagePct: 18, attackSpeedPct: 12 },
+  'scrap-collector': { id: 'receipt-mimic', title: 'Receipt Mimic', name: 'Receipt Mimic', hpPct: 15, damagePct: 10, attackSpeedPct: 0 },
+  'mutant-conveyor': { id: 'escalator-hydra', title: 'Escalator Hydra', name: 'Escalator Hydra', hpPct: 18, damagePct: 5, attackSpeedPct: -8 },
+  'signal-golem': { id: 'wifi-basilisk', title: 'Wi-Fi Basilisk', name: 'Wi-Fi Basilisk', hpPct: 5, damagePct: 8, attackSpeedPct: 18 },
+  'grinning-fridge': { id: 'expired-freezer', title: 'Expired Freezer', name: 'Expired Freezer', hpPct: 20, damagePct: 0, attackSpeedPct: -12 },
+  'rubber-duck-choir': { id: 'invoice-geese', title: 'Invoice Geese', name: 'Invoice Geese', hpPct: -6, damagePct: 22, attackSpeedPct: 10 },
+};
 
 interface BaseEncounterDefinition extends Omit<RunEncounterDefinition, 'modifiers' | 'modifier'> {}
 
@@ -85,8 +119,10 @@ export function modifiersForLoopWorld(
   loopNumber: number,
   world: number,
 ): readonly RunWorldModifier[] {
-  const count = Math.min(4, Math.max(2, Math.floor(loopNumber)));
-  const shuffled = createSeededRng(`${runSeed}:loop:${Math.max(2, Math.floor(loopNumber))}:mutations`).shuffle(WORLD_MODIFIERS);
+  const safeLoop = Math.max(2, Math.floor(loopNumber));
+  const count = Math.min(4, safeLoop);
+  const pool = safeLoop >= 3 ? LOOP_WORLD_MODIFIERS : WORLD_MODIFIERS;
+  const shuffled = createSeededRng(`${runSeed}:loop:${safeLoop}:mutations`).shuffle(pool);
   const start = ((Math.max(1, Math.floor(world)) - 1) * 2) % shuffled.length;
   const selected: RunWorldModifier[] = [];
   for (let offset = 0; offset < count; offset += 1) {
@@ -175,6 +211,10 @@ function loopVariantForTemplate(
       enemy: basicBossVariant(template.enemy, 'border-shark', 'Border Shark'),
     };
   }
+  if (loopNumber >= 3 && template.kind !== 'boss') {
+    const anomaly = LOOP_ANOMALY_VARIANTS[template.enemy.id];
+    if (anomaly) return { title: anomaly.title, enemy: anomalyEnemyVariant(template.enemy, anomaly) };
+  }
   return { title: template.title, enemy: template.enemy };
 }
 
@@ -189,6 +229,23 @@ function basicBossVariant(
     maxHp: source.maxHp,
     attackIntervalMs: source.attackIntervalMs,
     attackDamage: source.attackDamage,
+  };
+}
+
+function anomalyEnemyVariant(
+  source: EnemyCombatDefinition,
+  variant: LoopAnomalyVariant,
+): EnemyCombatDefinition {
+  const hpScale = Math.max(0.2, 1 + variant.hpPct / 100);
+  const damageScale = Math.max(0.2, 1 + variant.damagePct / 100);
+  const speedScale = Math.max(0.2, 1 + variant.attackSpeedPct / 100);
+  return {
+    ...source,
+    id: variant.id,
+    name: variant.name,
+    maxHp: Math.max(1, Math.round(source.maxHp * hpScale)),
+    attackDamage: Math.max(0, Math.round(source.attackDamage * damageScale)),
+    attackIntervalMs: Math.max(700, Math.round(source.attackIntervalMs / speedScale)),
   };
 }
 
