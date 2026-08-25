@@ -1,13 +1,23 @@
 import * as Phaser from 'phaser';
-import { audioCueForCombatEvent, combatStartAudioCue, type AudioCue } from '../audio/audioCues';
+import {
+  audioCueForCombatEvent,
+  audioCueForTimeTaxEvent,
+  combatStartAudioCue,
+  type AudioCue,
+} from '../audio/audioCues';
 import { PROTOTYPE_COMBAT_PROFILE_MAP, SCRAP_DUMMY, TV_TYRANT } from '../data/combatProfiles';
 import { PROTOTYPE_ITEM_MAP } from '../data/items';
 import { PROTOTYPE_PERK_MAP } from '../data/perks';
 import {
-  advanceCombat,
+  advanceCombatWithBossRules,
+  isBossRuleEnemy,
+  isTimeTaxPresentationEvent,
+  timeTaxDefinitionForEnemyId,
+  type BossCombatPresentationEvent,
+} from '../domain/bossCombat';
+import {
   createCombatState,
   type CombatOutcome,
-  type CombatPresentationEvent,
   type CombatSetup,
   type CombatState,
   type EnemyCombatDefinition,
@@ -188,7 +198,7 @@ export class CombatPanel {
 
   private updateCombat(_time: number, deltaMs: number): void {
     if (!this.running || !this.setup || !this.state) return;
-    const result = advanceCombat(this.state, this.setup, deltaMs);
+    const result = advanceCombatWithBossRules(this.state, this.setup, deltaMs);
     this.state = result.state;
     for (const event of result.events) this.consumeEvent(event);
     this.renderState();
@@ -198,7 +208,21 @@ export class CombatPanel {
     }
   }
 
-  private consumeEvent(event: CombatPresentationEvent): void {
+  private consumeEvent(event: BossCombatPresentationEvent): void {
+    if (isTimeTaxPresentationEvent(event)) {
+      this.onAudioCue?.(audioCueForTimeTaxEvent(event));
+      if (event.kind === 'boss-time-tax-telegraph') {
+        this.bossStatusText.setText(`TIME TAX → ${event.itemInstanceId} • FASTEST ITEM • IMPACT IN ${((event.impactAtMs - event.atMs) / 1000).toFixed(1)}s`);
+        this.showBackpackItem(event.itemInstanceId, 0xffd36d, Math.max(120, event.impactAtMs - event.atMs), true);
+        this.pushLog(`${this.seconds(event.atMs)} • snail invoices ${event.itemInstanceId}`);
+        return;
+      }
+      this.bossStatusText.setText(`TIME TAX → ${event.itemInstanceId} next trigger +${(event.delayMs / 1000).toFixed(1)}s`);
+      this.showBackpackItem(event.itemInstanceId, 0xff8f5f, Math.min(650, event.delayMs), false);
+      this.pushLog(`${this.seconds(event.atMs)} • ${event.itemInstanceId} DELAYED +${(event.delayMs / 1000).toFixed(1)}s`);
+      return;
+    }
+
     this.onAudioCue?.(audioCueForCombatEvent(event));
     if (event.kind === 'item-triggered') { this.pushLog(`${this.seconds(event.atMs)} • ${event.itemInstanceId} triggered`); return; }
     if (event.kind === 'item-jammed') { this.pushLog(`${this.seconds(event.atMs)} • ${event.itemInstanceId} JAMMED — trigger lost`); return; }
@@ -291,6 +315,12 @@ export class CombatPanel {
     this.scene.time.delayedCall(durationMs, () => overlay.destroy());
   }
 
+  private showBackpackItem(itemInstanceId: string, color: number, durationMs: number, telegraph: boolean): void {
+    const item = this.setup?.items.get(itemInstanceId);
+    if (!item) return;
+    for (const cell of item.occupiedCells) this.showBackpackCell(cell, color, durationMs, telegraph);
+  }
+
   private showBackpackRow(row: number, color: number, durationMs: number, telegraph: boolean): void {
     const { left, top, cellSize } = this.backpackGrid;
     const width = cellSize * 6;
@@ -336,6 +366,11 @@ export class CombatPanel {
       const effect = state.queue.find((candidate) => candidate.kind === kind);
       if (effect) entries.push(`${label} ${((effect.dueAtMs - state.timeMs) / 1000).toFixed(1)}s`);
     }
+    const timeTax = timeTaxDefinitionForEnemyId(enemy.id);
+    if (timeTax) {
+      const nextImpact = (Math.floor(state.timeMs / timeTax.intervalMs) + 1) * timeTax.intervalMs;
+      entries.push(`TAX ${Math.max(0, (nextImpact - state.timeMs) / 1000).toFixed(1)}s`);
+    }
     this.nextActionText.setText(entries.join(' • '));
   }
 
@@ -344,7 +379,11 @@ export class CombatPanel {
     this.barGraphics.fillStyle(color, 1); this.barGraphics.fillRoundedRect(x, y, width * Math.max(0, Math.min(1, ratio)), 14, 6);
   }
   private isBoss(enemy: EnemyCombatDefinition): boolean {
-    return !!enemy.interference || !!enemy.cellInterference || !!enemy.rowInterference || !!enemy.tagInterference;
+    return !!enemy.interference
+      || !!enemy.cellInterference
+      || !!enemy.rowInterference
+      || !!enemy.tagInterference
+      || isBossRuleEnemy(enemy.id);
   }
   private bossSystems(enemy: EnemyCombatDefinition): string[] {
     const systems: string[] = [];
@@ -352,6 +391,7 @@ export class CombatPanel {
     if (enemy.cellInterference) systems.push('SLIME SIGNAL');
     if (enemy.rowInterference) systems.push('MAGNET SCRAMBLE');
     if (enemy.tagInterference) systems.push('TAG ECLIPSE');
+    if (isBossRuleEnemy(enemy.id)) systems.push('TIME TAX');
     return systems;
   }
   private punchEnemy(scale: number): void {
