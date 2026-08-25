@@ -52,17 +52,18 @@ describe('fusion domain', () => {
     expect(state.items).toHaveLength(1);
   });
 
-  it('respects locked backpack cells when placing a fusion result', () => {
+  it('fails safely when a valid ingredient layout has no legal shape for the result', () => {
     const state: InventoryState = {
-      width: 2,
-      height: 2,
-      blockedCells: [{ x: 1, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 }],
+      width: 3,
+      height: 1,
+      blockedCells: [],
       items: [
-        { instanceId: 'battery-a', definitionId: 'angry-battery', origin: { x: 0, y: 0 }, rotation: 0 },
-        { instanceId: 'toaster-b', definitionId: 'cursed-toaster', origin: { x: 0, y: 0 }, rotation: 0 },
+        { instanceId: 'toaster-b', definitionId: 'cursed-toaster', origin: { x: 0, y: 0 }, rotation: 1 },
+        { instanceId: 'battery-a', definitionId: 'angry-battery', origin: { x: 2, y: 0 }, rotation: 0 },
       ],
     };
-    const result = applyFusion(state, PROTOTYPE_ITEM_MAP, recipe('shock-toaster'), 'fusion-locked');
-    expect(result.ok).toBe(false);
+    const result = applyFusion(state, PROTOTYPE_ITEM_MAP, recipe('shock-toaster'), 'fusion-cramped');
+    expect(result).toEqual({ ok: false, reason: 'no-space' });
+    expect(state.items).toHaveLength(2);
   });
 });
