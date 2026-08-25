@@ -1,3 +1,4 @@
+import type { TimeTaxPresentationEvent } from '../domain/bossCombat';
 import type { CombatPresentationEvent } from '../domain/combat';
 
 export type AudioCuePriority = 1 | 2 | 3 | 4;
@@ -23,6 +24,8 @@ export type AudioCueId =
   | 'boss.magnet.impact'
   | 'boss.eclipse.telegraph'
   | 'boss.eclipse.impact'
+  | 'boss.time-tax.telegraph'
+  | 'boss.time-tax.impact'
   | 'combat.victory'
   | 'combat.defeat';
 
@@ -91,6 +94,13 @@ export function audioCueForCombatEvent(event: CombatPresentationEvent): AudioCue
       return exhaustive;
     }
   }
+}
+
+export function audioCueForTimeTaxEvent(event: TimeTaxPresentationEvent): AudioCue {
+  if (event.kind === 'boss-time-tax-telegraph') {
+    return cue('boss.time-tax.telegraph', event.atMs, 3, 'boss', 300, event.itemInstanceId);
+  }
+  return cue('boss.time-tax.impact', event.atMs, 4, 'boss', 260, event.itemInstanceId);
 }
 
 function cue(
