@@ -1,4 +1,4 @@
-# Junkpack: Boss Rush — Game Design v0.15
+# Junkpack: Boss Rush — Game Design v0.16
 
 ## Elevator pitch
 A compact roguelite inventory autobattler where the player chooses a light rule-bending junk pilot, packs absurd junk into a constrained backpack, discovers spatial synergies and fusion recipes, then fights surreal bosses that directly interfere with build valuation and backpack rules.
@@ -17,7 +17,7 @@ Web-first: Yandex Games, CrazyGames and compatible HTML5 portals. Short onboardi
 8. Defeat a boss, unlock backpack space and choose a perk.
 9. Continue through four compact worlds.
 10. After the campaign finale, Escape/Cash Out or enter a full Corrupted Loop with the same build.
-11. Repeat deeper loops while mutations and boss-family rotations force new adaptations.
+11. Repeat deeper loops while stacked mutations, alternate corrupted enemies and boss-family rotations force new adaptations.
 12. Use the persistent Junk Archive to inspect discoveries and unfinished collection goals between active decisions.
 
 ## Pacing target
@@ -88,7 +88,7 @@ Fusion unlocks after Boss 1. Ingredients are consumed only when the result has a
 ## Run events
 A deterministic event occurs after the first combat of each world: four during campaign and four more during each Corrupted Loop. Pending events are persisted before presentation and cannot be rerolled by reload. Immediate repeats are suppressed when alternatives exist.
 
-Current **9-event pool**:
+Current **15-event pool**:
 - **Cursed Vending Machine** — mystery purchase or coin gamble;
 - **Cat Courier** — expensive guaranteed Laser Cat or refuse for coins;
 - **Duck Tax Office** — buy a Mutant Duck or file a risky appeal;
@@ -97,11 +97,17 @@ Current **9-event pool**:
 - **Shrine of the Armed Fish** — Fish Blaster purchase or steal coins;
 - **Feral Roomba Adoption Center** — buy a Feral Roomba or decline for a small payout;
 - **Pigeon Signal Tower** — buy signal-themed junk or gamble on selling location data;
-- **Illegal Brunch Lab** — buy experimental food junk or report the lab for coins.
+- **Illegal Brunch Lab** — buy experimental food junk or report the lab for coins;
+- **Taxidermy Wi-Fi Cafe** — buy signal-heavy junk or sell the password;
+- **Emergency Moon Laundromat** — rent dangerous cleaning junk or empty the coin traps;
+- **Banana Compliance Desk** — buy certified tactical food or audit the auditor;
+- **Hamster Power Exchange** — buy a battery asset or short the grid;
+- **Forbidden Printer Support** — accept an office upgrade or claim service credit;
+- **Slime Brunch Court** — settle with toxic lunch or collect court fees.
 
 All choices reuse the existing `coins / item / gamble` reward vocabulary. Item rewards resolve to real base/shop definitions and still fail safely when the backpack has no legal placement. No new event-engine state or save migration is required.
 
-Together with six world mutations, the project now has **15 combined mutation/event entries**, reaching the P4 content target.
+The larger pool reduces repeated event sequences during long multi-loop sessions without increasing the number of event interruptions per 12-encounter cycle.
 
 ## Heroes
 Four prototype heroes are light rule-benders rather than classes:
@@ -113,9 +119,17 @@ Four prototype heroes are light rule-benders rather than classes:
 Build resolution order: spatial synergy → hero bonus → run perks → immutable combat snapshot. A hero must never make off-tag items unusable.
 
 ## Perks
-Launch target: 20–25. Current prototype: **21 perks**, so the target is reached.
+Launch target was 20–25. The user-directed Wave 5 expansion brings the current prototype to **27 perks**.
 
-The latest additions are Laser Tax Refund, Pet Union, Slime Shell, Food Chain Reaction and Device Liability. Perks remain inside the same deterministic `ItemBonuses` vocabulary used by synergies and heroes.
+The six newest additions are:
+- **Weaponized Paperwork** — Weapon: +12% trigger speed and +1 poison;
+- **Battery Afterparty** — Battery: +1 bonus laser shot;
+- **Magnetic Tenure** — Magnet: +12% trigger speed and +1 scrap armor;
+- **Poison Subscription** — Poison: +15% trigger speed and +1 poison;
+- **Catastrophic Catnip** — Cat: +10% trigger speed and +1 scrap armor;
+- **Duck Emergency Powers** — Duck: +1 chaos power and +1 scrap armor.
+
+Perks remain inside the same deterministic `ItemBonuses` vocabulary used by synergies and heroes. The new perks are hybrid rather than isolated raw-stat upgrades, encouraging revaluation of multi-tag items and build pivots.
 
 ## Bosses
 All six planned prototype boss families are implemented.
@@ -133,7 +147,7 @@ Corrupted-loop alternates:
 Even Corrupted Loops use TV Tyrant → Copycat Auditor → Border Shark → Baby Moon. Odd loops use TV Tyrant → Deadline Snail → Closet Monster → Baby Moon. This exposes all six families without increasing the 12-encounter cycle.
 
 ## World mutations
-Current six seeded risk/reward rules:
+The original six seeded risk/reward rules remain the complete **campaign and Loop 2** pool:
 - Greedy Signal;
 - Glass Reality;
 - Rage Network;
@@ -141,7 +155,29 @@ Current six seeded risk/reward rules:
 - Bad Reception;
 - Coupon Apocalypse.
 
-Campaign gets one stable mutation per world. Corrupted loops stack 2 in Loop 2, 3 in Loop 3 and up to 4 deeper.
+From **Loop 3 onward**, six additional anomaly modifiers join the candidate pool:
+- **Paperwork Storm** — lower enemy HP but sharply higher damage;
+- **Overtime Dimension** — HP, damage and attack speed all rise together;
+- **Cheap Batteries** — higher HP with slightly lower damage;
+- **Static Rain** — substantially faster attacks;
+- **Unsafe Coupon** — low-HP, extremely high-damage enemies;
+- **Warranty Void** — broad HP and damage pressure.
+
+Campaign gets one stable mutation per world. Loop 2 stacks two mutations from the original six. Loop 3 stacks three from the expanded **12-modifier** pool and Loop 4+ stacks up to four. The campaign pool stays unchanged so the base pacing/balance benchmark remains comparable.
+
+## Corrupted enemy variants
+Loop 2 retains the campaign's ordinary/elite enemy families. From **Loop 3 onward**, the eight non-boss encounter templates rotate into alternate corrupted families before normal loop scaling and mutation stacking:
+
+- Static Rat Swarm → **Receipt Wasps**;
+- Trash Brute → **Dumpster Oracle**;
+- Microwave Brute → **Tax Blender**;
+- Scrap Collector → **Receipt Mimic**;
+- Mutant Conveyor → **Escalator Hydra**;
+- Signal Golem → **Wi-Fi Basilisk**;
+- Grinning Fridge → **Expired Freezer**;
+- Rubber Duck Choir → **Invoice Geese**.
+
+These are content-efficient stat-shape variants using the existing generic enemy presentation path, not eight pseudo-bosses. Boss mechanics remain reserved for the authored six boss families.
 
 ## Campaign and Corrupted Loops
 Campaign = four worlds × three encounters. Bosses end each world and can grant a three-choice perk.
@@ -150,32 +186,34 @@ After encounter 12:
 - **Escape / Cash Out** ends the run and locks score;
 - **Go Deeper** preserves hero, backpack, items and perks for another 12-encounter cycle.
 
-Entering a loop commits the player until the next cycle boundary. Loop depth scales enemy HP/damage/speed and payouts, stacks more mutations, adds more deterministic events and rotates boss families. Persistence resumes a committed loop after quitting.
+Entering a loop commits the player until the next cycle boundary. Loop depth scales enemy HP/damage/speed and payouts, stacks more mutations, adds more deterministic events and rotates boss families. From Loop 3, it also unlocks the expanded anomaly modifier pool and alternate non-boss enemy families. Persistence resumes a committed loop after quitting.
 
 ## Balance model
 The seeded build/combat QA model uses the same public item/perk/profile pools and boss wrapper as runtime. Fusion sampling is progression-aware:
 - campaign checkpoints may sample base + first-stage fusion results;
 - Corrupted Loop checkpoints may sample the complete fusion pool, including all four second-stage transformations.
 
-This keeps campaign reports free of impossible early late-run power while exercising secret evolutions in deep-run QA.
+This keeps campaign reports free of impossible early late-run power while exercising secret evolutions in deep-run QA. Wave 5 deliberately leaves campaign enemy templates and the six launch campaign mutations intact; the new anomaly pressure is concentrated in deep loops.
 
 ## Persistence and discovery
 Current save schema: **v8**. Active run persists run seed, hero ID, economy/shop state, backpack placements/rotations, generated sequence, progression/loop state, claim-once encounter rewards, selected perks and deterministic event state.
 
-Legacy v1–v7 saves migrate forward. Discovery persists item IDs and successful recipe IDs. Boss cadence/targeting, expanded event selection, second-stage fusion availability and the Junk Archive require no new save fields; they derive from existing stable discovery/content IDs.
+Legacy v1–v7 saves migrate forward. Discovery persists item IDs and successful recipe IDs. Boss cadence/targeting, expanded event selection, second-stage fusion availability, deep-loop anomaly selection and the Junk Archive require no new save fields; they derive from existing stable run seed, progression and content IDs.
 
-## P4 milestone
-The content-efficient-depth milestone is complete at prototype scope:
+## P4 milestone and expansion
+The original content-efficient-depth milestone was complete at prototype scope. Wave 5 expands the systemic pools without increasing authored item count:
 - 36 base items;
 - 24 fusion recipes;
 - 10 spatial synergy rules;
 - 4 heroes;
 - 6 boss families;
-- 21 perks;
-- 6 world mutations + 9 run events = 15 combined entries;
+- **27 perks**;
+- **15 run events**;
+- 6 launch world mutations + 6 deep-loop anomaly modifiers = **12 mutation candidates at Loop 3+**;
+- **8 alternate non-boss deep-loop enemy families**;
 - 4 second-stage transformations.
 
-Further raw content should be driven by playtest/retention evidence rather than added by default.
+The expansion is intentionally biased toward deep-run combinatorics rather than more campaign stages, atlas assets or HP-only padding. Further raw content should still be justified by playtest/retention evidence or an explicit product-direction change.
 
 ## Meta / Junk Archive
 The first P5 retention layer is implemented as the **Junk Archive** with two tabs:
@@ -199,4 +237,4 @@ Rewarded: revive, post-boss reward multiplier, reroll, bonus chest/attempt. Inte
 Real-time PvP, guilds/chat, open world, large story campaign, server-heavy economy, battle pass, dozens of heroes or hundreds of handmade stages.
 
 ## Success criterion for MVP
-A player can choose a hero without class lock-in, complete materially different runs from a compact content pool, understand why a build works, discover multiple second-stage fusions, track unfinished item/recipe collection goals without spoilers, experience six mechanically distinct boss families, encounter varied short event decisions, reach the first boss quickly, keep modifying the build after 15–20 minutes and have a credible reason to risk the same successful build for a 30–60+ minute Corrupted Loop session.
+A player can choose a hero without class lock-in, complete materially different runs from a compact content pool, understand why a build works, discover multiple second-stage fusions, track unfinished item/recipe collection goals without spoilers, experience six mechanically distinct boss families, encounter varied short event decisions, reach the first boss quickly, keep modifying the build after 15–20 minutes and have a credible reason to risk the same successful build for a 30–60+ minute Corrupted Loop session whose later cycles introduce new mutation combinations and enemy families rather than merely larger health bars.
