@@ -73,7 +73,7 @@ export const PROTOTYPE_FUSION_ITEMS: readonly ItemDefinition[] = [
     name: 'Shock Toaster',
     shape: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }],
     tags: ['device', 'metal', 'laser', 'chaos'],
-    rarity: 'legendary',
+    rarity: 'epic',
     description: 'Toast has become a high-voltage combat doctrine.',
   },
   {
@@ -81,7 +81,7 @@ export const PROTOTYPE_FUSION_ITEMS: readonly ItemDefinition[] = [
     name: 'Cyber Cat',
     shape: [{ x: 0, y: 0 }, { x: 1, y: 0 }],
     tags: ['pet', 'cat', 'laser', 'device', 'metal'],
-    rarity: 'legendary',
+    rarity: 'epic',
     description: 'The battery was installed where common sense used to be.',
   },
   {
@@ -89,7 +89,7 @@ export const PROTOTYPE_FUSION_ITEMS: readonly ItemDefinition[] = [
     name: 'Biohazard Turbine',
     shape: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }],
     tags: ['device', 'poison', 'metal'],
-    rarity: 'legendary',
+    rarity: 'epic',
     description: 'Industrial ventilation for people who hate breathable air.',
   },
   {
@@ -97,7 +97,7 @@ export const PROTOTYPE_FUSION_ITEMS: readonly ItemDefinition[] = [
     name: 'Polarity Duck',
     shape: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }],
     tags: ['pet', 'duck', 'chaos', 'magnet', 'metal'],
-    rarity: 'legendary',
+    rarity: 'epic',
     description: 'Quacks north. Bites south. Attracts cutlery.',
   },
   {
@@ -105,7 +105,7 @@ export const PROTOTYPE_FUSION_ITEMS: readonly ItemDefinition[] = [
     name: 'Toxic Fish Cannon',
     shape: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }, { x: 2, y: 1 }],
     tags: ['weapon', 'laser', 'poison', 'chaos'],
-    rarity: 'legendary',
+    rarity: 'epic',
     description: 'A fish weapon that now violates several environmental treaties.',
   },
   {
@@ -113,7 +113,7 @@ export const PROTOTYPE_FUSION_ITEMS: readonly ItemDefinition[] = [
     name: 'Gravity Toaster',
     shape: [{ x: 0, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 }],
     tags: ['device', 'metal', 'magnet', 'chaos'],
-    rarity: 'legendary',
+    rarity: 'epic',
     description: 'Breakfast bends nearby metal and occasionally local spacetime.',
   },
 ];
