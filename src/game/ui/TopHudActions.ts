@@ -1,5 +1,6 @@
 import * as Phaser from 'phaser';
 import { createHudActionLayout, type HudActionId, type HudActionPlacement } from '../domain/hudLayout';
+import { resolveAuthoredTexture, uiArtKey } from './authoredArt';
 
 export interface TopHudActionsOptions {
   readonly dailyKey: string;
@@ -16,6 +17,7 @@ interface ActionVisual {
   readonly placement: HudActionPlacement;
   readonly rect: Phaser.GameObjects.Rectangle;
   readonly text: Phaser.GameObjects.Text;
+  readonly icon?: Phaser.GameObjects.Image;
 }
 
 export class TopHudActions {
@@ -58,8 +60,11 @@ export class TopHudActions {
         palette.fill,
         1,
       ).setStrokeStyle(2, palette.stroke).setInteractive({ useHandCursor: true });
+
+      const icon = createActionIcon(this.scene, placement);
+      const textOffset = icon ? (placement.compactLabel ? 7 : 9) : 0;
       const text = this.scene.add.text(
-        placement.x,
+        placement.x + textOffset,
         placement.y,
         labelFor(placement.id, placement.compactLabel, this.options.dailyKey, this.options.dailyActive),
         {
@@ -71,16 +76,39 @@ export class TopHudActions {
 
       rect.on('pointerover', () => rect.setFillStyle(palette.hover));
       rect.on('pointerout', () => rect.setFillStyle(palette.fill));
-      rect.on('pointerdown', () => { rect.setScale(0.97); text.setScale(0.97); });
+      rect.on('pointerdown', () => {
+        rect.setScale(0.97);
+        text.setScale(0.97);
+        icon?.setScale(0.97 * iconBaseScale(placement));
+      });
       rect.on('pointerup', () => {
         rect.setScale(1);
         text.setScale(1);
+        icon?.setScale(iconBaseScale(placement));
         callbackFor(placement.id, this.options)();
       });
-      this.root.add([rect, text]);
-      this.visuals.set(placement.id, { placement, rect, text });
+
+      this.root.add([rect]);
+      if (icon) this.root.add(icon);
+      this.root.add(text);
+      this.visuals.set(placement.id, { placement, rect, text, icon });
     }
   }
+}
+
+function createActionIcon(scene: Phaser.Scene, placement: HudActionPlacement): Phaser.GameObjects.Image | undefined {
+  const texture = resolveAuthoredTexture(scene, uiArtKey(placement.id));
+  if (!texture) return undefined;
+  const size = placement.compactLabel ? 16 : 18;
+  const left = placement.x - placement.width / 2 + (placement.compactLabel ? 15 : 17);
+  const icon = scene.add.image(left, placement.y, texture.textureKey, texture.frame);
+  const maxSide = Math.max(1, icon.width, icon.height);
+  icon.setScale(size / maxSide);
+  return icon;
+}
+
+function iconBaseScale(placement: HudActionPlacement): number {
+  return (placement.compactLabel ? 16 : 18) / 128;
 }
 
 function readDisplayWidth(scene: Phaser.Scene): number {
@@ -104,10 +132,10 @@ function labelFor(id: HudActionId, compact: boolean, dailyKey: string, dailyActi
     if (compact) return dailyActive ? 'DAILY • ACTIVE' : `DAILY • ${dailyKey.slice(5)}`;
     return dailyActive ? `DAILY ${dailyKey} • ACTIVE` : `DAILY RUN • ${dailyKey}`;
   }
-  if (id === 'archive') return compact ? 'ARCHIVE ◆' : 'JUNK ARCHIVE ◆';
-  if (id === 'trophies') return compact ? 'TROPHIES ✦' : 'TROPHY SHELF ✦';
-  if (id === 'help') return compact ? '? HELP' : '? HOW TO PLAY';
-  if (id === 'settings') return compact ? '⚙ SET' : '⚙ SETTINGS';
+  if (id === 'archive') return compact ? 'ARCHIVE' : 'JUNK ARCHIVE';
+  if (id === 'trophies') return compact ? 'TROPHIES' : 'TROPHY SHELF';
+  if (id === 'help') return compact ? 'HELP' : 'HOW TO PLAY';
+  if (id === 'settings') return compact ? 'SET' : 'SETTINGS';
   return compact ? 'RESET' : 'NEW RUN / RESET';
 }
 
