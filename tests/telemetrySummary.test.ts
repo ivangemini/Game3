@@ -68,7 +68,7 @@ describe('summarizeTelemetry', () => {
     }]);
   });
 
-  it('counts at most one return-age bucket per started session and ignores unmatched age events', () => {
+  it('deduplicates return-age buckets while keeping coverage tied to started sessions', () => {
     const events: TelemetryEnvelope[] = [
       sessionEvent('a', 1000, 'session_start', { returning: false, platform: 'local', viewportMode: 'standard-landscape' }),
       sessionEvent('a', 1001, 'session_age', { bucket: 'new' }),
@@ -80,7 +80,7 @@ describe('summarizeTelemetry', () => {
     ];
 
     const summary = summarizeTelemetry(events);
-    expect(summary.returnAgeBuckets).toEqual({ '3-7d': 1, new: 1 });
+    expect(summary.returnAgeBuckets).toEqual({ '3-7d': 1, '30d-plus': 1, new: 1 });
     expect(summary.sessionsWithAgeBucket).toBe(2);
     expect(summary.sessionAgeCoverageRate).toBeCloseTo(2 / 3);
   });
