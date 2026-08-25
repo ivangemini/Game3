@@ -1,5 +1,8 @@
 import type { TelemetryEnvelope } from './Telemetry';
 
+const FIRST_BOSS_ENCOUNTER_ID = 'w1-tv-tyrant';
+const FINAL_CAMPAIGN_BOSS_ENCOUNTER_ID = 'w4-baby-moon';
+
 export interface CombatMetric {
   readonly encounterId: string;
   readonly attempts: number;
@@ -25,6 +28,16 @@ export interface SoftLaunchSummary {
   readonly averageTimeToFirstCombatMs: number;
   readonly medianTimeToFirstCombatMs: number;
   readonly p90TimeToFirstCombatMs: number;
+  readonly sessionsWithFirstBoss: number;
+  readonly firstBossSessionRate: number;
+  readonly averageTimeToFirstBossMs: number;
+  readonly medianTimeToFirstBossMs: number;
+  readonly p90TimeToFirstBossMs: number;
+  readonly sessionsCompletingBaseCampaign: number;
+  readonly baseCampaignCompletionRate: number;
+  readonly averageBaseCampaignDurationMs: number;
+  readonly medianBaseCampaignDurationMs: number;
+  readonly p90BaseCampaignDurationMs: number;
   readonly standardRunsStarted: number;
   readonly dailyRunsStarted: number;
   readonly tutorialOpened: number;
@@ -77,6 +90,8 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
   const sessionStartedAt = new Map<string, number>();
   const firstHeroAt = new Map<string, number>();
   const firstCombatAt = new Map<string, number>();
+  const firstBossAt = new Map<string, number>();
+  const baseCampaignCompletedAt = new Map<string, number>();
 
   for (const event of events) {
     switch (event.name) {
@@ -117,9 +132,12 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
         }
         break;
       }
-      case 'combat_started':
+      case 'combat_started': {
+        const payload = event.payload as { encounterId: string };
         rememberEarliest(firstCombatAt, event.sessionId, event.timestampMs);
+        if (payload.encounterId === FIRST_BOSS_ENCOUNTER_ID) rememberEarliest(firstBossAt, event.sessionId, event.timestampMs);
         break;
+      }
       case 'run_event_choice': eventChoices += 1; break;
       case 'fusion_used': fusions += 1; break;
       case 'loop_entered': {
@@ -150,6 +168,9 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
         metric.durationTotal += duration;
         metric.durations.push(duration);
         combats.set(payload.encounterId, metric);
+        if (payload.encounterId === FINAL_CAMPAIGN_BOSS_ENCOUNTER_ID && payload.outcome === 'victory') {
+          rememberEarliest(baseCampaignCompletedAt, event.sessionId, event.timestampMs);
+        }
         break;
       }
       default: break;
@@ -158,6 +179,8 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
 
   const timeToHero = sessionLatencies(sessionStartedAt, firstHeroAt);
   const timeToFirstCombat = sessionLatencies(sessionStartedAt, firstCombatAt);
+  const timeToFirstBoss = sessionLatencies(sessionStartedAt, firstBossAt);
+  const baseCampaignDurations = sessionLatencies(sessionStartedAt, baseCampaignCompletedAt);
 
   return {
     sessions,
@@ -173,6 +196,16 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
     averageTimeToFirstCombatMs: average(timeToFirstCombat),
     medianTimeToFirstCombatMs: percentile(timeToFirstCombat, 0.5),
     p90TimeToFirstCombatMs: percentile(timeToFirstCombat, 0.9),
+    sessionsWithFirstBoss: timeToFirstBoss.length,
+    firstBossSessionRate: ratio(timeToFirstBoss.length, sessions),
+    averageTimeToFirstBossMs: average(timeToFirstBoss),
+    medianTimeToFirstBossMs: percentile(timeToFirstBoss, 0.5),
+    p90TimeToFirstBossMs: percentile(timeToFirstBoss, 0.9),
+    sessionsCompletingBaseCampaign: baseCampaignDurations.length,
+    baseCampaignCompletionRate: ratio(baseCampaignDurations.length, sessions),
+    averageBaseCampaignDurationMs: average(baseCampaignDurations),
+    medianBaseCampaignDurationMs: percentile(baseCampaignDurations, 0.5),
+    p90BaseCampaignDurationMs: percentile(baseCampaignDurations, 0.9),
     standardRunsStarted,
     dailyRunsStarted,
     tutorialOpened,
