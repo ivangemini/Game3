@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { atlasTextureKeyForArtKey } from '../assets/atlasContract';
 
 export interface AuthoredArtAsset {
   readonly key: string;
@@ -6,77 +7,27 @@ export interface AuthoredArtAsset {
   readonly kind: 'item' | 'hero' | 'boss';
 }
 
+export interface AuthoredTextureRef {
+  readonly textureKey: string;
+  readonly frame?: string;
+}
+
 const ITEM_IDS = [
-  'laser-cat',
-  'angry-battery',
-  'cursed-toaster',
-  'mutant-duck',
-  'toxic-fan',
-  'fish-blaster',
-  'poison-flask',
-  'scrap-magnet',
-  'tactical-banana',
-  'pocket-radio',
-  'slime-can',
-  'wrench-sword',
-  'battery-snail',
-  'disco-orb',
-  'panic-noodles',
-  'feral-router',
-  'alarm-hamster',
-  'toxic-umbrella',
-  'satellite-fork',
-  'canned-lightning',
-  'slime-donut',
-  'catellite-dish',
-  'emergency-microwave',
-  'laser-mop',
-  'fermented-gamepad',
-  'magnet-croissant',
-  'slime-pager',
-  'battery-pigeon',
-  'duck-drill',
-  'cat-battery-pack',
-  'poison-printer',
-  'laser-kettle',
-  'chaos-stapler',
-  'antenna-sausage',
-  'slime-magnet',
-  'feral-roomba',
-  'shock-toaster',
-  'cyber-cat',
-  'biohazard-turbine',
-  'polarity-duck',
-  'toxic-fish-cannon',
-  'gravity-toaster',
-  'turbo-router',
-  'slime-sword',
-  'laser-banana',
-  'radio-duck',
-  'noodle-fan',
-  'disco-snail',
-  'reactor-hamster',
-  'acid-parasol',
-  'broadcast-trident',
-  'storm-disco',
-  'bio-snack-pack',
-  'orbital-cat',
-  'apocalypse-microwave',
-  'rail-mop',
-  'singularity-toaster',
-  'cataclysm-satellite',
-  'plague-picnic',
-  'thunder-rail-mop',
+  'laser-cat', 'angry-battery', 'cursed-toaster', 'mutant-duck', 'toxic-fan', 'fish-blaster',
+  'poison-flask', 'scrap-magnet', 'tactical-banana', 'pocket-radio', 'slime-can', 'wrench-sword',
+  'battery-snail', 'disco-orb', 'panic-noodles', 'feral-router', 'alarm-hamster', 'toxic-umbrella',
+  'satellite-fork', 'canned-lightning', 'slime-donut', 'catellite-dish', 'emergency-microwave', 'laser-mop',
+  'shock-toaster', 'cyber-cat', 'biohazard-turbine', 'polarity-duck', 'toxic-fish-cannon', 'gravity-toaster',
+  'turbo-router', 'slime-sword', 'laser-banana', 'radio-duck', 'noodle-fan', 'disco-snail',
+  'reactor-hamster', 'acid-parasol', 'broadcast-trident', 'storm-disco', 'bio-snack-pack', 'orbital-cat',
+  'apocalypse-microwave', 'rail-mop', 'fermented-gamepad', 'magnet-croissant', 'slime-pager', 'battery-pigeon',
+  'duck-drill', 'cat-battery-pack', 'poison-printer', 'laser-kettle', 'chaos-stapler', 'antenna-sausage',
+  'slime-magnet', 'feral-roomba', 'singularity-toaster', 'cataclysm-satellite', 'plague-picnic', 'thunder-rail-mop',
 ] as const;
 
 const HERO_IDS = ['scavenger', 'engineer', 'alchemist', 'beastfriend'] as const;
 const BOSS_IDS = [
-  'tv-tyrant',
-  'deadline-snail',
-  'closet-monster',
-  'baby-moon',
-  'copycat-auditor',
-  'border-shark',
+  'tv-tyrant', 'deadline-snail', 'closet-monster', 'baby-moon', 'copycat-auditor', 'border-shark',
 ] as const;
 
 export const AUTHORED_ART_ASSETS: readonly AuthoredArtAsset[] = [
@@ -103,12 +54,22 @@ export function hasAuthoredArt(key: string): boolean {
   return ASSET_BY_KEY.has(key);
 }
 
+export function resolveAuthoredTexture(scene: Phaser.Scene, key: string): AuthoredTextureRef | null {
+  const atlasKey = atlasTextureKeyForArtKey(key);
+  if (atlasKey && scene.textures.exists(atlasKey)) {
+    const atlas = scene.textures.get(atlasKey);
+    if (atlas.has(key)) return { textureKey: atlasKey, frame: key };
+  }
+  if (scene.textures.exists(key)) return { textureKey: key };
+  return null;
+}
+
 export function requestAuthoredTexture(
   scene: Phaser.Scene,
   key: string,
   onReady?: () => void,
 ): boolean {
-  if (scene.textures.exists(key)) {
+  if (resolveAuthoredTexture(scene, key)) {
     onReady?.();
     return true;
   }
@@ -146,13 +107,15 @@ export function createAuthoredPortraitSlot(
   root.add([plate, mark]);
 
   const render = (): void => {
-    if (!root.active || !scene.textures.exists(key)) return;
+    if (!root.active) return;
+    const texture = resolveAuthoredTexture(scene, key);
+    if (!texture) return;
     root.removeAll(true);
-    const image = scene.add.image(0, 0, key).setDisplaySize(width, height);
+    const image = scene.add.image(0, 0, texture.textureKey, texture.frame).setDisplaySize(width, height);
     root.add(image);
   };
 
-  if (scene.textures.exists(key)) render();
+  if (resolveAuthoredTexture(scene, key)) render();
   else requestAuthoredTexture(scene, key, render);
   return root;
 }
