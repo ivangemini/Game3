@@ -39,6 +39,8 @@
 - [x] Baby Moon Tag Eclipse: dominant-tag telegraph + temporary family-wide trigger suppression
 - [x] Deadline Snail Time Tax: fastest-item telegraph + one-shot delay of that item's next queued trigger
 - [x] Closet Monster Clutter Crush: loose-item telegraph + shield-aware pressure from isolated junk
+- [x] Copycat Auditor Duplicate Debt: exact-duplicate telegraph + shield-aware fine per extra copy
+- [x] Border Shark Edge Rent: perimeter-item telegraph + shield-aware rent per edge item
 - [x] Boss-rule wrappers preserve render-chunk invariance and scale cadence in corrupted loops
 - [x] Victory rewards feed the real run/shop economy
 - [x] Encounter rewards are claim-once per run and persisted
@@ -60,6 +62,7 @@
 - [x] Corrupted Loop foundation: another 4-world / 12-encounter cycle using the same build
 - [x] Loop depth scales enemy HP/damage/speed and base payout
 - [x] Loop worlds stack 2 mutations in Loop 2, 3 in Loop 3 and up to 4 deeper
+- [x] Corrupted boss rotation: even loops introduce Copycat Auditor + Border Shark; odd loops return Deadline Snail + Closet Monster
 - [x] Safe cash-out only at cycle boundaries; entering a loop commits the player to the full cycle
 - [x] Deepest completed corrupted loop persisted in meta save
 - [x] Seeded world mutation system with six prototype risk/reward rules that modify real encounter stats and payouts
@@ -75,7 +78,7 @@
 - [ ] 20–30 launch fusion recipes (12 prototype recipes implemented)
 - [x] Expanded tag/synergy-family foundation: 10 spatial contact rules across core + food/antenna/slime cross-links
 - [x] 4 prototype heroes with persisted per-run choice and real economy/combat effects
-- [ ] 6 boss families + modifiers (4 prototype families implemented: TV Tyrant + Deadline Snail + Closet Monster + Baby Moon)
+- [x] 6 boss families + corrupted-loop modifiers: TV Tyrant, Deadline Snail, Closet Monster, Baby Moon, Copycat Auditor and Border Shark
 - [ ] 20–25 perks (10 prototype perks implemented)
 - [ ] ~15 mutations/events pool (12 combined prototype rules/events currently)
 - [ ] late-run secret transformations / second-stage evolutions
@@ -107,7 +110,7 @@
 ## P8 — QA, balance & performance
 - [x] Automated deterministic tests for core run/fusion/event/hero/boss domains
 - [x] Seeded pacing target simulation with percentile bands and target hit rates
-- [x] Seeded combat/build simulation reports across weak/typical/strong power bands and boss checkpoints, including boss-rule wrappers
+- [x] Seeded combat/build simulation reports across weak/typical/strong power bands and boss checkpoints, including all custom boss-rule wrappers and Loop 2 alternate families
 - [ ] mobile/browser matrix
 - [ ] save migrations/recovery UX
 - [ ] performance profiling and asset budgets

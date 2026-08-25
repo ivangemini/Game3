@@ -1,4 +1,4 @@
-# Architecture v0.10
+# Architecture v0.11
 
 ## Stack
 - Phaser 4.2.1
@@ -43,6 +43,8 @@ Backpack geometry, blocked pocket cells, fusion placement and synergy evaluation
 
 Physical side contact is also a reusable gameplay concept separate from synergy activation. Closet Monster's Clutter Crush treats an item as anchored when any occupied cell shares an orthogonal side with a cell owned by another item. Tags do not matter for this defensive contact rule.
 
+The fixed prototype backpack boundary is another domain-level geometry concept. Border Shark's Edge Rent classifies an item as a perimeter item when any occupied cell lies on `x = 0`, `x = BACKPACK_WIDTH - 1`, `y = 0` or `y = BACKPACK_HEIGHT - 1`. The rule counts items rather than edge cells so shape/rotation decisions remain meaningful and a full late-run board is not automatically punished multiple times per item.
+
 ## Heroes and combat build
 Heroes are light per-run rule-benders, not classes. `src/game/domain/heroes.ts` applies optional tagged bonuses to the same `ItemBonuses` vocabulary used by spatial synergies and perks. The build pipeline is:
 
@@ -51,7 +53,7 @@ Heroes are light per-run rule-benders, not classes. `src/game/domain/heroes.ts` 
 3. apply selected run perks;
 4. create immutable combat items.
 
-Combat items retain stable gameplay tags and occupied cells. Boss rules can therefore reason about build composition and geometry without importing declarative item data back into combat execution.
+Combat items retain stable definition IDs, gameplay tags and occupied cells. Boss rules can therefore reason about exact duplicates, tag composition and geometry without importing declarative item data back into combat execution.
 
 The Scavenger's starting-coin bonus is an economy effect applied once when the hero is chosen; combat-oriented heroes never mutate the backpack or combat state directly.
 
@@ -64,11 +66,15 @@ Backpack effects are converted into combat stats before simulation. Current exam
 
 TV Tyrant owns item/cell/row interference primitives. Baby Moon owns `tagInterference`: the domain counts tags in the immutable combat snapshot, deterministically selects the most represented family, telegraphs it and suppresses matching item triggers for the eclipse window.
 
-`src/game/domain/bossCombat.ts` composes mechanically distinct boss-family rules around the generic queue without making `combat.ts` depend on boss IDs:
+`src/game/domain/bossCombat.ts` composes four additional mechanically distinct boss-family rules around the generic queue without making `combat.ts` depend on boss IDs:
 - **Deadline Snail / Time Tax** resolves the fastest meaningful combat item and shifts only its next queued trigger after a telegraph.
 - **Closet Monster / Clutter Crush** resolves all geometrically loose items, telegraphs their occupied cells, then applies shield-aware pressure proportional to the loose-item count.
+- **Copycat Auditor / Duplicate Debt** groups by exact `definitionId`, telegraphs the most repeated definition, then applies shield-aware pressure only for copies beyond the first.
+- **Border Shark / Edge Rent** resolves every item touching the 6×5 perimeter, telegraphs those footprints, then applies shield-aware pressure per edge item.
 
 The wrapper advances generic combat exactly to each boss telegraph/impact boundary before applying its deterministic transform. This preserves chunk-size invariance and explicit equal-time ordering. Wrapper identity is derived from stable enemy IDs; corrupted IDs encode loop number so cadence scaling needs no extra save state.
+
+Corrupted-loop encounter generation alternates the World 2/World 3 wrapper families without increasing encounter count: even loops use Copycat Auditor + Border Shark, odd loops use Deadline Snail + Closet Monster. World 1 remains TV Tyrant and World 4 remains Baby Moon, so the long-session cycle exposes all six families while preserving the 12-encounter structure.
 
 `CombatPanel` maps generic and boss-wrapper presentation events to semantic `AudioCue`s and exposes them through an optional callback. Muting, throttling or failing to play audio cannot influence combat state.
 
@@ -77,7 +83,7 @@ Combat simulation receives explicit elapsed time. Human decision pacing is model
 
 The seeded pacing model composes the real 12-encounter campaign/loop structure with target human decision-time ranges and produces first-boss, campaign, Loop 2 and Loop 3 percentile checkpoints. It is a regression guard, not a substitute for real play telemetry.
 
-The seeded combat/build model generates legal backpacks against the current pocket constraints, samples perk/fusion exposure by power band, feeds those builds through the real synergy/perk/hero/combat pipeline and reports outcomes plus item correlations. It advances through the boss-rule wrapper too, so Deadline Snail and Closet Monster are represented in Boss 2/Boss 3 balance reports. Synthetic build reports diagnose balance; soft-launch telemetry remains the authority for player behavior.
+The seeded combat/build model generates legal backpacks against the current pocket constraints, samples perk/fusion exposure by power band, feeds those builds through the real synergy/perk/combat pipeline and reports outcomes plus item correlations. It advances through the same boss-rule wrapper used by runtime and now includes seven checkpoints: all four campaign bosses, Loop 2 Copycat Auditor, Loop 2 Border Shark and the Loop 2 final Baby Moon. Synthetic build reports diagnose balance; soft-launch telemetry remains the authority for player behavior.
 
 ## Saves
 Current schema: **v8**.
