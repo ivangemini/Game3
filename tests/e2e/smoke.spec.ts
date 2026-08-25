@@ -51,3 +51,38 @@ test('keeps save recovery shell and application root available', async ({ page }
   await expect(page.locator('#save-notice')).toBeAttached();
   await expect(page.locator('#save-notice')).toBeHidden();
 });
+
+test('surfaces a safe reset when the primary save is corrupt and no backup exists', async ({ page }) => {
+  await page.evaluate(() => {
+    localStorage.setItem('junkpack.save', '{broken-json');
+    localStorage.removeItem('junkpack.save.backup');
+  });
+  await page.reload();
+  await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 });
+  const notice = page.locator('#save-notice');
+  await expect(notice).toBeVisible();
+  await expect(notice).toContainText('SAVE RESET');
+});
+
+test('restores the previous valid backup after primary corruption', async ({ page }) => {
+  const backup = {
+    version: 8,
+    discoveredItemIds: ['laser-cat'],
+    discoveredRecipeIds: [],
+    bestEndlessWave: 0,
+    bestCorruptedLoop: 0,
+    settings: { musicVolume: 0.8, sfxVolume: 0.9, reducedMotion: false },
+    activeRun: null,
+  };
+  await page.evaluate((value) => {
+    localStorage.setItem('junkpack.save', '{broken-json');
+    localStorage.setItem('junkpack.save.backup', JSON.stringify(value));
+  }, backup);
+  await page.reload();
+  await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 });
+  const notice = page.locator('#save-notice');
+  await expect(notice).toBeVisible();
+  await expect(notice).toContainText('SAVE RECOVERED');
+  const restored = await page.evaluate(() => JSON.parse(localStorage.getItem('junkpack.save') ?? 'null'));
+  expect(restored.discoveredItemIds).toEqual(['laser-cat']);
+});
