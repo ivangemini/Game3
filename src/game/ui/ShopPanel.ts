@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { telemetry } from '../../analytics/Telemetry';
 import type { PlatformAdapter } from '../../platform/PlatformAdapter';
 import { generateShopOffers, type ShopOffer } from '../domain/shop';
 import type { ItemDefinition } from '../domain/types';
@@ -149,7 +150,7 @@ export class ShopPanel {
     button.on('pointerup', () => {
       restore();
       if (!this.spendCoins(7, 'Shop reroll')) return;
-      this.advanceReroll('NEW CRATE OPENED');
+      this.advanceReroll('NEW CRATE OPENED', 'coins');
     });
   }
 
@@ -181,8 +182,9 @@ export class ShopPanel {
       this.setStatus('OPTIONAL AD • FREE REROLL ONLY AFTER COMPLETION', '#9eeeff');
       try {
         const result = await platform.showRewarded();
+        telemetry.track('ad_result', { placement: 'shop-free-reroll', format: 'rewarded', result });
         if (result === 'rewarded') {
-          this.advanceReroll('REWARDED REROLL COMPLETE');
+          this.advanceReroll('REWARDED REROLL COMPLETE', 'rewarded');
           return;
         }
         const message = result === 'dismissed'
@@ -191,6 +193,9 @@ export class ShopPanel {
             ? 'AD FAILED • NOTHING SPENT'
             : 'NO REWARDED AD AVAILABLE • NOTHING SPENT';
         this.setStatus(message, result === 'failed' ? '#ff9c9c' : '#c8bdba');
+      } catch {
+        telemetry.track('ad_result', { placement: 'shop-free-reroll', format: 'rewarded', result: 'failed' });
+        this.setStatus('AD FAILED • NOTHING SPENT', '#ff9c9c');
       } finally {
         this.rewardedRerollInFlight = false;
         label.setText('▶ FREE REROLL');
@@ -199,9 +204,10 @@ export class ShopPanel {
     });
   }
 
-  private advanceReroll(statusPrefix: string): void {
+  private advanceReroll(statusPrefix: string, source: 'coins' | 'rewarded'): void {
     this.shopIndex += 1;
     this.soldOfferIds.clear();
+    telemetry.track('shop_reroll', { source, shopIndex: this.shopIndex });
     this.onFeedback?.({ kind: 'reroll' });
     this.setStatus(`${statusPrefix} • SEED STEP ${this.shopIndex}`, '#b8ff8e');
     this.renderOffers();
@@ -289,6 +295,7 @@ export class ShopPanel {
 
     this.coins -= offer.price;
     this.soldOfferIds.add(offer.id);
+    telemetry.track('shop_purchase', { definitionId: definition.id, price: offer.price });
     this.onFeedback?.({ kind: 'purchase', definitionId: definition.id });
     this.setStatus(`${definition.name.toUpperCase()} • PACKED INTO THE BAG`, '#b8ff8e');
     this.renderOffers();
