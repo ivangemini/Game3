@@ -1,5 +1,6 @@
 export interface TelemetryEventMap {
   readonly session_start: { readonly returning: boolean; readonly platform: string; readonly viewportMode: string };
+  readonly run_started: { readonly mode: 'standard' | 'daily' };
   readonly tutorial_opened: { readonly step: number };
   readonly tutorial_completed: { readonly stepCount: number };
   readonly tutorial_skipped: { readonly step: number };
