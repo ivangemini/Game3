@@ -3,6 +3,8 @@ import { createSeededRng } from '../domain/rng';
 import type { RunProgressState } from '../domain/runProgression';
 import {
   CAMPAIGN_WORLDS,
+  LOOP_ENCOUNTER_COUNT,
+  LOOP_WORLDS,
   loopRewardMultiplier,
   slotForCampaignEncounter,
   slotForLoopEncounter,
@@ -102,8 +104,14 @@ const BASE_CAMPAIGN_ENCOUNTERS: readonly BaseEncounterDefinition[] = [
   { encounterId: 'w3-signal-golem', world: 3, slot: 2, kind: 'elite', title: 'Signal Golem', subtitle: 'Elite • checks whether the build has a coherent damage engine.', rewardCoins: 24, scoreValue: 340, enemy: { id: 'signal-golem', name: 'Signal Golem', maxHp: 264, attackIntervalMs: 1650, attackDamage: 14 } },
   { encounterId: 'w3-closet-monster', world: 3, slot: 3, kind: 'boss', title: 'Closet Monster', subtitle: 'Boss • Clutter Crush punishes loose items that touch nothing.', rewardCoins: 42, scoreValue: 650, enemy: { id: 'closet-monster', name: 'Closet Monster', maxHp: 332, attackIntervalMs: 1900, attackDamage: 16 } },
   { encounterId: 'w4-grinning-fridge', world: 4, slot: 1, kind: 'fight', title: 'Grinning Fridge', subtitle: 'World 4 • full backpack, no excuses.', rewardCoins: 24, scoreValue: 360, enemy: { id: 'grinning-fridge', name: 'Grinning Fridge', maxHp: 310, attackIntervalMs: 1725, attackDamage: 16 } },
-  { encounterId: 'w4-duck-cult', world: 4, slot: 2, kind: 'elite', title: 'Rubber Duck Choir', subtitle: 'Elite • a final pressure test before reality breaks.', rewardCoins: 31, scoreValue: 470, enemy: { id: 'rubber-duck-choir', name: 'Rubber Duck Choir', maxHp: 382, attackIntervalMs: 1550, attackDamage: 18 } },
-  { encounterId: 'w4-baby-moon', world: 4, slot: 3, kind: 'boss', title: 'Baby Moon', subtitle: 'Final campaign boss • Tag Eclipse attacks your most stacked build family.', rewardCoins: 55, scoreValue: 850, enemy: { id: 'baby-moon', name: 'Baby Moon', maxHp: 475, attackIntervalMs: 1825, attackDamage: 20, tagInterference: tagEclipse(5200, 1200, 3000) } },
+  { encounterId: 'w4-duck-cult', world: 4, slot: 2, kind: 'elite', title: 'Rubber Duck Choir', subtitle: 'Elite • the old campaign finale is now the first reality breakpoint.', rewardCoins: 31, scoreValue: 470, enemy: { id: 'rubber-duck-choir', name: 'Rubber Duck Choir', maxHp: 382, attackIntervalMs: 1550, attackDamage: 18 } },
+  { encounterId: 'w4-baby-moon', world: 4, slot: 3, kind: 'boss', title: 'Baby Moon', subtitle: 'Boss • Tag Eclipse attacks your most stacked build family and tears open the late campaign.', rewardCoins: 55, scoreValue: 850, enemy: { id: 'baby-moon', name: 'Baby Moon', maxHp: 475, attackIntervalMs: 1825, attackDamage: 20, tagInterference: tagEclipse(5200, 1200, 3000) } },
+  { encounterId: 'w5-carbon-clerks', world: 5, slot: 1, kind: 'fight', title: 'Carbon Copy Clerks', subtitle: 'World 5 • duplicate paperwork attacks the build you thought was finished.', rewardCoins: 30, scoreValue: 480, enemy: { id: 'carbon-copy-clerks', name: 'Carbon Copy Clerks', maxHp: 395, attackIntervalMs: 1650, attackDamage: 19 } },
+  { encounterId: 'w5-mirror-mule', world: 5, slot: 2, kind: 'elite', title: 'Mirror Mule', subtitle: 'Elite • late-run pressure with enough HP to expose weak scaling, not stall the run.', rewardCoins: 38, scoreValue: 610, enemy: { id: 'mirror-mule', name: 'Mirror Mule', maxHp: 485, attackIntervalMs: 1500, attackDamage: 21 } },
+  { encounterId: 'w5-copycat-auditor', world: 5, slot: 3, kind: 'boss', title: 'Copycat Auditor', subtitle: 'Boss • Duplicate Debt fines exact copies beyond the first.', rewardCoins: 64, scoreValue: 1050, enemy: { id: 'copycat-auditor', name: 'Copycat Auditor', maxHp: 585, attackIntervalMs: 1750, attackDamage: 22 } },
+  { encounterId: 'w6-edge-eels', world: 6, slot: 1, kind: 'fight', title: 'Edge Eel Syndicate', subtitle: 'World 6 • the final district weaponizes every unsafe inch of backpack perimeter.', rewardCoins: 34, scoreValue: 560, enemy: { id: 'edge-eel-syndicate', name: 'Edge Eel Syndicate', maxHp: 485, attackIntervalMs: 1575, attackDamage: 21 } },
+  { encounterId: 'w6-rent-crab', world: 6, slot: 2, kind: 'elite', title: 'Rent Collector Crab', subtitle: 'Elite • final build check before the border starts charging rent.', rewardCoins: 44, scoreValue: 720, enemy: { id: 'rent-collector-crab', name: 'Rent Collector Crab', maxHp: 595, attackIntervalMs: 1450, attackDamage: 23 } },
+  { encounterId: 'w6-border-shark', world: 6, slot: 3, kind: 'boss', title: 'Border Shark', subtitle: 'Final campaign boss • Edge Rent punishes items touching the backpack perimeter.', rewardCoins: 78, scoreValue: 1300, enemy: { id: 'border-shark', name: 'Border Shark', maxHp: 725, attackIntervalMs: 1675, attackDamage: 25 } },
 ];
 
 export function modifierForWorld(runSeed: string | number, world: number): RunWorldModifier {
@@ -150,7 +158,7 @@ export function createLoopEncounter(
   runSeed: string | number = 'prototype-run-001',
 ): RunEncounterDefinition {
   const safeLoop = Math.max(2, Math.floor(loopNumber));
-  const safeIndex = Math.max(0, Math.min(BASE_CAMPAIGN_ENCOUNTERS.length - 1, Math.floor(encounterIndex)));
+  const safeIndex = Math.max(0, Math.min(LOOP_ENCOUNTER_COUNT - 1, Math.floor(encounterIndex)));
   const template = BASE_CAMPAIGN_ENCOUNTERS[safeIndex] ?? BASE_CAMPAIGN_ENCOUNTERS[0]!;
   const variant = loopVariantForTemplate(template, safeLoop);
   const depth = safeLoop - 1;
@@ -192,7 +200,7 @@ export function campaignLabel(index: number): string {
 }
 
 export function loopLabel(loopNumber: number, index: number): string {
-  return `LOOP ${Math.max(2, Math.floor(loopNumber))} • WORLD ${worldForLoopEncounter(index)}/${CAMPAIGN_WORLDS} • ${slotForLoopEncounter(index)}/3`;
+  return `LOOP ${Math.max(2, Math.floor(loopNumber))} • WORLD ${worldForLoopEncounter(index)}/${LOOP_WORLDS} • ${slotForLoopEncounter(index)}/3`;
 }
 
 function loopVariantForTemplate(
