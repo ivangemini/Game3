@@ -3,6 +3,9 @@ dist/
 .vite/
 coverage/
 public/assets/atlas/
+public/assets/store/
+playwright-report/
+test-results/
 .DS_Store
 *.log
 .env
