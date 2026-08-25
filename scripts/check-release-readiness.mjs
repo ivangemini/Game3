@@ -14,7 +14,7 @@ const requiredFiles = [
   'public/assets/atlas/junk-ui.svg',
   'public/assets/atlas/junk-ui.json',
   'docs/PLATFORM_INTEGRATION.md',
-  'docs/SYSTEMS/SOFT_LAUNCH_ANALYTICS.md',
+  'docs/ANALYTICS.md',
 ];
 
 const failures = [];
