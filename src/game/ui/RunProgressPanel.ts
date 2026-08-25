@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { telemetry } from '../../analytics/Telemetry';
 import { AdBreakPolicy } from '../../platform/AdBreakPolicy';
 import type { PlatformAdapter } from '../../platform/PlatformAdapter';
 import { campaignLabel, loopLabel, type RunEncounterDefinition } from '../data/runEncounters';
@@ -108,18 +109,20 @@ export class RunProgressPanel {
     const encounter = this.options.getEncounter();
     if (!encounter) return;
     this.titleText.setText(progress.mode === 'loop' ? 'CORRUPTED LOOP' : 'RUN');
-    this.stageText.setText(
-      progress.mode === 'campaign'
-        ? campaignLabel(progress.campaignEncounterIndex)
-        : loopLabel(progress.loopNumber, progress.loopEncounterIndex),
-    );
+    const stage = progress.mode === 'campaign'
+      ? campaignLabel(progress.campaignEncounterIndex)
+      : loopLabel(progress.loopNumber, progress.loopEncounterIndex);
+    this.stageText.setText(stage);
     this.encounterText.setText(encounter.title.toUpperCase());
     this.subtitleText.setText(encounter.subtitle);
     this.rewardText.setText(`BOUNTY  ◈ +${encounter.rewardCoins}`);
     this.mutationText.setText(this.mutationSummary(encounter));
     this.createActionButton(this.left + 100, this.top + 302, '▶ START FIGHT', 0x443253, 0xd07cff, () => {
       const started = this.options.onStartEncounter(encounter);
-      if (started) this.startGameplayMarkup();
+      if (started) {
+        telemetry.track('combat_started', { encounterId: encounter.encounterId, stage });
+        this.startGameplayMarkup();
+      }
       this.statusText.setText(started ? 'FIGHT LIVE • BACKPACK SNAPSHOT LOCKED' : 'BLOCKED • FINISH THE CURRENT CHOICE / FIGHT FIRST');
     });
   }
@@ -173,7 +176,10 @@ export class RunProgressPanel {
     this.statusText.setText('NATURAL BREAK • AD MAY PLAY BEFORE CONTINUING');
     try {
       const result = await platform.showInterstitial();
+      telemetry.track('ad_result', { placement: 'cycle-boundary', format: 'interstitial', result });
       if (result === 'shown') this.adBreakPolicy.recordInterstitialShown(runtimeNowMs());
+    } catch {
+      telemetry.track('ad_result', { placement: 'cycle-boundary', format: 'interstitial', result: 'failed' });
     } finally {
       this.interstitialInFlight = false;
       action();
