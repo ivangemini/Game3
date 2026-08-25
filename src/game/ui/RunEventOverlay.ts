@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { telemetry } from '../../analytics/Telemetry';
 import type { RunEventChoice, RunEventDefinition } from '../domain/runEvents';
 
 export interface RunEventChoiceAttempt {
@@ -67,12 +68,14 @@ export class RunEventOverlay {
       card.on('pointerup', () => {
         card.setScale(1.02);
         if (!this.currentEvent) return;
-        const result = this.onChoose(this.currentEvent, choice);
+        const chosenEvent = this.currentEvent;
+        const result = this.onChoose(chosenEvent, choice);
         if (!result.ok) {
           status.setText(result.message).setColor('#ff8fa3');
           this.scene.tweens.add({ targets: card, x: { from: x - 4, to: x + 4 }, yoyo: true, repeat: 2, duration: 55, onComplete: () => card.setX(x) });
           return;
         }
+        telemetry.track('run_event_choice', { eventId: chosenEvent.id, choiceId: choice.id });
         status.setText(result.message).setColor('#c9ff72');
         this.scene.time.delayedCall(180, () => this.hide());
       });
