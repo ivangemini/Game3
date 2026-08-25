@@ -1,5 +1,8 @@
+export type ReturnAgeBucket = 'new' | 'under-24h' | '1-2d' | '3-7d' | '8-30d' | '30d-plus' | 'unknown';
+
 export interface TelemetryEventMap {
   readonly session_start: { readonly returning: boolean; readonly platform: string; readonly viewportMode: string };
+  readonly session_age: { readonly bucket: ReturnAgeBucket };
   readonly run_started: { readonly mode: 'standard' | 'daily' };
   readonly tutorial_opened: { readonly step: number };
   readonly tutorial_completed: { readonly stepCount: number };
@@ -82,19 +85,43 @@ export class TelemetryClient {
 
 export interface SessionStartContext {
   readonly returning: boolean;
+  readonly returnAgeBucket: ReturnAgeBucket;
 }
 
 const SEEN_KEY = 'junkpack.telemetry.seen';
+const FIRST_SEEN_AT_KEY = 'junkpack.telemetry.first-seen-at';
+const DAY_MS = 24 * 60 * 60 * 1000;
 
-export function registerSession(storage?: Storage): SessionStartContext {
-  if (!storage) return { returning: false };
+export function registerSession(storage?: Storage, nowMs = Date.now()): SessionStartContext {
+  if (!storage) return { returning: false, returnAgeBucket: 'unknown' };
   try {
     const returning = storage.getItem(SEEN_KEY) === '1';
-    storage.setItem(SEEN_KEY, '1');
-    return { returning };
+    const storedFirstSeen = Number(storage.getItem(FIRST_SEEN_AT_KEY));
+    const validNow = Number.isFinite(nowMs) && nowMs >= 0 ? nowMs : Date.now();
+
+    if (!returning) {
+      storage.setItem(SEEN_KEY, '1');
+      storage.setItem(FIRST_SEEN_AT_KEY, String(validNow));
+      return { returning: false, returnAgeBucket: 'new' };
+    }
+
+    if (!Number.isFinite(storedFirstSeen) || storedFirstSeen <= 0 || storedFirstSeen > validNow) {
+      storage.setItem(FIRST_SEEN_AT_KEY, String(validNow));
+      return { returning: true, returnAgeBucket: 'unknown' };
+    }
+
+    return { returning: true, returnAgeBucket: ageBucket(validNow - storedFirstSeen) };
   } catch {
-    return { returning: false };
+    return { returning: false, returnAgeBucket: 'unknown' };
   }
+}
+
+function ageBucket(ageMs: number): ReturnAgeBucket {
+  if (ageMs < DAY_MS) return 'under-24h';
+  if (ageMs < 3 * DAY_MS) return '1-2d';
+  if (ageMs < 8 * DAY_MS) return '3-7d';
+  if (ageMs < 31 * DAY_MS) return '8-30d';
+  return '30d-plus';
 }
 
 export class BrowserTelemetryTransport implements TelemetryTransport {
