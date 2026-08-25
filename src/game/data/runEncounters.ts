@@ -1,7 +1,14 @@
 import type { EnemyCombatDefinition } from '../domain/combat';
 import { createSeededRng } from '../domain/rng';
 import type { RunProgressState } from '../domain/runProgression';
-import { endlessRewardMultiplier, slotForCampaignEncounter, worldForCampaignEncounter } from '../domain/runProgression';
+import {
+  CAMPAIGN_WORLDS,
+  loopRewardMultiplier,
+  slotForCampaignEncounter,
+  slotForLoopEncounter,
+  worldForCampaignEncounter,
+  worldForLoopEncounter,
+} from '../domain/runProgression';
 
 export type RunEncounterKind = 'fight' | 'elite' | 'boss';
 
@@ -25,6 +32,7 @@ export interface RunEncounterDefinition {
   readonly rewardCoins: number;
   readonly scoreValue: number;
   readonly enemy: EnemyCombatDefinition;
+  readonly modifiers: readonly RunWorldModifier[];
   readonly modifier: RunWorldModifier;
 }
 
@@ -44,7 +52,7 @@ export const WORLD_MODIFIERS: readonly RunWorldModifier[] = [
   { id: 'coupon-apocalypse', name: 'Coupon Apocalypse', description: 'Enemies +10% HP • rewards +35%.', enemyHpPct: 10, enemyDamagePct: 0, enemyAttackSpeedPct: 0, rewardPct: 35 },
 ];
 
-interface BaseEncounterDefinition extends Omit<RunEncounterDefinition, 'modifier'> {}
+interface BaseEncounterDefinition extends Omit<RunEncounterDefinition, 'modifiers' | 'modifier'> {}
 
 const BASE_CAMPAIGN_ENCOUNTERS: readonly BaseEncounterDefinition[] = [
   { encounterId: 'w1-static-rats', world: 1, slot: 1, kind: 'fight', title: 'Static Rat Swarm', subtitle: 'Warm-up fight • learn what your build actually does.', rewardCoins: 10, scoreValue: 100, enemy: { id: 'static-rats', name: 'Static Rat Swarm', maxHp: 82, attackIntervalMs: 2100, attackDamage: 6 } },
@@ -53,69 +61,132 @@ const BASE_CAMPAIGN_ENCOUNTERS: readonly BaseEncounterDefinition[] = [
   { encounterId: 'w2-microwave-brute', world: 2, slot: 1, kind: 'fight', title: 'Microwave Brute', subtitle: 'World 2 • sturdier junk, less forgiving hits.', rewardCoins: 14, scoreValue: 180, enemy: { id: 'microwave-brute', name: 'Microwave Brute', maxHp: 148, attackIntervalMs: 1950, attackDamage: 10 } },
   { encounterId: 'w2-scrap-collector', world: 2, slot: 2, kind: 'elite', title: 'Scrap Collector', subtitle: 'Elite • punishes weak damage curves.', rewardCoins: 18, scoreValue: 230, enemy: { id: 'scrap-collector', name: 'Scrap Collector', maxHp: 186, attackIntervalMs: 1750, attackDamage: 11 } },
   { encounterId: 'w2-tv-pirate-signal', world: 2, slot: 3, kind: 'boss', title: 'TV Tyrant: Pirate Signal', subtitle: 'Boss remix • faster interference, higher pressure.', rewardCoins: 32, scoreValue: 420, enemy: { id: 'tv-tyrant-pirate', name: 'TV Tyrant // Pirate Signal', maxHp: 218, attackIntervalMs: 2050, attackDamage: 12, interference: channelJam(3700, 750, 2500), cellInterference: slimeCell(5000, 900, 2800) } },
-  { encounterId: 'w3-mutant-conveyor', world: 3, slot: 1, kind: 'fight', title: 'Mutant Conveyor', subtitle: 'World 3 • final climb starts here.', rewardCoins: 18, scoreValue: 260, enemy: { id: 'mutant-conveyor', name: 'Mutant Conveyor', maxHp: 214, attackIntervalMs: 1800, attackDamage: 13 } },
-  { encounterId: 'w3-signal-golem', world: 3, slot: 2, kind: 'elite', title: 'Signal Golem', subtitle: 'Elite • last chance to tune the backpack before the finale.', rewardCoins: 24, scoreValue: 340, enemy: { id: 'signal-golem', name: 'Signal Golem', maxHp: 264, attackIntervalMs: 1650, attackDamage: 14 } },
-  { encounterId: 'w3-final-broadcast', world: 3, slot: 3, kind: 'boss', title: 'TV Tyrant: Final Broadcast', subtitle: 'Final campaign boss • strongest signal attacks.', rewardCoins: 42, scoreValue: 650, enemy: { id: 'tv-tyrant-final', name: 'TV Tyrant // Final Broadcast', maxHp: 332, attackIntervalMs: 1900, attackDamage: 16, interference: channelJam(3300, 700, 2700), cellInterference: slimeCell(4400, 850, 3000) } },
+  { encounterId: 'w3-mutant-conveyor', world: 3, slot: 1, kind: 'fight', title: 'Mutant Conveyor', subtitle: 'World 3 • the backpack should be becoming a real machine now.', rewardCoins: 18, scoreValue: 260, enemy: { id: 'mutant-conveyor', name: 'Mutant Conveyor', maxHp: 214, attackIntervalMs: 1800, attackDamage: 13 } },
+  { encounterId: 'w3-signal-golem', world: 3, slot: 2, kind: 'elite', title: 'Signal Golem', subtitle: 'Elite • checks whether the build has a coherent damage engine.', rewardCoins: 24, scoreValue: 340, enemy: { id: 'signal-golem', name: 'Signal Golem', maxHp: 264, attackIntervalMs: 1650, attackDamage: 14 } },
+  { encounterId: 'w3-final-broadcast', world: 3, slot: 3, kind: 'boss', title: 'TV Tyrant: Final Broadcast', subtitle: 'Third boss • stronger signal attacks and the last normal pocket unlock.', rewardCoins: 42, scoreValue: 650, enemy: { id: 'tv-tyrant-final', name: 'TV Tyrant // Final Broadcast', maxHp: 332, attackIntervalMs: 1900, attackDamage: 16, interference: channelJam(3300, 700, 2700), cellInterference: slimeCell(4400, 850, 3000) } },
+  { encounterId: 'w4-grinning-fridge', world: 4, slot: 1, kind: 'fight', title: 'Grinning Fridge', subtitle: 'World 4 • full backpack, no excuses.', rewardCoins: 24, scoreValue: 360, enemy: { id: 'grinning-fridge', name: 'Grinning Fridge', maxHp: 310, attackIntervalMs: 1725, attackDamage: 16 } },
+  { encounterId: 'w4-duck-cult', world: 4, slot: 2, kind: 'elite', title: 'Rubber Duck Choir', subtitle: 'Elite • a final pressure test before reality breaks.', rewardCoins: 31, scoreValue: 470, enemy: { id: 'rubber-duck-choir', name: 'Rubber Duck Choir', maxHp: 382, attackIntervalMs: 1550, attackDamage: 18 } },
+  { encounterId: 'w4-baby-moon', world: 4, slot: 3, kind: 'boss', title: 'Baby Moon', subtitle: 'Final campaign boss • reality is already starting to corrupt.', rewardCoins: 55, scoreValue: 850, enemy: { id: 'baby-moon', name: 'Baby Moon', maxHp: 475, attackIntervalMs: 1825, attackDamage: 20, interference: channelJam(3000, 650, 2900), cellInterference: slimeCell(3900, 800, 3200) } },
 ];
 
 export function modifierForWorld(runSeed: string | number, world: number): RunWorldModifier {
-  return createSeededRng(`${runSeed}:world-mutation:${Math.max(1, Math.floor(world))}`).pick(WORLD_MODIFIERS);
+  const safeWorld = Math.max(1, Math.floor(world));
+  const cycle = Math.floor((safeWorld - 1) / WORLD_MODIFIERS.length);
+  const index = (safeWorld - 1) % WORLD_MODIFIERS.length;
+  const shuffled = createSeededRng(`${runSeed}:campaign-mutations:${cycle}`).shuffle(WORLD_MODIFIERS);
+  return shuffled[index] ?? WORLD_MODIFIERS[0]!;
 }
 
-export function getRunEncounter(progress: RunProgressState, runSeed: string | number = 'prototype-run-001'): RunEncounterDefinition | null {
+export function modifiersForLoopWorld(
+  runSeed: string | number,
+  loopNumber: number,
+  world: number,
+): readonly RunWorldModifier[] {
+  const count = Math.min(4, Math.max(2, Math.floor(loopNumber)));
+  const shuffled = createSeededRng(`${runSeed}:loop:${Math.max(2, Math.floor(loopNumber))}:mutations`)
+    .shuffle(WORLD_MODIFIERS);
+  const start = ((Math.max(1, Math.floor(world)) - 1) * 2) % shuffled.length;
+  const selected: RunWorldModifier[] = [];
+  for (let offset = 0; offset < count; offset += 1) {
+    const modifier = shuffled[(start + offset) % shuffled.length];
+    if (modifier && !selected.some((candidate) => candidate.id === modifier.id)) selected.push(modifier);
+  }
+  return selected;
+}
+
+export function getRunEncounter(
+  progress: RunProgressState,
+  runSeed: string | number = 'prototype-run-001',
+): RunEncounterDefinition | null {
   if (progress.mode === 'campaign') {
     const base = BASE_CAMPAIGN_ENCOUNTERS[progress.campaignEncounterIndex];
-    return base ? applyModifier(base, modifierForWorld(runSeed, base.world)) : null;
+    return base ? applyModifiers(base, [modifierForWorld(runSeed, base.world)]) : null;
   }
-  if (progress.mode === 'endless') return createEndlessEncounter(progress.endlessWave, runSeed);
+  if (progress.mode === 'loop') {
+    return createLoopEncounter(progress.loopNumber, progress.loopEncounterIndex, runSeed);
+  }
   return null;
 }
 
-export function createEndlessEncounter(wave: number, runSeed: string | number = 'prototype-run-001'): RunEncounterDefinition {
-  const safeWave = Math.max(1, Math.floor(wave));
-  const boss = safeWave % 5 === 0;
-  const hpScale = 1 + (safeWave - 1) * 0.16;
-  const damageScale = 1 + (safeWave - 1) * 0.075;
-  const multiplier = endlessRewardMultiplier(safeWave);
-  const baseHp = boss ? 235 : 155;
-  const baseDamage = boss ? 12 : 9;
-  const block = 4 + Math.floor((safeWave - 1) / 5);
-  const modifier = modifierForWorld(runSeed, block);
+export function createLoopEncounter(
+  loopNumber: number,
+  encounterIndex: number,
+  runSeed: string | number = 'prototype-run-001',
+): RunEncounterDefinition {
+  const safeLoop = Math.max(2, Math.floor(loopNumber));
+  const safeIndex = Math.max(0, Math.min(BASE_CAMPAIGN_ENCOUNTERS.length - 1, Math.floor(encounterIndex)));
+  const template = BASE_CAMPAIGN_ENCOUNTERS[safeIndex] ?? BASE_CAMPAIGN_ENCOUNTERS[0]!;
+  const depth = safeLoop - 1;
+  const rewardMultiplier = loopRewardMultiplier(safeLoop);
+  const world = worldForLoopEncounter(safeIndex);
+  const slot = slotForLoopEncounter(safeIndex);
+  const modifiers = modifiersForLoopWorld(runSeed, safeLoop, world);
+  const hpScale = 1 + depth * 0.58;
+  const damageScale = 1 + depth * 0.27;
+  const speedScale = 1 + depth * 0.08;
+
   const base: BaseEncounterDefinition = {
-    encounterId: `endless-wave-${safeWave}`,
-    world: 4,
-    slot: safeWave,
-    kind: boss ? 'boss' : safeWave % 3 === 0 ? 'elite' : 'fight',
-    title: boss ? `Corrupted Broadcast ${safeWave}` : `Endless Junk Wave ${safeWave}`,
-    subtitle: boss ? `Endless boss • base multiplier ×${multiplier}.` : `Endless • base multiplier ×${multiplier}.`,
-    rewardCoins: Math.max(8, Math.round((boss ? 24 : 10) * multiplier)),
-    scoreValue: Math.round((boss ? 500 : 180) * multiplier),
+    ...template,
+    encounterId: `loop-${safeLoop}-w${world}-s${slot}-${template.enemy.id}`,
+    world,
+    slot,
+    title: `Corrupted ${template.title}`,
+    subtitle: `LOOP ${safeLoop} • ${modifiers.length} simultaneous reality mutations.`,
+    rewardCoins: Math.max(1, Math.round(template.rewardCoins * rewardMultiplier)),
+    scoreValue: Math.max(1, Math.round(template.scoreValue * rewardMultiplier)),
     enemy: {
-      id: boss ? `endless-broadcast-${safeWave}` : `endless-junk-${safeWave}`,
-      name: boss ? `Corrupted Broadcast ${safeWave}` : `Endless Junk ${safeWave}`,
-      maxHp: Math.round(baseHp * hpScale),
-      attackIntervalMs: Math.max(1100, Math.round((boss ? 1950 : 1850) - safeWave * 16)),
-      attackDamage: Math.round(baseDamage * damageScale),
-      ...(boss ? { interference: channelJam(Math.max(2700, 3900 - safeWave * 25), 700, 2600), cellInterference: slimeCell(Math.max(3600, 5000 - safeWave * 30), 850, 2900) } : {}),
+      ...template.enemy,
+      id: `loop-${safeLoop}-${template.enemy.id}`,
+      name: `Corrupted ${template.enemy.name}`,
+      maxHp: Math.max(1, Math.round(template.enemy.maxHp * hpScale)),
+      attackDamage: Math.max(0, Math.round(template.enemy.attackDamage * damageScale)),
+      attackIntervalMs: Math.max(900, Math.round(template.enemy.attackIntervalMs / speedScale)),
+      ...(template.enemy.interference ? {
+        interference: {
+          ...template.enemy.interference,
+          intervalMs: Math.max(2300, Math.round(template.enemy.interference.intervalMs / speedScale)),
+        },
+      } : {}),
+      ...(template.enemy.cellInterference ? {
+        cellInterference: {
+          ...template.enemy.cellInterference,
+          intervalMs: Math.max(3200, Math.round(template.enemy.cellInterference.intervalMs / speedScale)),
+        },
+      } : {}),
     },
   };
-  return applyModifier(base, modifier);
+
+  return applyModifiers(base, modifiers);
 }
 
 export function campaignLabel(index: number): string {
-  return `WORLD ${worldForCampaignEncounter(index)} • ${slotForCampaignEncounter(index)}/3`;
+  return `WORLD ${worldForCampaignEncounter(index)}/${CAMPAIGN_WORLDS} • ${slotForCampaignEncounter(index)}/3`;
 }
 
-function applyModifier(base: BaseEncounterDefinition, modifier: RunWorldModifier): RunEncounterDefinition {
-  const hpScale = Math.max(0.2, 1 + modifier.enemyHpPct / 100);
-  const damageScale = Math.max(0.2, 1 + modifier.enemyDamagePct / 100);
-  const attackSpeedScale = Math.max(0.2, 1 + modifier.enemyAttackSpeedPct / 100);
-  const rewardScale = Math.max(0, 1 + modifier.rewardPct / 100);
+export function loopLabel(loopNumber: number, index: number): string {
+  return `LOOP ${Math.max(2, Math.floor(loopNumber))} • WORLD ${worldForLoopEncounter(index)}/${CAMPAIGN_WORLDS} • ${slotForLoopEncounter(index)}/3`;
+}
+
+function applyModifiers(
+  base: BaseEncounterDefinition,
+  modifiers: readonly RunWorldModifier[],
+): RunEncounterDefinition {
+  const totalHpPct = modifiers.reduce((sum, modifier) => sum + modifier.enemyHpPct, 0);
+  const totalDamagePct = modifiers.reduce((sum, modifier) => sum + modifier.enemyDamagePct, 0);
+  const totalAttackSpeedPct = modifiers.reduce((sum, modifier) => sum + modifier.enemyAttackSpeedPct, 0);
+  const totalRewardPct = modifiers.reduce((sum, modifier) => sum + modifier.rewardPct, 0);
+  const hpScale = Math.max(0.2, 1 + totalHpPct / 100);
+  const damageScale = Math.max(0.2, 1 + totalDamagePct / 100);
+  const attackSpeedScale = Math.max(0.2, 1 + totalAttackSpeedPct / 100);
+  const rewardScale = Math.max(0, 1 + totalRewardPct / 100);
+  const normalizedModifiers = modifiers.length > 0 ? [...modifiers] : [WORLD_MODIFIERS[0]!];
+
   return {
     ...base,
     rewardCoins: Math.max(0, Math.round(base.rewardCoins * rewardScale)),
     scoreValue: Math.max(0, Math.round(base.scoreValue * rewardScale)),
-    modifier,
+    modifiers: normalizedModifiers,
+    modifier: normalizedModifiers[0]!,
     enemy: {
       ...base.enemy,
       maxHp: Math.max(1, Math.round(base.enemy.maxHp * hpScale)),
@@ -126,5 +197,5 @@ function applyModifier(base: BaseEncounterDefinition, modifier: RunWorldModifier
 }
 
 export const CAMPAIGN_ENCOUNTERS: readonly RunEncounterDefinition[] = BASE_CAMPAIGN_ENCOUNTERS.map((encounter) =>
-  applyModifier(encounter, WORLD_MODIFIERS[0]!),
+  applyModifiers(encounter, [WORLD_MODIFIERS[0]!]),
 );

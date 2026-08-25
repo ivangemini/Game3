@@ -1,6 +1,5 @@
 import * as Phaser from 'phaser';
 import {
-  cellsForPlacement,
   findFirstValidPlacement,
   rotateShape,
   validatePlacement,
@@ -30,6 +29,7 @@ export interface BackpackBoardSnapshot {
 export interface BackpackBoardOptions {
   readonly initialItems?: readonly PlacedItem[];
   readonly nextLootSequence?: number;
+  readonly unlockedPocketCount?: number;
   readonly onStateChanged?: (snapshot: BackpackBoardSnapshot) => void;
 }
 
@@ -59,6 +59,12 @@ const ITEM_LABELS: Readonly<Record<string, string>> = {
   'scrap-magnet': 'SCRAP\nMAGNET',
 };
 
+const POCKET_UNLOCK_ORDER: readonly Cell[] = [
+  { x: 3, y: 4 },
+  { x: 4, y: 4 },
+  { x: 5, y: 4 },
+];
+
 const connectionKey = (connection: SynergyConnection): string =>
   `${connection.ruleId}:${connection.sourceInstanceId}:${connection.targetInstanceId}`;
 
@@ -66,18 +72,16 @@ export class BackpackBoard {
   private readonly cellSize = 76;
   private readonly width = 6;
   private readonly height = 5;
-  private readonly blockedCells: readonly Cell[] = [
-    { x: 3, y: 4 },
-    { x: 4, y: 4 },
-    { x: 5, y: 4 },
-  ];
   private readonly itemViews = new Map<string, ItemView>();
   private readonly previewCells: Phaser.GameObjects.Rectangle[] = [];
-  private readonly statusText: Phaser.GameObjects.Text;
-  private readonly synergyGraphics: Phaser.GameObjects.Graphics;
+  private readonly gridObjects: Phaser.GameObjects.GameObject[] = [];
   private readonly onStateChanged?: (snapshot: BackpackBoardSnapshot) => void;
+  private readonly synergyGraphics: Phaser.GameObjects.Graphics;
+  private readonly statusText: Phaser.GameObjects.Text;
   private selectedInstanceId: string | null = null;
   private nextLootSequence: number;
+  private unlockedPocketCount: number;
+  private blockedCells: readonly Cell[];
   private state: InventoryState;
   private synergySnapshot: SynergySnapshot;
 
@@ -89,10 +93,14 @@ export class BackpackBoard {
     options: BackpackBoardOptions = {},
   ) {
     this.nextLootSequence = Math.max(1, options.nextLootSequence ?? 1);
+    this.unlockedPocketCount = this.normalizeUnlockCount(options.unlockedPocketCount ?? 0);
+    this.blockedCells = this.blockedCellsFor(this.unlockedPocketCount);
     this.onStateChanged = options.onStateChanged;
+
     const items = options.initialItems === undefined
       ? this.initialItems()
       : this.sanitizeInitialItems(options.initialItems);
+
     this.state = {
       width: this.width,
       height: this.height,
@@ -108,11 +116,11 @@ export class BackpackBoard {
     this.statusText = this.scene.add.text(
       this.gridLeft,
       this.gridTop + this.height * this.cellSize + 13,
-      'Drag junk. Side-contact creates live synergies.',
+      this.defaultStatusText(),
       {
         fontSize: '15px',
         color: '#b7b0bd',
-        wordWrap: { width: 290 },
+        wordWrap: { width: 300 },
       },
     );
     this.createRotateButton();
@@ -126,6 +134,29 @@ export class BackpackBoard {
       items: this.state.items.map((item) => ({ ...item, origin: { ...item.origin } })),
       nextLootSequence: this.nextLootSequence,
     };
+  }
+
+  setUnlockedPocketCount(requestedCount: number): boolean {
+    const nextCount = Math.max(this.unlockedPocketCount, this.normalizeUnlockCount(requestedCount));
+    if (nextCount === this.unlockedPocketCount) return false;
+
+    const previousBlocked = new Set(this.blockedCells.map((cell) => `${cell.x}:${cell.y}`));
+    this.unlockedPocketCount = nextCount;
+    this.blockedCells = this.blockedCellsFor(nextCount);
+    this.state = { ...this.state, blockedCells: this.blockedCells };
+    this.drawGrid();
+
+    const newlyUnlocked = POCKET_UNLOCK_ORDER.filter(
+      (cell) => previousBlocked.has(`${cell.x}:${cell.y}`)
+        && !this.blockedCells.some((blocked) => blocked.x === cell.x && blocked.y === cell.y),
+    );
+    for (const cell of newlyUnlocked) this.pulseUnlockedCell(cell);
+
+    this.setStatus(
+      `POCKET EXPANDED • ${this.unlockedPocketCount}/3 bonus cells open. Rebuild your layout.`,
+      '#b8ff8e',
+    );
+    return true;
   }
 
   addRewardItem(definitionId: string): boolean {
@@ -200,20 +231,34 @@ export class BackpackBoard {
       boardHeight + 36,
       0x171922,
       1,
-    ).setStrokeStyle(5, 0x715b48);
+    ).setStrokeStyle(5, 0x715b48).setDepth(0);
   }
 
   private drawGrid(): void {
+    for (const object of this.gridObjects) object.destroy();
+    this.gridObjects.length = 0;
+
     const blocked = new Set(this.blockedCells.map((cell) => `${cell.x}:${cell.y}`));
     for (let row = 0; row < this.height; row += 1) {
       for (let column = 0; column < this.width; column += 1) {
         const isBlocked = blocked.has(`${column}:${row}`);
         const x = this.gridLeft + (column + 0.5) * this.cellSize;
         const y = this.gridTop + (row + 0.5) * this.cellSize;
-        this.scene.add.rectangle(x, y, this.cellSize - 7, this.cellSize - 7, isBlocked ? 0x111219 : 0x292733, 1)
-          .setStrokeStyle(2, isBlocked ? 0x3a3741 : 0x4b4857);
+        const cell = this.scene.add.rectangle(
+          x,
+          y,
+          this.cellSize - 7,
+          this.cellSize - 7,
+          isBlocked ? 0x111219 : 0x292733,
+          1,
+        ).setStrokeStyle(2, isBlocked ? 0x3a3741 : 0x4b4857).setDepth(1);
+        this.gridObjects.push(cell);
+
         if (isBlocked) {
-          this.scene.add.text(x, y, 'LOCK', { fontSize: '12px', color: '#66616d', fontStyle: 'bold' }).setOrigin(0.5);
+          const label = this.scene.add.text(x, y, 'LOCK', {
+            fontSize: '12px', color: '#66616d', fontStyle: 'bold',
+          }).setOrigin(0.5).setDepth(2);
+          this.gridObjects.push(label);
         }
       }
     }
@@ -235,7 +280,9 @@ export class BackpackBoard {
     const background = this.scene.add.rectangle(x, y, 156, 42, 0x2f2940, 1)
       .setStrokeStyle(2, 0xb779ff)
       .setInteractive({ useHandCursor: true });
-    const label = this.scene.add.text(x, y, '↻  ROTATE', { fontSize: '17px', color: '#e3c6ff', fontStyle: 'bold' }).setOrigin(0.5);
+    const label = this.scene.add.text(x, y, '↻  ROTATE', {
+      fontSize: '17px', color: '#e3c6ff', fontStyle: 'bold',
+    }).setOrigin(0.5);
 
     background.on('pointerover', () => background.setFillStyle(0x45365e));
     background.on('pointerout', () => background.setFillStyle(0x2f2940));
@@ -259,8 +306,8 @@ export class BackpackBoard {
 
     container.setInteractive({ useHandCursor: true });
     this.scene.input.setDraggable(container);
-
     container.on('pointerdown', () => this.select(item.instanceId));
+
     this.scene.input.on('dragstart', (_pointer: Phaser.Input.Pointer, target: Phaser.GameObjects.GameObject) => {
       if (target !== container) return;
       this.select(item.instanceId);
@@ -347,12 +394,9 @@ export class BackpackBoard {
     if (activeLinkCount > 0) {
       const badgeX = widthPx / 2 - 16;
       const badgeY = -heightPx / 2 + 16;
-      const badge = this.scene.add.circle(badgeX, badgeY, 13, 0xffd85d, 1)
-        .setStrokeStyle(3, 0x2c2134);
+      const badge = this.scene.add.circle(badgeX, badgeY, 13, 0xffd85d, 1).setStrokeStyle(3, 0x2c2134);
       const badgeText = this.scene.add.text(badgeX, badgeY, `×${activeLinkCount}`, {
-        fontSize: '10px',
-        color: '#241a20',
-        fontStyle: 'bold',
+        fontSize: '10px', color: '#241a20', fontStyle: 'bold',
       }).setOrigin(0.5);
       view.container.add([badge, badgeText]);
     }
@@ -370,16 +414,16 @@ export class BackpackBoard {
       if (oldView) this.renderItem(oldView);
     }
     const view = this.itemViews.get(instanceId);
-    if (view) {
-      this.renderItem(view);
-      const definition = this.definitionFor(view.item);
-      const links = this.activeConnectionsFor(instanceId).length;
-      const bonusSummary = this.bonusSummaryFor(instanceId);
-      const activeText = links > 0
-        ? ` • ${links} link${links === 1 ? '' : 's'}${bonusSummary ? ` • ${bonusSummary}` : ''}`
-        : '';
-      this.setStatus(`${definition.name}: ${definition.description}${activeText}`, '#e8ddf2');
-    }
+    if (!view) return;
+
+    this.renderItem(view);
+    const definition = this.definitionFor(view.item);
+    const links = this.activeConnectionsFor(instanceId).length;
+    const bonusSummary = this.bonusSummaryFor(instanceId);
+    const activeText = links > 0
+      ? ` • ${links} link${links === 1 ? '' : 's'}${bonusSummary ? ` • ${bonusSummary}` : ''}`
+      : '';
+    this.setStatus(`${definition.name}: ${definition.description}${activeText}`, '#e8ddf2');
   }
 
   private rotateSelected(): void {
@@ -528,10 +572,26 @@ export class BackpackBoard {
     });
   }
 
+  private pulseUnlockedCell(cell: Cell): void {
+    const x = this.gridLeft + (cell.x + 0.5) * this.cellSize;
+    const y = this.gridTop + (cell.y + 0.5) * this.cellSize;
+    const pulse = this.scene.add.rectangle(x, y, this.cellSize - 6, this.cellSize - 6, 0xb5ff4d, 0.34)
+      .setStrokeStyle(5, 0xb5ff4d)
+      .setDepth(15);
+    this.scene.tweens.add({
+      targets: pulse,
+      alpha: 0,
+      scaleX: 1.18,
+      scaleY: 1.18,
+      duration: 520,
+      ease: 'Sine.Out',
+      onComplete: () => pulse.destroy(),
+    });
+  }
+
   private activeConnectionsFor(instanceId: string): readonly SynergyConnection[] {
     return this.synergySnapshot.connections.filter(
-      (connection) =>
-        connection.sourceInstanceId === instanceId || connection.targetInstanceId === instanceId,
+      (connection) => connection.sourceInstanceId === instanceId || connection.targetInstanceId === instanceId,
     );
   }
 
@@ -577,13 +637,29 @@ export class BackpackBoard {
     return definition;
   }
 
+  private normalizeUnlockCount(value: number): number {
+    if (!Number.isFinite(value)) return 0;
+    return Math.max(0, Math.min(POCKET_UNLOCK_ORDER.length, Math.floor(value)));
+  }
+
+  private blockedCellsFor(unlockedCount: number): readonly Cell[] {
+    return POCKET_UNLOCK_ORDER.slice(this.normalizeUnlockCount(unlockedCount)).map((cell) => ({ ...cell }));
+  }
+
+  private defaultStatusText(): string {
+    const locked = POCKET_UNLOCK_ORDER.length - this.unlockedPocketCount;
+    return locked > 0
+      ? `Drag junk. ${locked} pocket cell${locked === 1 ? '' : 's'} still locked.`
+      : 'Full backpack unlocked. Side-contact creates live synergies.';
+  }
+
   private setStatus(message: string, color: string): void {
     this.statusText.setText(message).setColor(color);
   }
 
   private reasonText(reason: 'out-of-bounds' | 'blocked' | 'occupied' | undefined): string {
     if (reason === 'out-of-bounds') return 'That shape does not fit inside the backpack.';
-    if (reason === 'blocked') return 'Those pocket cells are locked.';
+    if (reason === 'blocked') return 'Those pocket cells are locked. Beat bosses to expand the backpack.';
     if (reason === 'occupied') return 'Another item already occupies those cells.';
     return 'That placement is invalid.';
   }
