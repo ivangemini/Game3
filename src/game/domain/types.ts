@@ -17,7 +17,7 @@ export type ItemTag =
   | 'chaos'
   | 'food';
 
-export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic';
 
 export interface ItemDefinition {
   readonly id: string;
