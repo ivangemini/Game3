@@ -9,6 +9,8 @@ export interface RarityVisualToken {
   readonly label: string;
 }
 
+export const ITEM_ATLAS_TEXTURE_KEY = 'junk-items';
+
 export const PANEL_VISUALS = {
   ink: 0x0c0d12,
   panel: 0x181820,
