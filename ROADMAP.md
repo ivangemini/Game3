@@ -93,13 +93,16 @@
 ## P6 — Presentation pass [IN PROGRESS]
 - [x] Responsive web-shell foundation (**safe-area insets, portrait orientation gate, compact-landscape viewport profile and resize/orientation sync**)
 - [x] Shared UI motion foundation (**120–180 ms overlay transitions, 3% press feedback, reduced-motion fallback, Archive/Trophy progress bars**)
-- [x] Responsive top action chrome (**wide/compact layouts, collision-tested hit targets, resize switching, protected reset/daily actions**)
+- [x] Responsive top action chrome (**wide/compact layouts, collision-tested 6-action hit targets, resize switching, protected reset/daily/settings actions**)
+- [x] Settings UI (**persisted Music/SFX 0–100% controls + Reduced Motion toggle; volume changes apply live, motion refreshes presentation consistently**)
 - [ ] Full in-game HUD reflow / small-text legibility on real mobile landscape
 - [ ] final art pipeline + atlases
 - [x] Combat semantic feedback foundation (**30-object particle pool, item/status rings, hit bursts, boss-frame pulses, outcome flashes, restrained shake, reduced-motion fallback**)
-- [ ] Final animation/VFX pass across backpack/shop/fusion/reward/onboarding states
+- [x] Non-combat run feedback foundation (**shop purchase/reward/reroll/error SFX hooks, fusion reveal, event-drop toast, pocket-unlock feedback**)
+- [ ] Final animation/VFX pass across backpack drag/drop, reward staging and final art assets
 - [x] Autoplay-safe WebAudio SFX mixer foundation (**semantic cue fan-out, deterministic synth patches, cooldowns, 10-voice priority budget, page visibility suspend/resume, persisted SFX volume**)
-- [ ] Final audio/music implementation (**volume/settings UI, final samples, music bed/ducking and portal/ad lifecycle integration**)
+- [x] Procedural adaptive music foundation (**deterministic menu/combat/boss patterns, persisted Music volume and semantic combat-mode switching**)
+- [ ] Final audio/music asset pass (**authored samples/music, mix tuning, transitions/ducking and portal/ad lifecycle integration**)
 - [x] First-run onboarding flow (**5-step hero → pack → synergy → fight → fusion tutorial, reduced-motion support and persistent Help entry point**)
 - [ ] Final onboarding visual polish against real browser/art assets
 - [ ] loading/thumbnail/store art
