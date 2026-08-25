@@ -6,8 +6,11 @@ import { zipSync } from 'fflate';
 const root = process.cwd();
 const distRoot = path.join(root, 'dist');
 const releaseRoot = path.join(root, 'release');
+const storeSourceRoot = path.join(root, 'public', 'assets', 'store');
+const storeReleaseRoot = path.join(releaseRoot, 'store');
 const archiveName = 'junkpack-boss-rush.zip';
 const archivePath = path.join(releaseRoot, archiveName);
+const storeFiles = ['icon-512.png', 'cover-800x470.png', 'hero-1560x520.png'];
 
 const files = await collectFiles(distRoot);
 if (files.length === 0) throw new Error('dist is empty; run the production build before packaging');
@@ -22,22 +25,36 @@ for (const relative of files) {
 }
 
 const archive = zipSync(payload, { level: 9 });
-await fs.mkdir(releaseRoot, { recursive: true });
+await fs.rm(releaseRoot, { recursive: true, force: true });
+await fs.mkdir(storeReleaseRoot, { recursive: true });
 await fs.writeFile(archivePath, archive);
+
+const storeManifest = [];
+for (const file of storeFiles) {
+  const source = path.join(storeSourceRoot, file);
+  const destination = path.join(storeReleaseRoot, file);
+  await fs.copyFile(source, destination);
+  const stat = await fs.stat(destination);
+  storeManifest.push({ path: `store/${file}`, bytes: stat.size });
+}
+
 const sha256 = createHash('sha256').update(archive).digest('hex');
 const manifest = {
   version: 1,
+  sourceSha: process.env.GITHUB_SHA ?? null,
   archive: archiveName,
   bytes: archive.byteLength,
   sha256,
   fileCount: manifestFiles.length,
   files: manifestFiles,
+  storeFiles: storeManifest,
 };
 await fs.writeFile(path.join(releaseRoot, 'portal-package.json'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
 
 console.log('[release] portal package built');
 console.log(`  ${archiveName}: ${formatBytes(archive.byteLength)}`);
-console.log(`  files: ${manifestFiles.length}`);
+console.log(`  runtime files: ${manifestFiles.length}`);
+console.log(`  store files: ${storeManifest.length}`);
 console.log(`  sha256: ${sha256}`);
 
 async function collectFiles(directory, prefix = '') {
