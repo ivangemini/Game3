@@ -30,6 +30,10 @@ for (const relative of requiredFiles) {
 try {
   const html = await fs.readFile(path.join(root, 'dist/index.html'), 'utf8');
   if (/localhost|127\.0\.0\.1/.test(html)) failures.push('dist/index.html contains a local-only URL');
+  if (!/<title>Junkpack: Boss Rush<\/title>/.test(html)) failures.push('dist/index.html is missing the release title');
+  if (!/<meta name="description" content="[^"]+"\s*\/>/.test(html)) failures.push('dist/index.html is missing a meta description');
+  if (!/<meta name="viewport" content="[^"]*viewport-fit=cover[^"]*"\s*\/>/.test(html)) failures.push('dist/index.html is missing viewport-fit=cover');
+  if (!/<meta name="mobile-web-app-capable" content="yes"\s*\/>/.test(html)) failures.push('dist/index.html is missing mobile web app capability metadata');
 } catch {
   // already reported above
 }
