@@ -1,13 +1,8 @@
 import * as Phaser from 'phaser';
 import { generateShopOffers, type ShopOffer } from '../domain/shop';
-import type { ItemDefinition, Rarity } from '../domain/types';
-
-const RARITY_COLORS: Record<Rarity, number> = {
-  common: 0xb9b5aa,
-  uncommon: 0x94df68,
-  rare: 0x63b9ff,
-  epic: 0xd87bff,
-};
+import type { ItemDefinition } from '../domain/types';
+import { createItemGlyph } from './ItemGlyph';
+import { PANEL_VISUALS, rarityVisual } from './visualTokens';
 
 export interface ShopPanelSnapshot {
   readonly coins: number;
@@ -58,16 +53,13 @@ export class ShopPanel {
     this.onStateChanged = options.onStateChanged;
     this.onFeedback = options.onFeedback;
 
-    this.scene.add.rectangle(left + 705, top + 72, 1410, 144, 0x141720, 1)
-      .setStrokeStyle(4, 0x66533d);
-    this.scene.add.text(left + 22, top + 16, 'JUNK SHOP', {
-      fontSize: '22px', color: '#ffd56e', fontStyle: 'bold',
-    });
+    this.drawShopShell();
     this.coinText = this.scene.add.text(left + 22, top + 49, '', {
-      fontSize: '17px', color: '#f7f2e8', fontStyle: 'bold',
+      fontFamily: 'Arial Black, Impact, sans-serif',
+      fontSize: '18px', color: '#fff4cf', fontStyle: 'bold', stroke: '#141218', strokeThickness: 4,
     });
-    this.statusText = this.scene.add.text(left + 22, top + 112, 'Buy junk. Rerolls are deterministic for this run seed.', {
-      fontSize: '12px', color: '#aaa5b2', wordWrap: { width: 275 },
+    this.statusText = this.scene.add.text(left + 22, top + 113, 'BUY • PACK • REBUILD. REROLLS STAY FIXED TO THIS RUN.', {
+      fontSize: '11px', color: '#bcb2a6', fontStyle: 'bold', wordWrap: { width: 288 },
     });
 
     this.createRerollButton();
@@ -84,7 +76,7 @@ export class ShopPanel {
     const safeAmount = Math.max(0, Math.floor(amount));
     if (safeAmount === 0) return;
     this.coins += safeAmount;
-    this.setStatus(`${reason}  •  +${safeAmount} coins`, '#ffd56e');
+    this.setStatus(`${reason.toUpperCase()} • +${safeAmount} SCRAP`, '#ffd56e');
     this.onFeedback?.({ kind: 'reward', amount: safeAmount });
     this.renderOffers();
     this.notifyStateChanged();
@@ -94,37 +86,61 @@ export class ShopPanel {
     const safeAmount = Math.max(0, Math.floor(amount));
     if (safeAmount === 0) return true;
     if (this.coins < safeAmount) {
-      this.setStatus(`Need ${safeAmount - this.coins} more coins.`, '#ff8a9b');
+      this.setStatus(`SHORT ${safeAmount - this.coins} SCRAP.`, '#ff8a9b');
       this.onFeedback?.({ kind: 'error', source: 'coins' });
       return false;
     }
     this.coins -= safeAmount;
-    this.setStatus(`${reason}  •  -${safeAmount} coins`, '#ffcf69');
+    this.setStatus(`${reason.toUpperCase()} • -${safeAmount} SCRAP`, '#ffcf69');
     this.renderOffers();
     this.notifyStateChanged();
     return true;
   }
 
+  private drawShopShell(): void {
+    const centerX = this.left + 705;
+    const centerY = this.top + 72;
+    this.scene.add.rectangle(centerX + 6, centerY + 7, 1410, 144, PANEL_VISUALS.ink, 0.55).setDepth(-3);
+    this.scene.add.rectangle(centerX, centerY, 1410, 144, PANEL_VISUALS.leatherDark, 1)
+      .setStrokeStyle(5, PANEL_VISUALS.leatherEdge).setDepth(-2);
+    this.scene.add.rectangle(centerX, centerY, 1392, 128, 0x171820, 1)
+      .setStrokeStyle(2, 0x342c2a).setDepth(-1);
+
+    const titlePlate = this.scene.add.rectangle(this.left + 142, this.top + 26, 246, 35, 0x5a3b2e, 1)
+      .setStrokeStyle(3, 0xc28c5e);
+    titlePlate.setAngle(-1.3);
+    this.scene.add.text(this.left + 142, this.top + 25, 'JUNK SHOP', {
+      fontFamily: 'Arial Black, Impact, sans-serif', fontSize: '21px', color: '#ffd56e',
+      stroke: '#261611', strokeThickness: 5,
+    }).setOrigin(0.5).setAngle(-1.3);
+
+    for (const x of [this.left + 12, this.left + 304]) {
+      this.scene.add.circle(x, this.top + 12, 5, PANEL_VISUALS.scrap, 1).setStrokeStyle(2, PANEL_VISUALS.scrapEdge);
+      this.scene.add.circle(x, this.top + 132, 5, PANEL_VISUALS.scrap, 1).setStrokeStyle(2, PANEL_VISUALS.scrapEdge);
+    }
+  }
+
   private createRerollButton(): void {
     const x = this.left + 142;
     const y = this.top + 88;
-    const button = this.scene.add.rectangle(x, y, 238, 34, 0x2c2638, 1)
-      .setStrokeStyle(2, 0xc36cff)
+    const shadow = this.scene.add.rectangle(x + 3, y + 4, 238, 35, 0x0b0c10, 0.65);
+    const button = this.scene.add.rectangle(x, y, 238, 35, 0x33253c, 1)
+      .setStrokeStyle(3, PANEL_VISUALS.neonPurple)
       .setInteractive({ useHandCursor: true });
-    const label = this.scene.add.text(x, y, 'REROLL  •  7 COINS', {
-      fontSize: '13px', color: '#e4c7ff', fontStyle: 'bold',
+    const label = this.scene.add.text(x, y, '↻  REROLL TAPE  •  7', {
+      fontSize: '13px', color: '#f0d6ff', fontStyle: 'bold', stroke: '#17121b', strokeThickness: 3,
     }).setOrigin(0.5);
 
-    button.on('pointerover', () => button.setFillStyle(0x443454));
-    button.on('pointerout', () => button.setFillStyle(0x2c2638));
-    button.on('pointerdown', () => { button.setScale(0.97); label.setScale(0.97); });
+    button.on('pointerover', () => button.setFillStyle(0x4d3459));
+    button.on('pointerout', () => button.setFillStyle(0x33253c));
+    button.on('pointerdown', () => { button.setScale(0.97); label.setScale(0.97); shadow.setScale(0.97); });
     button.on('pointerup', () => {
-      button.setScale(1); label.setScale(1);
+      button.setScale(1); label.setScale(1); shadow.setScale(1);
       if (!this.spendCoins(7, 'Shop reroll')) return;
       this.shopIndex += 1;
       this.soldOfferIds.clear();
       this.onFeedback?.({ kind: 'reroll' });
-      this.setStatus(`Shop rerolled • seed step ${this.shopIndex}.`, '#b8ff8e');
+      this.setStatus(`NEW CRATE OPENED • SEED STEP ${this.shopIndex}`, '#b8ff8e');
       this.renderOffers();
       this.notifyStateChanged();
     });
@@ -133,7 +149,7 @@ export class ShopPanel {
   private renderOffers(): void {
     for (const object of this.offerObjects) object.destroy();
     this.offerObjects.length = 0;
-    this.coinText.setText(`SCRAP COINS  ${this.coins}`);
+    this.coinText.setText(`SCRAP  ◈ ${this.coins}`);
 
     const offers = generateShopOffers([...this.definitionsById.values()], this.runSeed, this.shopIndex, 3);
     const activeOfferIds = new Set(offers.map((offer) => offer.id));
@@ -149,43 +165,58 @@ export class ShopPanel {
 
     const x = this.left + 475 + index * 315;
     const y = this.top + 72;
-    const color = RARITY_COLORS[definition.rarity];
+    const rarity = rarityVisual(definition.rarity);
     const sold = this.soldOfferIds.has(offer.id);
 
-    const card = this.scene.add.rectangle(x, y, 286, 112, sold ? 0x15161b : 0x20232d, 1)
-      .setStrokeStyle(3, sold ? 0x55515b : color);
-    const title = this.scene.add.text(x - 126, y - 44, definition.name.toUpperCase(), {
-      fontSize: '15px', color: sold ? '#77727e' : '#fff8ec', fontStyle: 'bold',
+    const shadow = this.scene.add.rectangle(x + 4, y + 5, 286, 112, PANEL_VISUALS.ink, 0.62);
+    const card = this.scene.add.rectangle(x, y, 286, 112, sold ? 0x15161b : rarity.fill, 1)
+      .setStrokeStyle(3, sold ? 0x55515b : rarity.stroke);
+    const inner = this.scene.add.rectangle(x, y, 274, 100, sold ? 0x1a1a20 : 0x23242c, 0.8)
+      .setStrokeStyle(1, sold ? 0x444149 : rarity.mid);
+    const glyph = createItemGlyph(this.scene, definition, x - 103, y - 2, { size: 62, compact: true });
+    glyph.setAlpha(sold ? 0.34 : 1);
+
+    const title = this.scene.add.text(x - 61, y - 44, definition.name.toUpperCase(), {
+      fontSize: '14px', color: sold ? '#77727e' : rarity.text, fontStyle: 'bold',
+      stroke: '#141218', strokeThickness: 3, wordWrap: { width: 150 },
     });
-    const tags = this.scene.add.text(x - 126, y - 18, definition.tags.slice(0, 4).join(' • ').toUpperCase(), {
-      fontSize: '10px', color: sold ? '#66616b' : `#${color.toString(16).padStart(6, '0')}`,
+    const rarityLabel = this.scene.add.text(x - 61, y - 19, rarity.label, {
+      fontSize: '9px', color: sold ? '#66616b' : `#${rarity.stroke.toString(16).padStart(6, '0')}`,
+      fontStyle: 'bold',
     });
-    const price = this.scene.add.text(x - 126, y + 14, sold ? 'SOLD' : `${offer.price} COINS`, {
-      fontSize: '14px', color: sold ? '#77727e' : '#ffd56e', fontStyle: 'bold',
+    const tags = this.scene.add.text(x - 61, y - 2, definition.tags.slice(0, 3).join(' • ').toUpperCase(), {
+      fontSize: '9px', color: sold ? '#66616b' : '#b9b5c1', wordWrap: { width: 142 },
     });
-    const buyButton = this.scene.add.rectangle(x + 82, y + 29, 92, 34, sold ? 0x29282d : 0x314125, 1)
-      .setStrokeStyle(2, sold ? 0x55515b : 0xa8ff55);
-    const buyLabel = this.scene.add.text(x + 82, y + 29, sold ? 'SOLD' : 'BUY', {
-      fontSize: '13px', color: sold ? '#77727e' : '#d9ffb5', fontStyle: 'bold',
+    const price = this.scene.add.text(x - 61, y + 27, sold ? 'SOLD' : `◈ ${offer.price}`, {
+      fontFamily: 'Arial Black, Impact, sans-serif', fontSize: '15px', color: sold ? '#77727e' : '#ffd56e',
+      fontStyle: 'bold', stroke: '#15131a', strokeThickness: 3,
+    });
+    const buyButton = this.scene.add.rectangle(x + 95, y + 31, 76, 34, sold ? 0x29282d : 0x30452b, 1)
+      .setStrokeStyle(2, sold ? 0x55515b : PANEL_VISUALS.neonLime);
+    const buyLabel = this.scene.add.text(x + 95, y + 31, sold ? 'SOLD' : 'PACK IT', {
+      fontSize: '11px', color: sold ? '#77727e' : '#e3ffc5', fontStyle: 'bold',
     }).setOrigin(0.5);
 
-    this.offerObjects.push(card, title, tags, price, buyButton, buyLabel);
+    this.offerObjects.push(shadow, card, inner, glyph, title, rarityLabel, tags, price, buyButton, buyLabel);
     if (sold) return;
     buyButton.setInteractive({ useHandCursor: true });
-    buyButton.on('pointerover', () => buyButton.setFillStyle(0x435d31));
-    buyButton.on('pointerout', () => buyButton.setFillStyle(0x314125));
-    buyButton.on('pointerdown', () => { buyButton.setScale(0.96); buyLabel.setScale(0.96); });
-    buyButton.on('pointerup', () => { buyButton.setScale(1); buyLabel.setScale(1); this.tryPurchase(offer, definition); });
+    buyButton.on('pointerover', () => { buyButton.setFillStyle(0x47653c); card.setStrokeStyle(4, rarity.accent); });
+    buyButton.on('pointerout', () => { buyButton.setFillStyle(0x30452b); card.setStrokeStyle(3, rarity.stroke); });
+    buyButton.on('pointerdown', () => { buyButton.setScale(0.96); buyLabel.setScale(0.96); glyph.setScale(1.04); });
+    buyButton.on('pointerup', () => {
+      buyButton.setScale(1); buyLabel.setScale(1); glyph.setScale(1);
+      this.tryPurchase(offer, definition);
+    });
   }
 
   private tryPurchase(offer: ShopOffer, definition: ItemDefinition): void {
     if (this.coins < offer.price) {
-      this.setStatus(`Need ${offer.price - this.coins} more coins for ${definition.name}.`, '#ff8a9b');
+      this.setStatus(`NEED ${offer.price - this.coins} MORE SCRAP FOR ${definition.name.toUpperCase()}.`, '#ff8a9b');
       this.onFeedback?.({ kind: 'error', source: 'coins' });
       return;
     }
     if (!this.onPurchase(definition.id)) {
-      this.setStatus('No legal backpack space. Rearrange junk before buying.', '#ffbd72');
+      this.setStatus('BACKPACK JAMMED • MAKE SPACE BEFORE BUYING.', '#ffbd72');
       this.onFeedback?.({ kind: 'error', source: 'space' });
       return;
     }
@@ -193,7 +224,7 @@ export class ShopPanel {
     this.coins -= offer.price;
     this.soldOfferIds.add(offer.id);
     this.onFeedback?.({ kind: 'purchase', definitionId: definition.id });
-    this.setStatus(`${definition.name} bought and packed.`, '#b8ff8e');
+    this.setStatus(`${definition.name.toUpperCase()} • PACKED INTO THE BAG`, '#b8ff8e');
     this.renderOffers();
     this.notifyStateChanged();
   }
