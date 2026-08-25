@@ -1,4 +1,4 @@
-# Junkpack: Boss Rush — Game Design v0.9
+# Junkpack: Boss Rush — Game Design v0.10
 
 ## Elevator pitch
 A compact roguelite inventory autobattler where the player picks a light rule-bending junk pilot, packs absurd junk into a constrained backpack, discovers synergies and fusion recipes, then fights surreal bosses that directly interfere with the backpack's rules.
@@ -32,7 +32,7 @@ Web-first: Yandex Games, CrazyGames and compatible HTML5 portals. Short onboardi
 The first boss is a checkpoint, not the end of the run. A player should understand the fantasy quickly, then spend the rest of the session making the backpack increasingly powerful and increasingly strange.
 
 ## Core differentiator
-Bosses attack the inventory rules, not only player HP. Examples: magnetizing metal items, sliming cells, scrambling a row after a telegraph, delaying a hyper-fast carry, freezing slots, duplicating junk, or temporarily corrupting a tag.
+Bosses attack inventory rules and build structure, not only player HP. Examples: magnetizing metal items, sliming cells, delaying a hyper-fast carry, crushing isolated junk, or temporarily corrupting a tag.
 
 ## Launch systems
 ### Backpack
@@ -63,6 +63,8 @@ Current rules:
 Rules resolve deterministically from stable item instance IDs. Multiple valid contacts may stack where the rule is designed to stack. The new families deliberately reuse the existing combat bonus vocabulary, so content depth grows without creating a bespoke combat subsystem for every item.
 
 A single contact may activate multiple readable rules when tags justify it. Tactical Banana next to Laser Cat, for example, can activate both `FOOD → PET` and `CHAOS → LASER`.
+
+Physical contact is also allowed to matter independently of a tag synergy. Closet Monster uses orthogonal contact as an anchoring rule: unrelated items can protect each other from Clutter Crush simply by being packed together.
 
 Future synergy families may add directional arcs or row/column rules, but they must stay visually readable and testable without Phaser.
 
@@ -117,16 +119,21 @@ The combat build resolves spatial synergies first, hero bonus second and run per
 A hero must never make non-matching items unusable. The player should still be able to pivot from Engineer into pets, from Beastfriend into poison, or from Scavenger into any tag family when the shop/recipes demand it.
 
 ### Bosses
-Launch target: 6 major boss families plus modifiers. Each boss changes backpack valuation/positioning and has clear telegraphs and counterplay.
+Launch target: 6 major boss families plus modifiers. Each boss changes item valuation, tempo, geometry or composition and has clear telegraphs and counterplay.
 
-Three boss families are now mechanically distinct:
-- **TV Tyrant** attacks spatial reliability with Channel Jam, Slime Signal and Magnet Scramble. Later TV variants layer those three readable interference primitives more aggressively.
-- **Deadline Snail** attacks tempo concentration with **Time Tax**. It deterministically targets the fastest meaningful combat item, telegraphs its backpack footprint, then shifts only that item's next queued trigger by +1.2s. The rest of the build continues normally.
-- **Baby Moon** attacks build concentration with **Tag Eclipse**. It counts tags in the immutable combat-start build, telegraphs the most represented family and temporarily suppresses triggers from every matching item. Other tag families remain active, so diversified builds retain a live secondary engine.
+Four campaign boss families are now mechanically distinct:
+- **TV Tyrant** attacks spatial reliability with Channel Jam, Slime Signal and Magnet Scramble.
+- **Deadline Snail** attacks tempo concentration with **Time Tax**. It targets the fastest meaningful combat item, telegraphs its footprint, then shifts only that item's next queued trigger by +1.2s.
+- **Closet Monster** attacks loose geometry with **Clutter Crush**. Items that touch no other item orthogonally are telegraphed; impact deals 3 pressure per loose item, with shield absorbing pressure first. Any side contact anchors the item even when no tag synergy exists.
+- **Baby Moon** attacks build concentration with **Tag Eclipse**. It telegraphs the most represented tag family and temporarily suppresses triggers from matching items while other families remain live.
 
-Deadline Snail replaces the repeated World 2 TV remix. Its counterplay is to spread trigger-speed investment across several useful items, maintain a slower secondary engine, or accept the tax because the carry remains efficient enough. Time Tax is a one-shot delay rather than a silence window, so its feel stays distinct from TV Tyrant and Baby Moon. Corrupted Deadline Snail shortens tax cadence while preserving the +1.2s delay.
+Deadline Snail replaces the old World 2 TV remix. Its counterplay is to distribute trigger-speed investment across multiple productive items, preserve a slower secondary engine or deliberately accept the tax when one carry is still efficient enough. Corrupted variants shorten tax cadence while keeping the +1.2s delay stable.
+
+Closet Monster replaces the old World 3 TV remix. Its counterplay is spatial: pack items into connected clusters, use multi-cell junk as bridges and rotate/fuse around isolated pockets. A player may still leave a high-value item loose, but that becomes an explicit recurring HP/shield cost. Corrupted variants increase attack cadence without raising the per-item damage rule.
 
 Tag Eclipse uses stable tie-breaking and shows the affected item count before impact. Its counterplay is to diversify damage/poison/shield families or pivot tags through shop/fusion choices before World 4. Corrupted Baby Moon shortens Eclipse cadence rather than inheriting TV Tyrant attacks, preserving boss-family identity.
+
+The base campaign therefore teaches four different adaptation lessons in order: survive spatial disruption, avoid a single hyper-fast carry, pack the backpack into defensible geometry, then avoid over-concentrating the entire build in one tag family.
 
 ### Perks
 Launch target: 20–25 run perks. The prototype currently has **10** perks covering devices, pets, weapons, chaos, metal, antenna, slime, food and global trigger speed. Perks should modify build identity more often than provide generic flat percentages, but lightweight tag bonuses remain useful while the content pool is still being validated.
