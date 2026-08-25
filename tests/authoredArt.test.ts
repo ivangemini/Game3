@@ -6,11 +6,11 @@ import {
   heroArtKey,
 } from '../src/game/ui/authoredArt';
 
-describe('authored art wave 1 contract', () => {
-  it('ships 12 item assets, four hero portraits and one boss portrait with unique stable keys', () => {
+describe('authored art contract', () => {
+  it('ships 12 item assets, four hero portraits and all six boss portraits with unique stable keys', () => {
     expect(AUTHORED_ART_ASSETS.filter((asset) => asset.kind === 'item')).toHaveLength(12);
     expect(AUTHORED_ART_ASSETS.filter((asset) => asset.kind === 'hero')).toHaveLength(4);
-    expect(AUTHORED_ART_ASSETS.filter((asset) => asset.kind === 'boss')).toHaveLength(1);
+    expect(AUTHORED_ART_ASSETS.filter((asset) => asset.kind === 'boss')).toHaveLength(6);
     expect(new Set(AUTHORED_ART_ASSETS.map((asset) => asset.key)).size).toBe(AUTHORED_ART_ASSETS.length);
     expect(new Set(AUTHORED_ART_ASSETS.map((asset) => asset.url)).size).toBe(AUTHORED_ART_ASSETS.length);
   });
@@ -24,10 +24,22 @@ describe('authored art wave 1 contract', () => {
     expect(hasAuthoredArt('item.nonexistent-junk')).toBe(false);
   });
 
-  it('maps heroes and loop variants of TV Tyrant to stable portrait keys', () => {
+  it('maps heroes and every campaign/corrupted boss family to stable portrait keys', () => {
     expect(heroArtKey('scavenger')).toBe('hero.scavenger');
-    expect(bossArtKeyForEnemyId('tv-tyrant')).toBe('boss.tv-tyrant');
-    expect(bossArtKeyForEnemyId('loop-2-tv-tyrant')).toBe('boss.tv-tyrant');
-    expect(bossArtKeyForEnemyId('deadline-snail')).toBeNull();
+
+    const bosses = [
+      'tv-tyrant',
+      'deadline-snail',
+      'closet-monster',
+      'baby-moon',
+      'copycat-auditor',
+      'border-shark',
+    ] as const;
+    for (const boss of bosses) {
+      expect(bossArtKeyForEnemyId(boss)).toBe(`boss.${boss}`);
+      expect(bossArtKeyForEnemyId(`loop-4-${boss}`)).toBe(`boss.${boss}`);
+      expect(hasAuthoredArt(`boss.${boss}`)).toBe(true);
+    }
+    expect(bossArtKeyForEnemyId('static-rats')).toBeNull();
   });
 });
