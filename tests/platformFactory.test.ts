@@ -28,4 +28,16 @@ describe('detectPlatform', () => {
     expect(detectPlatform({ search: '', hostname: 'www.crazygames.com', referrer: '' })).toBe('crazygames');
     expect(detectPlatform({ search: '', hostname: 'cdn.example.com', referrer: 'https://www.crazygames.com/game/foo' })).toBe('crazygames');
   });
+
+  it('does not treat portal names in unrelated hostnames, paths or query strings as embedding evidence', () => {
+    expect(detectPlatform({ search: '', hostname: 'notyandex.com', referrer: '' })).toBe('local');
+    expect(detectPlatform({ search: '', hostname: 'crazygames.example.com', referrer: '' })).toBe('local');
+    expect(detectPlatform({
+      search: '', hostname: 'cdn.example.com', referrer: 'https://example.com/?next=https://yandex.com/games',
+    })).toBe('local');
+    expect(detectPlatform({
+      search: '', hostname: 'cdn.example.com', referrer: 'https://example.com/crazygames.com/game/foo',
+    })).toBe('local');
+    expect(detectPlatform({ search: '', hostname: 'cdn.example.com', referrer: 'not a url yandex.com' })).toBe('local');
+  });
 });
