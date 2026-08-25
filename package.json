@@ -4,8 +4,11 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "assets:atlas": "node scripts/build-atlases.mjs",
+    "assets:check": "node scripts/check-asset-budget.mjs",
+    "assets:prepare": "npm run assets:atlas && npm run assets:check",
+    "dev": "npm run assets:prepare && vite",
+    "build": "npm run assets:prepare && tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
