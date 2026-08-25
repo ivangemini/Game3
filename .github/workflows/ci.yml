@@ -23,6 +23,8 @@ jobs:
       - run: npm run assets:prepare
       - run: npm run typecheck
       - run: npm run test
+      - name: Smoke-test soft-launch report generator
+        run: npm run analytics:report -- scripts/fixtures/telemetry-smoke.json --json /tmp/junkpack-telemetry-report.json --markdown /tmp/junkpack-telemetry-report.md
       - run: npm run build
       - run: npm run release:check
       - run: npm run release:archive
