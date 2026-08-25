@@ -7,6 +7,7 @@ const RARITY_COLORS: Record<Rarity, number> = {
   uncommon: 0x94df68,
   rare: 0x63b9ff,
   epic: 0xd87bff,
+  legendary: 0xffc94d,
 };
 
 export interface ShopPanelSnapshot {
@@ -79,6 +80,10 @@ export class ShopPanel {
     };
   }
 
+  getCoins(): number {
+    return this.coins;
+  }
+
   addCoins(amount: number, reason = 'Reward'): void {
     const safeAmount = Math.max(0, Math.floor(amount));
     if (safeAmount === 0) return;
@@ -86,6 +91,20 @@ export class ShopPanel {
     this.setStatus(`${reason}  •  +${safeAmount} coins`, '#ffd56e');
     this.renderOffers();
     this.notifyStateChanged();
+  }
+
+  spendCoins(amount: number, reason = 'Spent'): boolean {
+    const safeAmount = Math.max(0, Math.floor(amount));
+    if (safeAmount === 0) return true;
+    if (this.coins < safeAmount) {
+      this.setStatus(`Need ${safeAmount - this.coins} more coins.`, '#ff8a9b');
+      return false;
+    }
+    this.coins -= safeAmount;
+    this.setStatus(`${reason}  •  -${safeAmount} coins`, '#ffcf69');
+    this.renderOffers();
+    this.notifyStateChanged();
+    return true;
   }
 
   private createRerollButton(): void {
@@ -109,11 +128,7 @@ export class ShopPanel {
     button.on('pointerup', () => {
       button.setScale(1);
       label.setScale(1);
-      if (this.coins < 7) {
-        this.setStatus('Not enough coins to reroll.', '#ff8a9b');
-        return;
-      }
-      this.coins -= 7;
+      if (!this.spendCoins(7, 'Shop reroll')) return;
       this.shopIndex += 1;
       this.soldOfferIds.clear();
       this.setStatus(`Shop rerolled • seed step ${this.shopIndex}.`, '#b8ff8e');
