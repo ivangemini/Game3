@@ -1,5 +1,11 @@
-import { describe, expect, it } from 'vitest';
-import { registerSession, TelemetryClient, type TelemetryEnvelope, type TelemetryTransport } from '../src/analytics/Telemetry';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  BrowserTelemetryTransport,
+  registerSession,
+  TelemetryClient,
+  type TelemetryEnvelope,
+  type TelemetryTransport,
+} from '../src/analytics/Telemetry';
 
 class MemoryStorage implements Storage {
   private readonly values = new Map<string, string>();
@@ -19,6 +25,8 @@ class RecordingTransport implements TelemetryTransport {
     return this.succeeds;
   }
 }
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe('TelemetryClient', () => {
   it('buffers typed events with one ephemeral session id and timestamp', () => {
@@ -54,6 +62,34 @@ describe('TelemetryClient', () => {
     const events = client.getBufferedEvents();
     expect(events).toHaveLength(10);
     expect(events[0]?.payload).toEqual({ step: 5 });
+  });
+});
+
+describe('BrowserTelemetryTransport', () => {
+  it('falls back to fetch keepalive when beacon is unavailable', async () => {
+    const fetchMock = vi.fn(async () => ({ ok: true }));
+    vi.stubGlobal('navigator', {});
+    vi.stubGlobal('fetch', fetchMock);
+    const transport = new BrowserTelemetryTransport();
+    const events: TelemetryEnvelope[] = [
+      { name: 'hero_selected', payload: { heroId: 'engineer' }, sessionId: 's', timestampMs: 1 },
+    ];
+
+    await expect(transport.send('https://metrics.example.test/events', events)).resolves.toBe(true);
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ method: 'POST', keepalive: true, credentials: 'omit', cache: 'no-store' });
+  });
+
+  it('does not call fetch after a beacon accepts the batch', async () => {
+    const sendBeacon = vi.fn(() => true);
+    const fetchMock = vi.fn();
+    vi.stubGlobal('navigator', { sendBeacon });
+    vi.stubGlobal('fetch', fetchMock);
+    const transport = new BrowserTelemetryTransport();
+
+    await expect(transport.send('https://metrics.example.test/events', [])).resolves.toBe(true);
+    expect(sendBeacon).toHaveBeenCalledOnce();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
 
