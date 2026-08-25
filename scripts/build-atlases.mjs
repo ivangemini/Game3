@@ -25,6 +25,14 @@ const GROUPS = [
       { directory: 'bosses', prefix: 'boss' },
     ],
   },
+  {
+    textureKey: 'junk-ui',
+    outputName: 'junk-ui',
+    cellWidth: 128,
+    cellHeight: 128,
+    columns: 5,
+    sources: [{ directory: 'ui', prefix: 'ui' }],
+  },
 ];
 
 await fs.mkdir(OUTPUT_ROOT, { recursive: true });
@@ -36,7 +44,7 @@ const sourceBytes = reports.reduce((sum, report) => sum + report.sourceBytes, 0)
 const generatedBytes = reports.reduce((sum, report) => sum + report.generatedBytes, 0);
 const estimatedTextureBytes = reports.reduce((sum, report) => sum + report.estimatedTextureBytes, 0);
 const report = {
-  version: 1,
+  version: 2,
   generatedAt: new Date().toISOString(),
   sourceRequestCount: reports.reduce((sum, entry) => sum + entry.frameCount, 0),
   runtimeAtlasRequestCount: reports.length,
