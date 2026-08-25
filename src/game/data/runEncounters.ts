@@ -42,9 +42,6 @@ const channelJam = (intervalMs: number, telegraphMs: number, durationMs: number)
 const slimeCell = (intervalMs: number, telegraphMs: number, durationMs: number) => ({
   kind: 'slime-cell' as const, intervalMs, telegraphMs, durationMs,
 });
-const magnetRow = (intervalMs: number, telegraphMs: number, durationMs: number) => ({
-  kind: 'magnet-row' as const, intervalMs, telegraphMs, durationMs,
-});
 const tagEclipse = (intervalMs: number, telegraphMs: number, durationMs: number) => ({
   kind: 'tag-eclipse' as const, intervalMs, telegraphMs, durationMs,
 });
@@ -69,7 +66,7 @@ const BASE_CAMPAIGN_ENCOUNTERS: readonly BaseEncounterDefinition[] = [
   { encounterId: 'w2-deadline-snail', world: 2, slot: 3, kind: 'boss', title: 'Deadline Snail', subtitle: 'Boss • Time Tax delays the next trigger of your fastest combat item.', rewardCoins: 32, scoreValue: 420, enemy: { id: 'deadline-snail', name: 'Deadline Snail', maxHp: 218, attackIntervalMs: 2050, attackDamage: 12 } },
   { encounterId: 'w3-mutant-conveyor', world: 3, slot: 1, kind: 'fight', title: 'Mutant Conveyor', subtitle: 'World 3 • the backpack should be becoming a real machine now.', rewardCoins: 18, scoreValue: 260, enemy: { id: 'mutant-conveyor', name: 'Mutant Conveyor', maxHp: 214, attackIntervalMs: 1800, attackDamage: 13 } },
   { encounterId: 'w3-signal-golem', world: 3, slot: 2, kind: 'elite', title: 'Signal Golem', subtitle: 'Elite • checks whether the build has a coherent damage engine.', rewardCoins: 24, scoreValue: 340, enemy: { id: 'signal-golem', name: 'Signal Golem', maxHp: 264, attackIntervalMs: 1650, attackDamage: 14 } },
-  { encounterId: 'w3-final-broadcast', world: 3, slot: 3, kind: 'boss', title: 'TV Tyrant: Final Broadcast', subtitle: 'Third boss • all three signal attacks are active.', rewardCoins: 42, scoreValue: 650, enemy: { id: 'tv-tyrant-final', name: 'TV Tyrant // Final Broadcast', maxHp: 332, attackIntervalMs: 1900, attackDamage: 16, interference: channelJam(3300, 700, 2700), cellInterference: slimeCell(4400, 850, 3000), rowInterference: magnetRow(6100, 1050, 2700) } },
+  { encounterId: 'w3-closet-monster', world: 3, slot: 3, kind: 'boss', title: 'Closet Monster', subtitle: 'Boss • Clutter Crush punishes loose items that touch nothing.', rewardCoins: 42, scoreValue: 650, enemy: { id: 'closet-monster', name: 'Closet Monster', maxHp: 332, attackIntervalMs: 1900, attackDamage: 16 } },
   { encounterId: 'w4-grinning-fridge', world: 4, slot: 1, kind: 'fight', title: 'Grinning Fridge', subtitle: 'World 4 • full backpack, no excuses.', rewardCoins: 24, scoreValue: 360, enemy: { id: 'grinning-fridge', name: 'Grinning Fridge', maxHp: 310, attackIntervalMs: 1725, attackDamage: 16 } },
   { encounterId: 'w4-duck-cult', world: 4, slot: 2, kind: 'elite', title: 'Rubber Duck Choir', subtitle: 'Elite • a final pressure test before reality breaks.', rewardCoins: 31, scoreValue: 470, enemy: { id: 'rubber-duck-choir', name: 'Rubber Duck Choir', maxHp: 382, attackIntervalMs: 1550, attackDamage: 18 } },
   { encounterId: 'w4-baby-moon', world: 4, slot: 3, kind: 'boss', title: 'Baby Moon', subtitle: 'Final campaign boss • Tag Eclipse attacks your most stacked build family.', rewardCoins: 55, scoreValue: 850, enemy: { id: 'baby-moon', name: 'Baby Moon', maxHp: 475, attackIntervalMs: 1825, attackDamage: 20, tagInterference: tagEclipse(5200, 1200, 3000) } },
@@ -89,8 +86,7 @@ export function modifiersForLoopWorld(
   world: number,
 ): readonly RunWorldModifier[] {
   const count = Math.min(4, Math.max(2, Math.floor(loopNumber)));
-  const shuffled = createSeededRng(`${runSeed}:loop:${Math.max(2, Math.floor(loopNumber))}:mutations`)
-    .shuffle(WORLD_MODIFIERS);
+  const shuffled = createSeededRng(`${runSeed}:loop:${Math.max(2, Math.floor(loopNumber))}:mutations`).shuffle(WORLD_MODIFIERS);
   const start = ((Math.max(1, Math.floor(world)) - 1) * 2) % shuffled.length;
   const selected: RunWorldModifier[] = [];
   for (let offset = 0; offset < count; offset += 1) {
@@ -108,9 +104,7 @@ export function getRunEncounter(
     const base = BASE_CAMPAIGN_ENCOUNTERS[progress.campaignEncounterIndex];
     return base ? applyModifiers(base, [modifierForWorld(runSeed, base.world)]) : null;
   }
-  if (progress.mode === 'loop') {
-    return createLoopEncounter(progress.loopNumber, progress.loopEncounterIndex, runSeed);
-  }
+  if (progress.mode === 'loop') return createLoopEncounter(progress.loopNumber, progress.loopEncounterIndex, runSeed);
   return null;
 }
 
@@ -147,33 +141,12 @@ export function createLoopEncounter(
       maxHp: Math.max(1, Math.round(template.enemy.maxHp * hpScale)),
       attackDamage: Math.max(0, Math.round(template.enemy.attackDamage * damageScale)),
       attackIntervalMs: Math.max(900, Math.round(template.enemy.attackIntervalMs / speedScale)),
-      ...(template.enemy.interference ? {
-        interference: {
-          ...template.enemy.interference,
-          intervalMs: Math.max(2300, Math.round(template.enemy.interference.intervalMs / speedScale)),
-        },
-      } : {}),
-      ...(template.enemy.cellInterference ? {
-        cellInterference: {
-          ...template.enemy.cellInterference,
-          intervalMs: Math.max(3200, Math.round(template.enemy.cellInterference.intervalMs / speedScale)),
-        },
-      } : {}),
-      ...(template.enemy.rowInterference ? {
-        rowInterference: {
-          ...template.enemy.rowInterference,
-          intervalMs: Math.max(3900, Math.round(template.enemy.rowInterference.intervalMs / speedScale)),
-        },
-      } : {}),
-      ...(template.enemy.tagInterference ? {
-        tagInterference: {
-          ...template.enemy.tagInterference,
-          intervalMs: Math.max(3400, Math.round(template.enemy.tagInterference.intervalMs / speedScale)),
-        },
-      } : {}),
+      ...(template.enemy.interference ? { interference: { ...template.enemy.interference, intervalMs: Math.max(2300, Math.round(template.enemy.interference.intervalMs / speedScale)) } } : {}),
+      ...(template.enemy.cellInterference ? { cellInterference: { ...template.enemy.cellInterference, intervalMs: Math.max(3200, Math.round(template.enemy.cellInterference.intervalMs / speedScale)) } } : {}),
+      ...(template.enemy.rowInterference ? { rowInterference: { ...template.enemy.rowInterference, intervalMs: Math.max(3900, Math.round(template.enemy.rowInterference.intervalMs / speedScale)) } } : {}),
+      ...(template.enemy.tagInterference ? { tagInterference: { ...template.enemy.tagInterference, intervalMs: Math.max(3400, Math.round(template.enemy.tagInterference.intervalMs / speedScale)) } } : {}),
     },
   };
-
   return applyModifiers(base, modifiers);
 }
 
@@ -185,10 +158,7 @@ export function loopLabel(loopNumber: number, index: number): string {
   return `LOOP ${Math.max(2, Math.floor(loopNumber))} • WORLD ${worldForLoopEncounter(index)}/${CAMPAIGN_WORLDS} • ${slotForLoopEncounter(index)}/3`;
 }
 
-function applyModifiers(
-  base: BaseEncounterDefinition,
-  modifiers: readonly RunWorldModifier[],
-): RunEncounterDefinition {
+function applyModifiers(base: BaseEncounterDefinition, modifiers: readonly RunWorldModifier[]): RunEncounterDefinition {
   const totalHpPct = modifiers.reduce((sum, modifier) => sum + modifier.enemyHpPct, 0);
   const totalDamagePct = modifiers.reduce((sum, modifier) => sum + modifier.enemyDamagePct, 0);
   const totalAttackSpeedPct = modifiers.reduce((sum, modifier) => sum + modifier.enemyAttackSpeedPct, 0);
