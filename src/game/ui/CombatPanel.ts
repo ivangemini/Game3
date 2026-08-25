@@ -148,7 +148,7 @@ export class CombatPanel {
     this.eventLog.length = 0;
     this.eventLogText.setText('');
     const boss = this.isBoss(enemy);
-    this.bossStatusText.setText(boss ? 'CHANNEL JAM + SLIME SIGNAL armed.' : '');
+    this.bossStatusText.setText(boss ? `${this.bossSystems(enemy).join(' + ')} armed.` : '');
     this.enemyNameText.setText(enemy.name.toUpperCase());
     this.enemyBody.setFillStyle(boss ? 0x697f45 : 0x6f8f50);
     this.enemyBody.setStrokeStyle(8, boss ? 0x9b4aa7 : 0x2a2732);
@@ -195,6 +195,7 @@ export class CombatPanel {
     if (event.kind === 'item-triggered') { this.pushLog(`${this.seconds(event.atMs)} • ${event.itemInstanceId} triggered`); return; }
     if (event.kind === 'item-jammed') { this.pushLog(`${this.seconds(event.atMs)} • ${event.itemInstanceId} JAMMED — trigger lost`); return; }
     if (event.kind === 'item-slimed') { this.pushLog(`${this.seconds(event.atMs)} • ${event.itemInstanceId} blocked by SLIME [${event.cell.x},${event.cell.y}]`); return; }
+    if (event.kind === 'item-scrambled') { this.pushLog(`${this.seconds(event.atMs)} • ${event.itemInstanceId} MAGNET-SCRAMBLED on row ${event.row + 1}`); return; }
     if (event.kind === 'enemy-damaged') { this.pushLog(`${this.seconds(event.atMs)} • ${event.source === 'poison' ? 'POISON' : event.itemInstanceId} dealt ${event.amount}`); this.punchEnemy(0.96); return; }
     if (event.kind === 'poison-applied') { this.pushLog(`${this.seconds(event.atMs)} • +${event.amount} poison`); return; }
     if (event.kind === 'shield-gained') { this.pushLog(`${this.seconds(event.atMs)} • +${event.amount} shield`); return; }
@@ -224,6 +225,19 @@ export class CombatPanel {
       this.bossStatusText.setText(`SLIMED CELL ${event.cell.x + 1}:${event.cell.y + 1} • ${(event.durationMs / 1000).toFixed(1)}s`);
       this.showBackpackCell(event.cell, 0x76ff5b, event.durationMs, false);
       this.pushLog(`${this.seconds(event.atMs)} • cell ${event.cell.x + 1}:${event.cell.y + 1} SLIMED`);
+      return;
+    }
+    if (event.kind === 'boss-row-telegraph') {
+      const targetReason = event.magneticPriority ? 'METAL DETECTED' : 'OCCUPIED ROW';
+      this.bossStatusText.setText(`MAGNET SCRAMBLE → ROW ${event.row + 1} • ${targetReason} • IMPACT IN ${((event.impactAtMs - event.atMs) / 1000).toFixed(1)}s`);
+      this.showBackpackRow(event.row, 0x58d7ff, Math.max(120, event.impactAtMs - event.atMs), true);
+      this.pushLog(`${this.seconds(event.atMs)} • magnet locks row ${event.row + 1}`);
+      return;
+    }
+    if (event.kind === 'boss-row-scrambled') {
+      this.bossStatusText.setText(`MAGNET SCRAMBLE → ROW ${event.row + 1} unstable ${(event.durationMs / 1000).toFixed(1)}s`);
+      this.showBackpackRow(event.row, 0x5de7ff, event.durationMs, false);
+      this.pushLog(`${this.seconds(event.atMs)} • row ${event.row + 1} SCRAMBLED`);
       return;
     }
 
@@ -266,6 +280,26 @@ export class CombatPanel {
     this.scene.time.delayedCall(durationMs, () => overlay.destroy());
   }
 
+  private showBackpackRow(row: number, color: number, durationMs: number, telegraph: boolean): void {
+    const { left, top, cellSize } = this.backpackGrid;
+    const width = cellSize * 6;
+    const overlay = this.scene.add.rectangle(
+      left + width / 2,
+      top + (row + 0.5) * cellSize,
+      width - 8,
+      cellSize - 8,
+      color,
+      telegraph ? 0.13 : 0.3,
+    ).setStrokeStyle(telegraph ? 4 : 5, color).setDepth(159);
+    if (!this.reducedMotion && telegraph) {
+      this.scene.tweens.add({ targets: overlay, alpha: 0.34, yoyo: true, repeat: -1, duration: 130 });
+    }
+    if (!this.reducedMotion && !telegraph) {
+      this.scene.tweens.add({ targets: overlay, x: { from: overlay.x - 5, to: overlay.x + 5 }, yoyo: true, repeat: 3, duration: 55 });
+    }
+    this.scene.time.delayedCall(durationMs, () => overlay.destroy());
+  }
+
   private renderState(): void {
     const state = this.state;
     const enemy = this.setup?.enemy ?? SCRAP_DUMMY;
@@ -281,7 +315,12 @@ export class CombatPanel {
     this.drawBar(left, this.centerY - 150, 280, enemyHp / enemy.maxHp, boss ? 0xf06cff : 0xb96cff);
     if (!state || state.outcome !== 'active') { this.nextActionText.setText(''); return; }
     const entries: string[] = [];
-    const labels: Array<[string, string]> = [['enemy-attack', 'HIT'], ['boss-interference', 'JAM'], ['boss-cell-interference', 'SLIME']];
+    const labels: Array<[string, string]> = [
+      ['enemy-attack', 'HIT'],
+      ['boss-interference', 'JAM'],
+      ['boss-cell-interference', 'SLIME'],
+      ['boss-row-interference', 'MAGNET'],
+    ];
     for (const [kind, label] of labels) {
       const effect = state.queue.find((candidate) => candidate.kind === kind);
       if (effect) entries.push(`${label} ${((effect.dueAtMs - state.timeMs) / 1000).toFixed(1)}s`);
@@ -297,7 +336,15 @@ export class CombatPanel {
   }
 
   private isBoss(enemy: EnemyCombatDefinition): boolean {
-    return !!enemy.interference || !!enemy.cellInterference;
+    return !!enemy.interference || !!enemy.cellInterference || !!enemy.rowInterference;
+  }
+
+  private bossSystems(enemy: EnemyCombatDefinition): string[] {
+    const systems: string[] = [];
+    if (enemy.interference) systems.push('CHANNEL JAM');
+    if (enemy.cellInterference) systems.push('SLIME SIGNAL');
+    if (enemy.rowInterference) systems.push('MAGNET SCRAMBLE');
+    return systems;
   }
 
   private punchEnemy(scale: number): void {
