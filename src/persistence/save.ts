@@ -64,8 +64,15 @@ export interface SaveV4 {
   readonly activeRun: ActiveRunSaveV4 | null;
 }
 
-export interface ActiveRunSave extends ActiveRunSaveV4 {
-  readonly progress: RunProgressState;
+export interface LegacyRunProgressStateV5 {
+  readonly mode: 'campaign' | 'cashout' | 'endless' | 'complete';
+  readonly campaignEncounterIndex: number;
+  readonly endlessWave: number;
+  readonly score: number;
+}
+
+export interface ActiveRunSaveV5 extends ActiveRunSaveV4 {
+  readonly progress: LegacyRunProgressStateV5;
 }
 
 export interface SaveV5 {
@@ -74,16 +81,31 @@ export interface SaveV5 {
   readonly discoveredRecipeIds: readonly string[];
   readonly bestEndlessWave: number;
   readonly settings: SaveSettings;
+  readonly activeRun: ActiveRunSaveV5 | null;
+}
+
+export interface ActiveRunSave extends ActiveRunSaveV4 {
+  readonly progress: RunProgressState;
+}
+
+export interface SaveV6 {
+  readonly version: 6;
+  readonly discoveredItemIds: readonly string[];
+  readonly discoveredRecipeIds: readonly string[];
+  readonly bestEndlessWave: number;
+  readonly bestCorruptedLoop: number;
+  readonly settings: SaveSettings;
   readonly activeRun: ActiveRunSave | null;
 }
 
-export type GameSave = SaveV5;
+export type GameSave = SaveV6;
 
-export const DEFAULT_SAVE: SaveV5 = {
-  version: 5,
+export const DEFAULT_SAVE: SaveV6 = {
+  version: 6,
   discoveredItemIds: [],
   discoveredRecipeIds: [],
   bestEndlessWave: 0,
+  bestCorruptedLoop: 0,
   settings: {
     musicVolume: 0.8,
     sfxVolume: 0.9,
@@ -92,17 +114,18 @@ export const DEFAULT_SAVE: SaveV5 = {
   activeRun: null,
 };
 
-export function loadSave(storage: Storage = localStorage): SaveV5 {
+export function loadSave(storage: Storage = localStorage): SaveV6 {
   const raw = storage.getItem(SAVE_KEY);
   if (!raw) return DEFAULT_SAVE;
 
   try {
     const parsed: unknown = JSON.parse(raw);
-    if (isSaveV5(parsed)) return parsed;
-    if (isSaveV4(parsed)) return migrateV4ToV5(parsed);
-    if (isSaveV3(parsed)) return migrateV4ToV5(migrateV3ToV4(parsed));
-    if (isSaveV2(parsed)) return migrateV4ToV5(migrateV3ToV4(migrateV2ToV3(parsed)));
-    if (isSaveV1(parsed)) return migrateV4ToV5(migrateV3ToV4(migrateV2ToV3(migrateV1ToV2(parsed))));
+    if (isSaveV6(parsed)) return parsed;
+    if (isSaveV5(parsed)) return migrateV5ToV6(parsed);
+    if (isSaveV4(parsed)) return migrateV5ToV6(migrateV4ToV5(parsed));
+    if (isSaveV3(parsed)) return migrateV5ToV6(migrateV4ToV5(migrateV3ToV4(parsed)));
+    if (isSaveV2(parsed)) return migrateV5ToV6(migrateV4ToV5(migrateV3ToV4(migrateV2ToV3(parsed))));
+    if (isSaveV1(parsed)) return migrateV5ToV6(migrateV4ToV5(migrateV3ToV4(migrateV2ToV3(migrateV1ToV2(parsed)))));
   } catch {
     // Corrupted local data falls back safely; recovery UI can be added later.
   }
@@ -110,11 +133,11 @@ export function loadSave(storage: Storage = localStorage): SaveV5 {
   return DEFAULT_SAVE;
 }
 
-export function writeSave(save: SaveV5, storage: Storage = localStorage): void {
+export function writeSave(save: SaveV6, storage: Storage = localStorage): void {
   storage.setItem(SAVE_KEY, JSON.stringify(save));
 }
 
-export function clearActiveRun(save: SaveV5): SaveV5 {
+export function clearActiveRun(save: SaveV6): SaveV6 {
   return { ...save, activeRun: null };
 }
 
@@ -167,8 +190,65 @@ function migrateV4ToV5(save: SaveV4): SaveV5 {
     bestEndlessWave: save.bestEndlessWave,
     settings: save.settings,
     activeRun: save.activeRun
-      ? { ...save.activeRun, progress: createInitialRunProgress() }
+      ? {
+          ...save.activeRun,
+          progress: { mode: 'campaign', campaignEncounterIndex: 0, endlessWave: 0, score: 0 },
+        }
       : null,
+  };
+}
+
+function migrateV5ToV6(save: SaveV5): SaveV6 {
+  return {
+    version: 6,
+    discoveredItemIds: save.discoveredItemIds,
+    discoveredRecipeIds: save.discoveredRecipeIds,
+    bestEndlessWave: save.bestEndlessWave,
+    bestCorruptedLoop: save.bestEndlessWave > 0
+      ? 2 + Math.floor((Math.max(1, save.bestEndlessWave) - 1) / 12)
+      : 0,
+    settings: save.settings,
+    activeRun: save.activeRun
+      ? { ...save.activeRun, progress: migrateLegacyProgress(save.activeRun.progress) }
+      : null,
+  };
+}
+
+function migrateLegacyProgress(progress: LegacyRunProgressStateV5): RunProgressState {
+  if (progress.mode === 'campaign') {
+    return {
+      mode: 'campaign',
+      campaignEncounterIndex: Math.max(0, Math.min(8, progress.campaignEncounterIndex)),
+      loopNumber: 1,
+      loopEncounterIndex: 0,
+      score: progress.score,
+    };
+  }
+  if (progress.mode === 'cashout') {
+    return {
+      mode: 'campaign',
+      campaignEncounterIndex: 9,
+      loopNumber: 1,
+      loopEncounterIndex: 0,
+      score: progress.score,
+    };
+  }
+  if (progress.mode === 'endless') {
+    const legacyWave = Math.max(1, progress.endlessWave);
+    return {
+      mode: 'loop',
+      campaignEncounterIndex: 11,
+      loopNumber: 2 + Math.floor((legacyWave - 1) / 12),
+      loopEncounterIndex: (legacyWave - 1) % 12,
+      score: progress.score,
+    };
+  }
+  return {
+    mode: 'complete',
+    campaignEncounterIndex: 11,
+    loopNumber: 1,
+    loopEncounterIndex: 0,
+    score: progress.score,
   };
 }
 
@@ -204,6 +284,15 @@ function isSaveV5(value: unknown): value is SaveV5 {
   if (!value || typeof value !== 'object') return false;
   const candidate = value as Partial<SaveV5>;
   return candidate.version === 5 && isMeta(candidate) && (candidate.activeRun === null || isActiveRunV5(candidate.activeRun));
+}
+
+function isSaveV6(value: unknown): value is SaveV6 {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as Partial<SaveV6>;
+  return candidate.version === 6
+    && isMeta(candidate)
+    && isNonNegativeInteger(candidate.bestCorruptedLoop)
+    && (candidate.activeRun === null || isActiveRunV6(candidate.activeRun));
 }
 
 function isMeta(value: {
@@ -243,8 +332,21 @@ function isActiveRunV4(value: unknown): value is ActiveRunSaveV4 {
     && isStringArray(candidate.offeredPerkEncounterIds);
 }
 
-function isActiveRunV5(value: unknown): value is ActiveRunSave {
+function isActiveRunV5(value: unknown): value is ActiveRunSaveV5 {
+  return isActiveRunV4(value) && isLegacyRunProgressState((value as Partial<ActiveRunSaveV5>).progress);
+}
+
+function isActiveRunV6(value: unknown): value is ActiveRunSave {
   return isActiveRunV4(value) && isRunProgressState((value as Partial<ActiveRunSave>).progress);
+}
+
+function isLegacyRunProgressState(value: unknown): value is LegacyRunProgressStateV5 {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as Partial<LegacyRunProgressStateV5>;
+  return (candidate.mode === 'campaign' || candidate.mode === 'cashout' || candidate.mode === 'endless' || candidate.mode === 'complete')
+    && isIntegerInRange(candidate.campaignEncounterIndex, 0, 8)
+    && isNonNegativeInteger(candidate.endlessWave)
+    && isNonNegativeInteger(candidate.score);
 }
 
 function isPlacedItem(value: unknown): value is PlacedItem {
@@ -284,4 +386,8 @@ function isNonNegativeInteger(value: unknown): value is number {
 
 function isPositiveInteger(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value >= 1;
+}
+
+function isIntegerInRange(value: unknown, min: number, max: number): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max;
 }
