@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { telemetry } from '../../analytics/Telemetry';
 import { uiAudioCue } from '../audio/audioCues';
 import { GameAudio } from '../audio/GameAudio';
 import { PROTOTYPE_FUSION_RECIPES, SECOND_STAGE_FUSION_RECIPE_IDS } from '../data/fusionRecipes';
@@ -68,6 +69,10 @@ function createFreshRun(runSeed: string): ActiveRunSave {
     resolvedEventIds: [],
     heroId: null,
   };
+}
+
+function runtimeNowMs(): number {
+  return typeof performance !== 'undefined' ? performance.now() : Date.now();
 }
 
 export class PrototypeScene extends Phaser.Scene {
@@ -257,6 +262,9 @@ export class PrototypeScene extends Phaser.Scene {
       return { ok: true, message: resolution.resultText };
     });
 
+    let activeCombatStartedAtMs: number | null = null;
+    let activeCombatEncounterId: string | null = null;
+
     const combatPanel = new CombatPanel(this, 1140, 445, {
       getBackpackItems: () => board.getSnapshot().items,
       getSelectedPerkIds: () => activeRun.selectedPerkIds,
@@ -283,6 +291,16 @@ export class PrototypeScene extends Phaser.Scene {
         perkOverlay.show(activeRun.pendingPerkOfferIds);
       },
       onOutcome: ({ encounterId, outcome }) => {
+        if (activeCombatEncounterId === encounterId && activeCombatStartedAtMs !== null) {
+          telemetry.track('combat_finished', {
+            encounterId,
+            outcome,
+            durationMs: Math.max(0, Math.round(runtimeNowMs() - activeCombatStartedAtMs)),
+          });
+        }
+        activeCombatStartedAtMs = null;
+        activeCombatEncounterId = null;
+
         if (outcome !== 'victory') {
           runPanel.refresh('Defeat. Repack, shop or fuse, then retry the same encounter.');
           return;
@@ -345,19 +363,28 @@ export class PrototypeScene extends Phaser.Scene {
           || combatPanel.isRunning()) return false;
         const current = getRunEncounter(activeRun.progress, activeRun.runSeed);
         if (!current || current.encounterId !== encounter.encounterId) return false;
-        return combatPanel.startEncounter(encounter.encounterId, encounter.enemy, encounter.rewardCoins);
+        const started = combatPanel.startEncounter(encounter.encounterId, encounter.enemy, encounter.rewardCoins);
+        if (started) {
+          activeCombatStartedAtMs = runtimeNowMs();
+          activeCombatEncounterId = encounter.encounterId;
+        }
+        return started;
       },
       onEnterCorruptedLoop: () => {
         if (activeRun.heroId === null || combatPanel.isRunning() || metaBlocked()
           || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return;
         activeRun = { ...activeRun, progress: enterCorruptedLoop(activeRun.progress) };
+        telemetry.track('loop_entered', { loopNumber: activeRun.progress.loopNumber });
         persistRun();
         runPanel.refresh(`LOOP ${activeRun.progress.loopNumber} started. Mutations now stack.`);
       },
       onCashOut: () => {
         if (activeRun.heroId === null || combatPanel.isRunning() || metaBlocked()
           || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return;
+        const completedLoop = activeRun.progress.loopNumber;
+        const finalScore = activeRun.progress.score;
         activeRun = { ...activeRun, progress: cashOutRun(activeRun.progress) };
+        telemetry.track('run_cashout', { loopNumber: completedLoop, score: finalScore });
         persistRun();
         runPanel.refresh('Run complete. Score and deepest completed loop are saved.');
       },
