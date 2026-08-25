@@ -26,7 +26,7 @@
 
 **Gate:** arranging items is satisfying before combat exists. Current prototype has drag lift, placement previews, elastic snap, invalid-action feedback, synergy activation feedback, fusion and mid-run backpack growth; final polish remains tied to runtime visual review.
 
-## P2 — Combat vertical slice [IN PROGRESS]
+## P2 — Combat vertical slice [DONE]
 - [x] Deterministic combat clock/effect queue independent of render FPS
 - [x] Player HP/shield, enemy HP and recurring enemy attacks in domain logic
 - [x] Item trigger system consuming backpack-derived speed/poison/laser/chaos/armor bonuses
@@ -43,9 +43,9 @@
 - [x] Victory rewards feed the real run/shop economy
 - [x] Encounter rewards are claim-once per run and persisted
 - [x] Fused junk has distinct combat profiles and participates in the existing synergy/perk pipeline
-- [ ] Audio hooks
+- [x] Asset-agnostic combat audio cue hooks with priorities/cooldowns for the future mixer and final SFX
 
-**Gate:** one full mini-run is understandable and fun.
+**Gate:** one full mini-run is understandable and fun. Final runtime/audio feel is polished during P6, but the combat feature contract is complete.
 
 ## P3 — Roguelite run [IN PROGRESS]
 - [x] Seeded shops/rewards foundation

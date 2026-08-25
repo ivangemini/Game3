@@ -1,4 +1,4 @@
-# Architecture v0.4
+# Architecture v0.5
 
 ## Stack
 - Phaser 4.2.1
@@ -17,6 +17,9 @@ Declarative content: items, combat profiles, encounters, bosses, perks, events, 
 
 ### `src/game/simulation/`
 Offline/QA simulation that may compose domain rules with declarative game data. It is not a presentation layer and must remain deterministic. Pacing/balance reports belong here rather than inside Phaser scenes.
+
+### `src/game/audio/`
+Asset-agnostic semantic audio cues derived from presentation events. Cue IDs/priorities/cooldowns are presentation contracts only: sound loading, WebAudio lifecycle, mixing and music remain outside the combat domain.
 
 ### `src/game/scenes/`
 Phaser presentation/orchestration. Scenes translate domain state into visuals/input and coordinate persistence without making presentation the source of gameplay rules.
@@ -44,6 +47,8 @@ Backpack geometry, blocked pocket cells, fusion placement and synergy evaluation
 The render loop passes explicit elapsed milliseconds to `advanceCombat`; render FPS never determines trigger count, damage or outcome. A single large advance and many smaller advances over the same simulated duration must converge to the same state.
 
 Backpack effects are converted into combat stats before simulation. Current examples include trigger speed, poison, laser shots, chaos damage and scrap armor. Boss interference can jam item triggers, slime occupied cells or temporarily scramble crossing rows. Phaser consumes presentation events for animation/audio/UI but cannot modify the combat result through presentation timing.
+
+`CombatPanel` also maps each presentation event to a semantic `AudioCue` and exposes it through an optional callback. This is one-way presentation output: muting, throttling or failing to play audio cannot influence combat state.
 
 ## Time and pacing QA
 Combat simulation receives explicit elapsed time. Human decision pacing is modeled separately in `src/game/simulation/pacing.ts` so design-duration assumptions never leak into combat rules.

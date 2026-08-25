@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { audioCueForCombatEvent, combatStartAudioCue, type AudioCue } from '../audio/audioCues';
 import { PROTOTYPE_COMBAT_PROFILE_MAP, SCRAP_DUMMY, TV_TYRANT } from '../data/combatProfiles';
 import { PROTOTYPE_ITEM_MAP } from '../data/items';
 import { PROTOTYPE_PERK_MAP } from '../data/perks';
@@ -34,6 +35,7 @@ export interface CombatPanelOptions {
   readonly onVictoryReward?: (reward: CombatVictoryReward) => boolean;
   readonly onBossVictory?: (encounterId: string, enemyId: string) => void;
   readonly onOutcome?: (notice: CombatOutcomeNotice) => void;
+  readonly onAudioCue?: (cue: AudioCue) => void;
   readonly backpackGrid?: { readonly left: number; readonly top: number; readonly cellSize: number };
   readonly showDebugButtons?: boolean;
 }
@@ -45,6 +47,7 @@ export class CombatPanel {
   private readonly onVictoryReward?: (reward: CombatVictoryReward) => boolean;
   private readonly onBossVictory?: (encounterId: string, enemyId: string) => void;
   private readonly onOutcome?: (notice: CombatOutcomeNotice) => void;
+  private readonly onAudioCue?: (cue: AudioCue) => void;
   private readonly backpackGrid: { readonly left: number; readonly top: number; readonly cellSize: number };
   private readonly barGraphics: Phaser.GameObjects.Graphics;
   private readonly enemyBody: Phaser.GameObjects.Rectangle;
@@ -76,6 +79,7 @@ export class CombatPanel {
     this.onVictoryReward = options.onVictoryReward;
     this.onBossVictory = options.onBossVictory;
     this.onOutcome = options.onOutcome;
+    this.onAudioCue = options.onAudioCue;
     this.backpackGrid = options.backpackGrid ?? { left: 90, top: 225, cellSize: 76 };
 
     scene.add.rectangle(centerX, centerY, 720, 530, 0x211d28, 1).setStrokeStyle(5, 0x55365e);
@@ -148,6 +152,7 @@ export class CombatPanel {
     this.eventLog.length = 0;
     this.eventLogText.setText('');
     const boss = this.isBoss(enemy);
+    this.onAudioCue?.(combatStartAudioCue(enemy.id, boss));
     this.bossStatusText.setText(boss ? `${this.bossSystems(enemy).join(' + ')} armed.` : '');
     this.enemyNameText.setText(enemy.name.toUpperCase());
     this.enemyBody.setFillStyle(boss ? 0x697f45 : 0x6f8f50);
@@ -192,6 +197,7 @@ export class CombatPanel {
   }
 
   private consumeEvent(event: CombatPresentationEvent): void {
+    this.onAudioCue?.(audioCueForCombatEvent(event));
     if (event.kind === 'item-triggered') { this.pushLog(`${this.seconds(event.atMs)} • ${event.itemInstanceId} triggered`); return; }
     if (event.kind === 'item-jammed') { this.pushLog(`${this.seconds(event.atMs)} • ${event.itemInstanceId} JAMMED — trigger lost`); return; }
     if (event.kind === 'item-slimed') { this.pushLog(`${this.seconds(event.atMs)} • ${event.itemInstanceId} blocked by SLIME [${event.cell.x},${event.cell.y}]`); return; }
