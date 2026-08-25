@@ -98,6 +98,32 @@ describe('summarizeTelemetry', () => {
     expect(summary.p90TimeToFirstCombatMs).toBe(20000);
   });
 
+  it('derives first-boss reach and base-campaign completion pacing from existing encounter events', () => {
+    const events: TelemetryEnvelope[] = [
+      sessionEvent('a', 0, 'session_start', { returning: false, platform: 'local', viewportMode: 'standard-landscape' }),
+      sessionEvent('a', 180_000, 'combat_started', { encounterId: 'w1-tv-tyrant', stage: 'World 1 · Boss' }),
+      sessionEvent('a', 1_260_000, 'combat_finished', { encounterId: 'w4-baby-moon', outcome: 'victory', durationMs: 55_000 }),
+      sessionEvent('b', 10_000, 'session_start', { returning: false, platform: 'local', viewportMode: 'standard-landscape' }),
+      sessionEvent('b', 250_000, 'combat_started', { encounterId: 'w1-tv-tyrant', stage: 'World 1 · Boss' }),
+      sessionEvent('b', 1_510_000, 'combat_finished', { encounterId: 'w4-baby-moon', outcome: 'victory', durationMs: 62_000 }),
+      sessionEvent('c', 20_000, 'session_start', { returning: false, platform: 'local', viewportMode: 'standard-landscape' }),
+      sessionEvent('c', 350_000, 'combat_started', { encounterId: 'w1-tv-tyrant', stage: 'World 1 · Boss' }),
+      sessionEvent('d', 30_000, 'session_start', { returning: false, platform: 'local', viewportMode: 'standard-landscape' }),
+    ];
+
+    const summary = summarizeTelemetry(events);
+    expect(summary.sessionsWithFirstBoss).toBe(3);
+    expect(summary.firstBossSessionRate).toBeCloseTo(3 / 4);
+    expect(summary.averageTimeToFirstBossMs).toBeCloseTo((180_000 + 240_000 + 330_000) / 3);
+    expect(summary.medianTimeToFirstBossMs).toBe(240_000);
+    expect(summary.p90TimeToFirstBossMs).toBe(330_000);
+    expect(summary.sessionsCompletingBaseCampaign).toBe(2);
+    expect(summary.baseCampaignCompletionRate).toBe(0.5);
+    expect(summary.averageBaseCampaignDurationMs).toBeCloseTo((1_260_000 + 1_500_000) / 2);
+    expect(summary.medianBaseCampaignDurationMs).toBe(1_260_000);
+    expect(summary.p90BaseCampaignDurationMs).toBe(1_500_000);
+  });
+
   it('uses nearest-rank percentiles for skewed combat durations', () => {
     const events = [10_000, 12_000, 13_000, 15_000, 80_000].map((durationMs, index) =>
       event('combat_finished', {
@@ -128,6 +154,14 @@ describe('summarizeTelemetry', () => {
     expect(summary.averageTimeToFirstCombatMs).toBe(0);
     expect(summary.medianTimeToFirstCombatMs).toBe(0);
     expect(summary.p90TimeToFirstCombatMs).toBe(0);
+    expect(summary.firstBossSessionRate).toBe(0);
+    expect(summary.averageTimeToFirstBossMs).toBe(0);
+    expect(summary.medianTimeToFirstBossMs).toBe(0);
+    expect(summary.p90TimeToFirstBossMs).toBe(0);
+    expect(summary.baseCampaignCompletionRate).toBe(0);
+    expect(summary.averageBaseCampaignDurationMs).toBe(0);
+    expect(summary.medianBaseCampaignDurationMs).toBe(0);
+    expect(summary.p90BaseCampaignDurationMs).toBe(0);
     expect(summary.tutorialCompletionRate).toBe(0);
     expect(summary.rewardedAdCompletionRate).toBe(0);
     expect(summary.averageCashoutScore).toBe(0);
