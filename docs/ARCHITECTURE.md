@@ -1,9 +1,9 @@
-# Architecture v0.16
+# Architecture v0.17
 
 ## Stack
 - Phaser 4.2.1
 - TypeScript (strict)
-- Vite 8
+- Vite 8 / Rolldown
 - Vitest for deterministic domain and simulation tests
 
 Phaser 4 uses namespace imports from npm (`import * as Phaser from 'phaser'`).
@@ -20,20 +20,27 @@ Large content additions may live in wave modules such as `items.wave4.ts`, `comb
 ### `src/game/simulation/`
 Offline/QA simulation that composes domain rules with declarative game data. It remains deterministic and outside Phaser. Pacing reports protect session structure; combat/build reports generate legal seeded backpacks and execute the same combat + boss-rule wrapper used by runtime encounters.
 
+### `src/game/assets/`
+Stable runtime asset contracts only. `atlasContract.ts` defines texture keys, generated public URLs and art-key → atlas routing. It contains no gameplay state and does not own source-art generation.
+
 ### `src/game/audio/`
 Semantic audio cues are the stable contract. `audioMix.ts` owns runtime-independent cooldown/priority/voice-budget admission, `audioSynthesis.ts` maps accepted cues to short deterministic synth patches, `musicPattern.ts` defines deterministic menu/combat/boss beds, and `GameAudio.ts` owns browser WebAudio lifecycle and music/SFX buses.
 
 Audio may be dropped or mixed differently for readability, but it can never change simulation state.
 
 ### `src/game/scenes/`
-Phaser presentation/orchestration. Scenes translate domain state into visuals/input and coordinate persistence without making presentation the source of gameplay rules. `PrototypeScene` fans semantic cues out to audio and presentation feedback.
+Phaser presentation/orchestration. Scenes translate domain state into visuals/input and coordinate persistence without making presentation the source of gameplay rules.
+
+`AssetPreloadScene` is the boot presentation boundary for reviewed art: it queues the generated `junk-items` and `junk-portraits` atlases, then starts `PrototypeScene`. `PrototypeScene` remains gameplay orchestration and fans semantic cues out to audio/presentation feedback.
 
 ### `src/game/ui/`
 Reusable game UI components/widgets. Components expose serializable state snapshots rather than scene-object references where state leaves the UI layer.
 
 Presentation-only modules include:
 - `visualTokens.ts` — material/rarity tokens plus stable item-art keys;
-- `ItemGlyph.ts` — shared item renderer with atlas-first / procedural-fallback behavior;
+- `ItemGlyph.ts` — shared item renderer with atlas-first / authored-standalone / procedural-fallback behavior;
+- `authoredArt.ts` — authored catalog lookup and atlas/standalone texture resolution;
+- `BossPortraitLayer.ts` — portrait-only boss motion on top of semantic combat events;
 - `BackpackSkin.ts` — decorative leather/scrap shell only;
 - `CombatFeedback` / `RunFeedback` — transient effects only;
 - `TopHudActions`, overlays and `uiMotion` — input/presentation controls.
@@ -116,16 +123,19 @@ Settings remain inside save v8: separate Music/SFX volumes plus Reduced Motion. 
 
 Reduced-motion mode removes camera shake and traveling particle effects while retaining static rings/flashes and state text so causality remains readable.
 
-## Item visual / atlas boundary
-Item identity remains `definitionId`; art is replaceable presentation.
+## Item / portrait atlas boundary
+Gameplay identity remains stable IDs; art is replaceable presentation.
 
-Runtime contract:
-- texture key: `junk-items`;
-- frame: `item.<definitionId>`;
-- `ItemGlyph` checks for that frame and uses it if available;
-- otherwise it renders a deterministic primary-tag procedural silhouette.
+Production runtime contracts:
+- item texture key: `junk-items`;
+- item frame: `item.<definitionId>`;
+- portrait texture key: `junk-portraits`;
+- hero frame: `hero.<heroId>`;
+- boss frame: `boss.<bossId>`.
 
-Backpack, shop and fusion all consume `ItemGlyph`, so reviewed item art can arrive incrementally and automatically replace fallback visuals without changing layout code, persistence or gameplay data.
+The build pipeline scans the 60 item SVGs plus 4 hero / 6 boss SVGs and creates two deterministic Phaser-compatible SVG+JSON atlas pages. `AssetPreloadScene` loads those pages before gameplay.
+
+Lookup order is atlas frame → standalone authored SVG fallback → procedural item glyph where applicable. The current authored catalog is expected to resolve entirely from atlases in normal production builds.
 
 Rarity borders, selected states, synergy badges, labels and locked states stay in UI rendering rather than being baked into item sprites. See `docs/SYSTEMS/ART_PIPELINE.md`.
 
@@ -150,12 +160,27 @@ Meta persistence tracks durable item/recipe discovery and deepest completed corr
 ## Platform adapter outline
 Capabilities may include init, player identity when available, locale, storage/cloud save, interstitial, rewarded ad, gameplay start/stop signals and leaderboard hooks. Every capability requires a graceful unsupported fallback.
 
-## Asset strategy
-Use generated/source art → reviewed final exports → runtime atlases. Keep source assets separate from runtime-optimized assets. Never bind gameplay rules to filename semantics.
+## Production asset / bundle strategy
+Reviewed SVG sources remain under `public/assets/art/`. Generated runtime atlas output lives under ignored `public/assets/atlas/` and is reproduced by `npm run assets:prepare` during local dev and CI/build.
 
-Item atlas keys are stable presentation identifiers only. Atlas pages may be split during P8 profiling without changing frame keys. Boss art and UI chrome use separate atlases from items.
+Current measured atlas baseline:
+- 70 source SVGs → 2 runtime atlas requests;
+- 86.2 KiB generated atlas+JSON payload;
+- 9.77 MiB estimated RGBA texture memory;
+- item page 1280×1280; portrait page 1280×720.
+
+Vite/Rolldown isolates Phaser into a stable vendor chunk to improve cache reuse across game-content deploys. Current production JS baseline is 57.1 KiB gzip for app/game code + 347.7 KiB gzip for Phaser, 404.8 KiB total.
+
+`check-asset-budget.mjs` and `check-bundle-budget.mjs` are CI release gates. They do not replace real-device profiling; P8 still owns browser/mobile frame time, live texture memory and portal network acceptance. See `docs/SYSTEMS/PERFORMANCE_BUDGETS.md`.
 
 Final audio samples/music keep the semantic mixer contract: short high-information SFX, compressed web-friendly assets, separate music/SFX buses and no dependency of gameplay on sample duration.
 
 ## Quality gates
-Typecheck + unit tests + production build on every main-branch push. Deterministic pacing/balance/boss/event/collection/audio/visual-token tests run as regression guards. Browser smoke verification is required once a connected/runnable browser environment is available.
+Every main-branch push runs:
+- generated atlas preparation + asset-budget validation;
+- TypeScript typecheck;
+- deterministic Vitest suite;
+- production Vite build;
+- post-build JavaScript gzip budget validation.
+
+Browser smoke verification remains required once a connected/runnable browser environment is available. Static budgets are regression guards, not proof of real-device performance.
