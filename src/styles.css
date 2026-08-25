@@ -13,15 +13,109 @@ html, body, #app {
   overflow: hidden;
 }
 
+html,
+body {
+  min-height: 100%;
+  min-height: 100dvh;
+  overscroll-behavior: none;
+}
+
 body {
   min-width: 320px;
+  min-height: 100dvh;
   background:
     radial-gradient(circle at 70% 20%, rgba(104, 62, 166, 0.22), transparent 38%),
     radial-gradient(circle at 25% 80%, rgba(79, 145, 86, 0.16), transparent 36%),
     #0b0d13;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+#app {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100dvh;
+  padding:
+    max(0px, env(safe-area-inset-top))
+    max(0px, env(safe-area-inset-right))
+    max(0px, env(safe-area-inset-bottom))
+    max(0px, env(safe-area-inset-left));
 }
 
 canvas {
   display: block;
+  max-width: 100%;
+  max-height: 100%;
   touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#orientation-gate {
+  position: fixed;
+  z-index: 10000;
+  inset:
+    max(12px, env(safe-area-inset-top))
+    max(12px, env(safe-area-inset-right))
+    max(12px, env(safe-area-inset-bottom))
+    max(12px, env(safe-area-inset-left));
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  pointer-events: auto;
+}
+
+html[data-viewport-mode="portrait"] #orientation-gate {
+  display: flex;
+}
+
+html[data-viewport-mode="portrait"] #app canvas {
+  opacity: 0.18;
+  filter: blur(3px) saturate(0.65);
+  pointer-events: none;
+}
+
+.orientation-card {
+  width: min(420px, 100%);
+  padding: 28px 26px;
+  border: 2px solid rgba(181, 255, 77, 0.72);
+  border-radius: 22px;
+  background: rgba(17, 20, 29, 0.96);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+  text-align: center;
+}
+
+.orientation-card strong,
+.orientation-card span {
+  display: block;
+}
+
+.orientation-card strong {
+  margin-top: 10px;
+  font-size: clamp(22px, 7vw, 34px);
+  letter-spacing: 0.04em;
+  color: #f7f2e8;
+}
+
+.orientation-card span {
+  margin-top: 12px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: #b9bcc7;
+}
+
+.orientation-mark {
+  font-size: 42px;
+  line-height: 1;
+  color: #b5ff4d;
+  transform: rotate(-18deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+  }
 }
