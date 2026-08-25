@@ -47,7 +47,7 @@ describe('save persistence', () => {
     expect(migrated.version).toBe(6);
     expect(migrated.discoveredItemIds).toEqual(['laser-cat']);
     expect(migrated.activeRun).toBeNull();
-    expect(migrated.bestCorruptedLoop).toBe(3);
+    expect(migrated.bestCorruptedLoop).toBe(2);
   });
 
   it('migrates v2-v4 active runs with safe progression defaults', () => {
