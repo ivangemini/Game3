@@ -1,7 +1,15 @@
 import type { TelemetryEnvelope } from './Telemetry';
 
-const FIRST_BOSS_ENCOUNTER_ID = 'w1-tv-tyrant';
-const FINAL_CAMPAIGN_BOSS_ENCOUNTER_ID = 'w6-border-shark';
+const CAMPAIGN_BOSS_ENCOUNTER_IDS = [
+  'w1-tv-tyrant',
+  'w2-deadline-snail',
+  'w3-closet-monster',
+  'w4-baby-moon',
+  'w5-copycat-auditor',
+  'w6-border-shark',
+] as const;
+const FIRST_BOSS_ENCOUNTER_ID = CAMPAIGN_BOSS_ENCOUNTER_IDS[0];
+const FINAL_CAMPAIGN_BOSS_ENCOUNTER_ID = CAMPAIGN_BOSS_ENCOUNTER_IDS[CAMPAIGN_BOSS_ENCOUNTER_IDS.length - 1];
 
 export interface CombatMetric {
   readonly encounterId: string;
@@ -12,6 +20,17 @@ export interface CombatMetric {
   readonly averageDurationMs: number;
   readonly medianDurationMs: number;
   readonly p90DurationMs: number;
+}
+
+export interface CampaignWorldMetric {
+  readonly world: number;
+  readonly bossEncounterId: string;
+  readonly sessionsCleared: number;
+  readonly sessionClearRate: number;
+  readonly previousWorldContinuationRate: number | null;
+  readonly averageTimeFromRunStartMs: number;
+  readonly medianTimeFromRunStartMs: number;
+  readonly p90TimeFromRunStartMs: number;
 }
 
 export interface SoftLaunchSummary {
@@ -41,6 +60,7 @@ export interface SoftLaunchSummary {
   readonly averageBaseCampaignDurationMs: number;
   readonly medianBaseCampaignDurationMs: number;
   readonly p90BaseCampaignDurationMs: number;
+  readonly campaignWorlds: readonly CampaignWorldMetric[];
   readonly standardRunsStarted: number;
   readonly dailyRunsStarted: number;
   readonly tutorialOpened: number;
@@ -97,6 +117,7 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
   const firstCombatAt = new Map<string, number>();
   const firstBossAt = new Map<string, number>();
   const baseCampaignCompletedAt = new Map<string, number>();
+  const campaignWorldCompletedAt = CAMPAIGN_BOSS_ENCOUNTER_IDS.map(() => new Map<string, number>());
 
   for (const event of events) {
     switch (event.name) {
@@ -179,8 +200,16 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
         metric.durationTotal += duration;
         metric.durations.push(duration);
         combats.set(payload.encounterId, metric);
-        if (payload.encounterId === FINAL_CAMPAIGN_BOSS_ENCOUNTER_ID && payload.outcome === 'victory') {
-          rememberEarliest(baseCampaignCompletedAt, event.sessionId, event.timestampMs);
+
+        if (payload.outcome === 'victory') {
+          const campaignWorldIndex = CAMPAIGN_BOSS_ENCOUNTER_IDS.findIndex((encounterId) => encounterId === payload.encounterId);
+          if (campaignWorldIndex >= 0) {
+            const completedAt = campaignWorldCompletedAt[campaignWorldIndex];
+            if (completedAt) rememberEarliest(completedAt, event.sessionId, event.timestampMs);
+          }
+          if (payload.encounterId === FINAL_CAMPAIGN_BOSS_ENCOUNTER_ID) {
+            rememberEarliest(baseCampaignCompletedAt, event.sessionId, event.timestampMs);
+          }
         }
         break;
       }
@@ -200,6 +229,23 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
   const timeToFirstCombat = sessionLatencies(sessionStartedAt, firstCombatAt);
   const timeToFirstBoss = milestoneLatencies(runStartedAt, sessionStartedAt, firstBossAt);
   const baseCampaignDurations = milestoneLatencies(runStartedAt, sessionStartedAt, baseCampaignCompletedAt);
+  const campaignWorldDurations = campaignWorldCompletedAt.map((completedAt) =>
+    milestoneLatencies(runStartedAt, sessionStartedAt, completedAt));
+  const campaignWorlds: CampaignWorldMetric[] = campaignWorldDurations.map((durations, index) => {
+    const previousCount = index > 0 ? (campaignWorldDurations[index - 1]?.length ?? 0) : 0;
+    return {
+      world: index + 1,
+      bossEncounterId: CAMPAIGN_BOSS_ENCOUNTER_IDS[index] ?? `world-${index + 1}`,
+      sessionsCleared: durations.length,
+      sessionClearRate: ratio(durations.length, sessions),
+      previousWorldContinuationRate: index === 0 || previousCount === 0
+        ? null
+        : ratio(durations.length, previousCount),
+      averageTimeFromRunStartMs: average(durations),
+      medianTimeFromRunStartMs: percentile(durations, 0.5),
+      p90TimeFromRunStartMs: percentile(durations, 0.9),
+    };
+  });
 
   return {
     sessions,
@@ -228,6 +274,7 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
     averageBaseCampaignDurationMs: average(baseCampaignDurations),
     medianBaseCampaignDurationMs: percentile(baseCampaignDurations, 0.5),
     p90BaseCampaignDurationMs: percentile(baseCampaignDurations, 0.9),
+    campaignWorlds,
     standardRunsStarted,
     dailyRunsStarted,
     tutorialOpened,
