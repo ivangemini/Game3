@@ -8,6 +8,11 @@ afterEach(() => {
   Object.defineProperty(globalThis, 'window', { value: originalWindow, configurable: true, writable: true });
 });
 
+async function flushAsyncRegistration(): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
+}
+
 describe('YandexPlatformAdapter', () => {
   it('marks loading ready and gameplay through the SDK feature APIs', async () => {
     const calls: string[] = [];
@@ -64,12 +69,41 @@ describe('YandexPlatformAdapter', () => {
     });
     await adapter.init();
     const rewarded = adapter.showRewarded();
+    await flushAsyncRegistration();
+    expect(callbacks).toBeDefined();
     callbacks?.onOpen?.();
     callbacks?.onRewarded?.();
     callbacks?.onClose?.(true);
 
     await expect(rewarded).resolves.toBe('rewarded');
     expect(lifecycle).toEqual(['pause', 'resume']);
+  });
+
+  it('does not grant a reward when a shown video closes without onRewarded', async () => {
+    let callbacks: {
+      onOpen?: () => void;
+      onRewarded?: () => void;
+      onClose?: (shown: boolean) => void;
+      onError?: () => void;
+    } | undefined;
+    const sdk = {
+      features: {},
+      adv: {
+        showFullscreenAdv: () => {},
+        showRewardedVideo: (options?: { callbacks?: typeof callbacks }) => { callbacks = options?.callbacks; },
+      },
+    };
+    Object.defineProperty(globalThis, 'window', {
+      value: { YaGames: { init: async () => sdk } }, configurable: true, writable: true,
+    });
+
+    const adapter = new YandexPlatformAdapter({ loadScript: async () => {} });
+    await adapter.init();
+    const rewarded = adapter.showRewarded();
+    await flushAsyncRegistration();
+    callbacks?.onOpen?.();
+    callbacks?.onClose?.(true);
+    await expect(rewarded).resolves.toBe('dismissed');
   });
 });
 
@@ -124,6 +158,8 @@ describe('CrazyGamesPlatformAdapter', () => {
     });
     await adapter.init();
     const rewarded = adapter.showRewarded();
+    await flushAsyncRegistration();
+    expect(callbacks).toBeDefined();
     callbacks?.adStarted?.();
     callbacks?.adFinished?.();
 
