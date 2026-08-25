@@ -19,7 +19,7 @@
 - [x] Basic seeded shop/reward choice with run currency and deterministic rerolls
 - [x] Purchased junk enters the real backpack through deterministic legal placement
 - [x] Save/restore current run: backpack, rotations, loot sequence, seed, coins, shop step and sold offers
-- [x] Versioned save v7 with legacy migrations, encounter claims, perk state, long-session progression and pending events
+- [x] Versioned save v8 with legacy migrations, hero choice, encounter claims, perk state, long-session progression and pending events
 - [x] Progressive backpack: one lower pocket cell unlocks after Boss 1, Boss 2 and Boss 3
 - [x] Shared backpack-layout domain for blocked pocket cells outside Phaser
 - [ ] Final interaction polish against real runtime/assets
@@ -33,7 +33,7 @@
 - [x] Poison tick clock, stable equal-time effect ordering and victory/defeat outcomes
 - [x] Presentation-event stream for Phaser VFX/UI without putting rules in the scene
 - [x] Rendered enemy with live HP/shield/poison HUD
-- [x] Combat starts from immutable backpack/perk snapshot and locks inventory input until result
+- [x] Combat starts from immutable backpack/hero/perk snapshot and locks inventory input until result
 - [x] Lightweight hit/outcome feedback with reduced-motion behavior
 - [x] TV Tyrant interference 1: deterministic Channel Jam with telegraph
 - [x] TV Tyrant interference 2: Slime Signal targets an occupied backpack cell, telegraphs it, then suppresses touching item triggers
@@ -74,7 +74,7 @@
 - [ ] 35–45 launch base items (16 prototype base items implemented)
 - [ ] 20–30 launch fusion recipes (12 prototype recipes implemented)
 - [x] Expanded tag/synergy-family foundation: 10 spatial contact rules across core + food/antenna/slime cross-links
-- [ ] 4 heroes
+- [x] 4 prototype heroes with persisted per-run choice and real economy/combat effects
 - [ ] 6 boss families + modifiers
 - [ ] 20–25 perks (10 prototype perks implemented)
 - [ ] ~15 mutations/events pool (12 combined prototype rules/events currently)
@@ -105,7 +105,7 @@
 - [ ] cloud/leaderboard hooks where justified
 
 ## P8 — QA, balance & performance
-- [x] Automated deterministic tests for core run/fusion/event domains
+- [x] Automated deterministic tests for core run/fusion/event/hero domains
 - [x] Seeded pacing target simulation with percentile bands and target hit rates
 - [x] Seeded combat/build simulation reports across weak/typical/strong power bands and boss checkpoints
 - [ ] mobile/browser matrix
@@ -115,6 +115,6 @@
 
 ## P9 — Soft launch & iteration
 - [ ] release candidate to first portals
-- [ ] measure tutorial completion/first boss/base-campaign duration/event choice/fusion usage/loop-entry/loop-completion/return behavior
+- [ ] measure tutorial completion/hero choice/first boss/base-campaign duration/event choice/fusion usage/loop-entry/loop-completion/return behavior
 - [ ] tune difficulty/economy/ad pacing
 - [ ] add content only after core retention signals justify it

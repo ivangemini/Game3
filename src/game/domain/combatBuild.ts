@@ -4,6 +4,7 @@ import {
   type CombatItemProfile,
   type CombatBuildItem,
 } from './combat';
+import { applyHeroBonuses, type HeroDefinition } from './heroes';
 import { applyPerkBonuses, type PerkDefinition } from './perks';
 import { evaluateSynergies, type SynergySnapshot } from './synergies';
 import type { ItemDefinition } from './types';
@@ -19,6 +20,7 @@ export function createCombatBuild(
   profiles: ReadonlyMap<string, CombatItemProfile>,
   perkDefinitions: ReadonlyMap<string, PerkDefinition> = new Map(),
   selectedPerkIds: readonly string[] = [],
+  heroDefinition?: HeroDefinition,
 ): CombatBuildSnapshot {
   const synergies = evaluateSynergies(inventory, definitions);
   const items = new Map<string, CombatBuildItem>();
@@ -28,9 +30,14 @@ export function createCombatBuild(
     const profile = profiles.get(placement.definitionId);
     const definition = definitions.get(placement.definitionId);
     if (!profile || !definition) continue;
-    const bonuses = applyPerkBonuses(
+    const heroBonuses = applyHeroBonuses(
       definition,
       synergies.bonusesByInstanceId[placement.instanceId],
+      heroDefinition,
+    );
+    const bonuses = applyPerkBonuses(
+      definition,
+      heroBonuses,
       perkDefinitions,
       selectedPerkIds,
     );

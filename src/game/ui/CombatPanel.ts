@@ -13,6 +13,7 @@ import {
   type EnemyCombatDefinition,
 } from '../domain/combat';
 import { createCombatBuild } from '../domain/combatBuild';
+import type { HeroDefinition } from '../domain/heroes';
 import type { InventoryState } from '../domain/inventory';
 import type { Cell, PlacedItem } from '../domain/types';
 
@@ -31,6 +32,7 @@ export interface CombatOutcomeNotice {
 export interface CombatPanelOptions {
   readonly getBackpackItems: () => readonly PlacedItem[];
   readonly getSelectedPerkIds?: () => readonly string[];
+  readonly getHeroDefinition?: () => HeroDefinition | undefined;
   readonly reducedMotion?: boolean;
   readonly onVictoryReward?: (reward: CombatVictoryReward) => boolean;
   readonly onBossVictory?: (encounterId: string, enemyId: string) => void;
@@ -44,6 +46,7 @@ export class CombatPanel {
   private readonly reducedMotion: boolean;
   private readonly getBackpackItems: () => readonly PlacedItem[];
   private readonly getSelectedPerkIds: () => readonly string[];
+  private readonly getHeroDefinition: () => HeroDefinition | undefined;
   private readonly onVictoryReward?: (reward: CombatVictoryReward) => boolean;
   private readonly onBossVictory?: (encounterId: string, enemyId: string) => void;
   private readonly onOutcome?: (notice: CombatOutcomeNotice) => void;
@@ -76,6 +79,7 @@ export class CombatPanel {
     this.reducedMotion = options.reducedMotion ?? false;
     this.getBackpackItems = options.getBackpackItems;
     this.getSelectedPerkIds = options.getSelectedPerkIds ?? (() => []);
+    this.getHeroDefinition = options.getHeroDefinition ?? (() => undefined);
     this.onVictoryReward = options.onVictoryReward;
     this.onBossVictory = options.onBossVictory;
     this.onOutcome = options.onOutcome;
@@ -86,7 +90,7 @@ export class CombatPanel {
     scene.add.text(centerX - 325, centerY - 250, 'LIVE COMBAT', {
       fontSize: '25px', color: '#ff91e6', fontStyle: 'bold',
     });
-    scene.add.text(centerX - 325, centerY - 216, 'Build + perks snapshot at fight start. Bosses attack backpack rules.', {
+    scene.add.text(centerX - 325, centerY - 216, 'Build + hero + perks snapshot at fight start. Bosses attack backpack rules.', {
       fontSize: '13px', color: '#aaa5b2',
     });
 
@@ -129,15 +133,21 @@ export class CombatPanel {
     this.renderState();
   }
 
-  isRunning(): boolean {
-    return this.running;
-  }
+  isRunning(): boolean { return this.running; }
 
   startEncounter(encounterId: string, enemy: EnemyCombatDefinition, rewardCoins: number): boolean {
     if (this.running) return false;
     const inventory: InventoryState = { width: 6, height: 5, blockedCells: [], items: this.getBackpackItems() };
     const selectedPerks = this.getSelectedPerkIds();
-    const build = createCombatBuild(inventory, PROTOTYPE_ITEM_MAP, PROTOTYPE_COMBAT_PROFILE_MAP, PROTOTYPE_PERK_MAP, selectedPerks);
+    const hero = this.getHeroDefinition();
+    const build = createCombatBuild(
+      inventory,
+      PROTOTYPE_ITEM_MAP,
+      PROTOTYPE_COMBAT_PROFILE_MAP,
+      PROTOTYPE_PERK_MAP,
+      selectedPerks,
+      hero,
+    );
     if (build.items.size === 0) {
       this.setStatus('No combat-capable junk in the backpack.', '#ff9aab');
       return false;
@@ -157,29 +167,21 @@ export class CombatPanel {
     this.enemyNameText.setText(enemy.name.toUpperCase());
     this.enemyBody.setFillStyle(boss ? 0x697f45 : 0x6f8f50);
     this.enemyBody.setStrokeStyle(8, boss ? 0x9b4aa7 : 0x2a2732);
-    this.setStatus(`${enemy.name} • ${build.items.size} items • ${build.synergies.connections.length} links • ${selectedPerks.length} perks.`, '#b8ff8e');
+    const heroText = hero ? ` • ${hero.name}` : '';
+    this.setStatus(`${enemy.name}${heroText} • ${build.items.size} items • ${build.synergies.connections.length} links • ${selectedPerks.length} perks.`, '#b8ff8e');
     this.renderState();
     this.punchEnemy(1.03);
     return true;
   }
 
-  private createFightButton(
-    x: number,
-    y: number,
-    title: string,
-    encounterId: string,
-    enemy: EnemyCombatDefinition,
-    fill: number,
-    stroke: number,
-  ): void {
+  private createFightButton(x: number, y: number, title: string, encounterId: string, enemy: EnemyCombatDefinition, fill: number, stroke: number): void {
     const button = this.scene.add.rectangle(x, y, 160, 42, fill, 1).setStrokeStyle(2, stroke).setInteractive({ useHandCursor: true });
     const label = this.scene.add.text(x, y, title, { fontSize: '13px', color: '#f5eaff', fontStyle: 'bold' }).setOrigin(0.5);
     button.on('pointerover', () => button.setAlpha(0.82));
     button.on('pointerout', () => button.setAlpha(1));
     button.on('pointerdown', () => { button.setScale(0.97); label.setScale(0.97); });
     button.on('pointerup', () => {
-      button.setScale(1);
-      label.setScale(1);
+      button.setScale(1); label.setScale(1);
       this.startEncounter(encounterId, enemy, enemy.id === TV_TYRANT.id ? 25 : 10);
     });
   }
@@ -213,38 +215,32 @@ export class CombatPanel {
     }
     if (event.kind === 'boss-telegraph') {
       this.bossStatusText.setText(`TV SIGNAL LOCK → ${event.itemInstanceId} • JAM IN ${((event.impactAtMs - event.atMs) / 1000).toFixed(1)}s`);
-      this.pushLog(`${this.seconds(event.atMs)} • TV targets ${event.itemInstanceId}`);
-      return;
+      this.pushLog(`${this.seconds(event.atMs)} • TV targets ${event.itemInstanceId}`); return;
     }
     if (event.kind === 'boss-jammed') {
       this.bossStatusText.setText(`CHANNEL JAM → ${event.itemInstanceId} disabled ${(event.durationMs / 1000).toFixed(1)}s`);
-      this.pushLog(`${this.seconds(event.atMs)} • JAMMED ${event.itemInstanceId}`);
-      return;
+      this.pushLog(`${this.seconds(event.atMs)} • JAMMED ${event.itemInstanceId}`); return;
     }
     if (event.kind === 'boss-cell-telegraph') {
       this.bossStatusText.setText(`SLIME SIGNAL → CELL ${event.cell.x + 1}:${event.cell.y + 1} IN ${((event.impactAtMs - event.atMs) / 1000).toFixed(1)}s`);
       this.showBackpackCell(event.cell, 0xffcf69, Math.max(120, event.impactAtMs - event.atMs), true);
-      this.pushLog(`${this.seconds(event.atMs)} • slime targets cell ${event.cell.x + 1}:${event.cell.y + 1}`);
-      return;
+      this.pushLog(`${this.seconds(event.atMs)} • slime targets cell ${event.cell.x + 1}:${event.cell.y + 1}`); return;
     }
     if (event.kind === 'boss-cell-slimed') {
       this.bossStatusText.setText(`SLIMED CELL ${event.cell.x + 1}:${event.cell.y + 1} • ${(event.durationMs / 1000).toFixed(1)}s`);
       this.showBackpackCell(event.cell, 0x76ff5b, event.durationMs, false);
-      this.pushLog(`${this.seconds(event.atMs)} • cell ${event.cell.x + 1}:${event.cell.y + 1} SLIMED`);
-      return;
+      this.pushLog(`${this.seconds(event.atMs)} • cell ${event.cell.x + 1}:${event.cell.y + 1} SLIMED`); return;
     }
     if (event.kind === 'boss-row-telegraph') {
       const targetReason = event.magneticPriority ? 'METAL DETECTED' : 'OCCUPIED ROW';
       this.bossStatusText.setText(`MAGNET SCRAMBLE → ROW ${event.row + 1} • ${targetReason} • IMPACT IN ${((event.impactAtMs - event.atMs) / 1000).toFixed(1)}s`);
       this.showBackpackRow(event.row, 0x58d7ff, Math.max(120, event.impactAtMs - event.atMs), true);
-      this.pushLog(`${this.seconds(event.atMs)} • magnet locks row ${event.row + 1}`);
-      return;
+      this.pushLog(`${this.seconds(event.atMs)} • magnet locks row ${event.row + 1}`); return;
     }
     if (event.kind === 'boss-row-scrambled') {
       this.bossStatusText.setText(`MAGNET SCRAMBLE → ROW ${event.row + 1} unstable ${(event.durationMs / 1000).toFixed(1)}s`);
       this.showBackpackRow(event.row, 0x5de7ff, event.durationMs, false);
-      this.pushLog(`${this.seconds(event.atMs)} • row ${event.row + 1} SCRAMBLED`);
-      return;
+      this.pushLog(`${this.seconds(event.atMs)} • row ${event.row + 1} SCRAMBLED`); return;
     }
 
     const won = event.outcome === 'victory';
@@ -269,9 +265,7 @@ export class CombatPanel {
     const { left, top, cellSize } = this.backpackGrid;
     const width = cellSize * 6;
     const height = cellSize * 5;
-    const shield = this.scene.add.rectangle(left + width / 2, top + height / 2, width, height, 0x080910, 0.08)
-      .setInteractive()
-      .setDepth(150);
+    const shield = this.scene.add.rectangle(left + width / 2, top + height / 2, width, height, 0x080910, 0.08).setInteractive().setDepth(150);
     const label = this.scene.add.text(left + width / 2, top - 13, 'COMBAT SNAPSHOT LOCKED', {
       fontSize: '12px', color: '#ffcf69', fontStyle: 'bold', stroke: '#11121a', strokeThickness: 3,
     }).setOrigin(0.5).setDepth(151);
@@ -289,20 +283,10 @@ export class CombatPanel {
   private showBackpackRow(row: number, color: number, durationMs: number, telegraph: boolean): void {
     const { left, top, cellSize } = this.backpackGrid;
     const width = cellSize * 6;
-    const overlay = this.scene.add.rectangle(
-      left + width / 2,
-      top + (row + 0.5) * cellSize,
-      width - 8,
-      cellSize - 8,
-      color,
-      telegraph ? 0.13 : 0.3,
-    ).setStrokeStyle(telegraph ? 4 : 5, color).setDepth(159);
-    if (!this.reducedMotion && telegraph) {
-      this.scene.tweens.add({ targets: overlay, alpha: 0.34, yoyo: true, repeat: -1, duration: 130 });
-    }
-    if (!this.reducedMotion && !telegraph) {
-      this.scene.tweens.add({ targets: overlay, x: { from: overlay.x - 5, to: overlay.x + 5 }, yoyo: true, repeat: 3, duration: 55 });
-    }
+    const overlay = this.scene.add.rectangle(left + width / 2, top + (row + 0.5) * cellSize, width - 8, cellSize - 8, color, telegraph ? 0.13 : 0.3)
+      .setStrokeStyle(telegraph ? 4 : 5, color).setDepth(159);
+    if (!this.reducedMotion && telegraph) this.scene.tweens.add({ targets: overlay, alpha: 0.34, yoyo: true, repeat: -1, duration: 130 });
+    if (!this.reducedMotion && !telegraph) this.scene.tweens.add({ targets: overlay, x: { from: overlay.x - 5, to: overlay.x + 5 }, yoyo: true, repeat: 3, duration: 55 });
     this.scene.time.delayedCall(durationMs, () => overlay.destroy());
   }
 
@@ -322,10 +306,7 @@ export class CombatPanel {
     if (!state || state.outcome !== 'active') { this.nextActionText.setText(''); return; }
     const entries: string[] = [];
     const labels: Array<[string, string]> = [
-      ['enemy-attack', 'HIT'],
-      ['boss-interference', 'JAM'],
-      ['boss-cell-interference', 'SLIME'],
-      ['boss-row-interference', 'MAGNET'],
+      ['enemy-attack', 'HIT'], ['boss-interference', 'JAM'], ['boss-cell-interference', 'SLIME'], ['boss-row-interference', 'MAGNET'],
     ];
     for (const [kind, label] of labels) {
       const effect = state.queue.find((candidate) => candidate.kind === kind);
@@ -335,16 +316,10 @@ export class CombatPanel {
   }
 
   private drawBar(x: number, y: number, width: number, ratio: number, color: number): void {
-    this.barGraphics.fillStyle(0x35242b, 1);
-    this.barGraphics.fillRoundedRect(x, y, width, 14, 6);
-    this.barGraphics.fillStyle(color, 1);
-    this.barGraphics.fillRoundedRect(x, y, width * Math.max(0, Math.min(1, ratio)), 14, 6);
+    this.barGraphics.fillStyle(0x35242b, 1); this.barGraphics.fillRoundedRect(x, y, width, 14, 6);
+    this.barGraphics.fillStyle(color, 1); this.barGraphics.fillRoundedRect(x, y, width * Math.max(0, Math.min(1, ratio)), 14, 6);
   }
-
-  private isBoss(enemy: EnemyCombatDefinition): boolean {
-    return !!enemy.interference || !!enemy.cellInterference || !!enemy.rowInterference;
-  }
-
+  private isBoss(enemy: EnemyCombatDefinition): boolean { return !!enemy.interference || !!enemy.cellInterference || !!enemy.rowInterference; }
   private bossSystems(enemy: EnemyCombatDefinition): string[] {
     const systems: string[] = [];
     if (enemy.interference) systems.push('CHANNEL JAM');
@@ -352,18 +327,13 @@ export class CombatPanel {
     if (enemy.rowInterference) systems.push('MAGNET SCRAMBLE');
     return systems;
   }
-
   private punchEnemy(scale: number): void {
     if (this.reducedMotion) return;
     this.scene.tweens.add({ targets: this.enemyBody, scaleX: scale, scaleY: scale, yoyo: true, duration: 85, onComplete: () => this.enemyBody.setScale(1) });
   }
-
   private pushLog(message: string): void {
-    this.eventLog.unshift(message);
-    if (this.eventLog.length > 5) this.eventLog.length = 5;
-    this.eventLogText.setText(this.eventLog.join('\n'));
+    this.eventLog.unshift(message); if (this.eventLog.length > 5) this.eventLog.length = 5; this.eventLogText.setText(this.eventLog.join('\n'));
   }
-
   private seconds(ms: number): string { return `${(ms / 1000).toFixed(1)}s`; }
   private setStatus(message: string, color: string): void { this.statusText.setText(message).setColor(color); }
 }

@@ -1,3 +1,4 @@
+import type { HeroId } from '../game/domain/heroes';
 import { createInitialRunProgress, isRunProgressState, type RunProgressState } from '../game/domain/runProgression';
 import type { PlacedItem } from '../game/domain/types';
 
@@ -9,103 +10,27 @@ export interface SaveSettings {
   readonly reducedMotion: boolean;
 }
 
-export interface SaveV1 {
-  readonly version: 1;
-  readonly discoveredItemIds: readonly string[];
-  readonly discoveredRecipeIds: readonly string[];
-  readonly bestEndlessWave: number;
-  readonly settings: SaveSettings;
-}
-
-export interface ActiveRunSaveV2 {
+export interface ActiveRunSave {
   readonly runSeed: string;
   readonly shopIndex: number;
   readonly coins: number;
   readonly soldOfferIds: readonly string[];
   readonly backpackItems: readonly PlacedItem[];
   readonly nextLootSequence: number;
-}
-
-export interface SaveV2 {
-  readonly version: 2;
-  readonly discoveredItemIds: readonly string[];
-  readonly discoveredRecipeIds: readonly string[];
-  readonly bestEndlessWave: number;
-  readonly settings: SaveSettings;
-  readonly activeRun: ActiveRunSaveV2 | null;
-}
-
-export interface ActiveRunSaveV3 extends ActiveRunSaveV2 {
   readonly claimedEncounterIds: readonly string[];
-}
-
-export interface SaveV3 {
-  readonly version: 3;
-  readonly discoveredItemIds: readonly string[];
-  readonly discoveredRecipeIds: readonly string[];
-  readonly bestEndlessWave: number;
-  readonly settings: SaveSettings;
-  readonly activeRun: ActiveRunSaveV3 | null;
-}
-
-export interface ActiveRunSaveV4 extends ActiveRunSaveV3 {
   readonly selectedPerkIds: readonly string[];
   readonly perkChoiceIndex: number;
   readonly pendingPerkOfferIds: readonly string[];
   readonly offeredPerkEncounterIds: readonly string[];
-}
-
-export interface SaveV4 {
-  readonly version: 4;
-  readonly discoveredItemIds: readonly string[];
-  readonly discoveredRecipeIds: readonly string[];
-  readonly bestEndlessWave: number;
-  readonly settings: SaveSettings;
-  readonly activeRun: ActiveRunSaveV4 | null;
-}
-
-export interface LegacyRunProgressStateV5 {
-  readonly mode: 'campaign' | 'cashout' | 'endless' | 'complete';
-  readonly campaignEncounterIndex: number;
-  readonly endlessWave: number;
-  readonly score: number;
-}
-
-export interface ActiveRunSaveV5 extends ActiveRunSaveV4 {
-  readonly progress: LegacyRunProgressStateV5;
-}
-
-export interface SaveV5 {
-  readonly version: 5;
-  readonly discoveredItemIds: readonly string[];
-  readonly discoveredRecipeIds: readonly string[];
-  readonly bestEndlessWave: number;
-  readonly settings: SaveSettings;
-  readonly activeRun: ActiveRunSaveV5 | null;
-}
-
-export interface ActiveRunSaveV6 extends ActiveRunSaveV4 {
   readonly progress: RunProgressState;
-}
-
-export interface SaveV6 {
-  readonly version: 6;
-  readonly discoveredItemIds: readonly string[];
-  readonly discoveredRecipeIds: readonly string[];
-  readonly bestEndlessWave: number;
-  readonly bestCorruptedLoop: number;
-  readonly settings: SaveSettings;
-  readonly activeRun: ActiveRunSaveV6 | null;
-}
-
-export interface ActiveRunSave extends ActiveRunSaveV6 {
   readonly eventIndex: number;
   readonly pendingEventId: string | null;
   readonly resolvedEventIds: readonly string[];
+  readonly heroId: HeroId | null;
 }
 
-export interface SaveV7 {
-  readonly version: 7;
+export interface SaveV8 {
+  readonly version: 8;
   readonly discoveredItemIds: readonly string[];
   readonly discoveredRecipeIds: readonly string[];
   readonly bestEndlessWave: number;
@@ -114,333 +39,292 @@ export interface SaveV7 {
   readonly activeRun: ActiveRunSave | null;
 }
 
-export type GameSave = SaveV7;
+export type GameSave = SaveV8;
 
-export const DEFAULT_SAVE: SaveV7 = {
-  version: 7,
+export const DEFAULT_SAVE: SaveV8 = {
+  version: 8,
   discoveredItemIds: [],
   discoveredRecipeIds: [],
   bestEndlessWave: 0,
   bestCorruptedLoop: 0,
-  settings: {
-    musicVolume: 0.8,
-    sfxVolume: 0.9,
-    reducedMotion: false,
-  },
+  settings: { musicVolume: 0.8, sfxVolume: 0.9, reducedMotion: false },
   activeRun: null,
 };
 
-export function loadSave(storage: Storage = localStorage): SaveV7 {
+export function loadSave(storage: Storage = localStorage): SaveV8 {
   const raw = storage.getItem(SAVE_KEY);
   if (!raw) return DEFAULT_SAVE;
-
   try {
     const parsed: unknown = JSON.parse(raw);
-    if (isSaveV7(parsed)) return parsed;
-    if (isSaveV6(parsed)) return migrateV6ToV7(parsed);
-    if (isSaveV5(parsed)) return migrateV6ToV7(migrateV5ToV6(parsed));
-    if (isSaveV4(parsed)) return migrateV6ToV7(migrateV5ToV6(migrateV4ToV5(parsed)));
-    if (isSaveV3(parsed)) return migrateV6ToV7(migrateV5ToV6(migrateV4ToV5(migrateV3ToV4(parsed))));
-    if (isSaveV2(parsed)) return migrateV6ToV7(migrateV5ToV6(migrateV4ToV5(migrateV3ToV4(migrateV2ToV3(parsed)))));
-    if (isSaveV1(parsed)) return migrateV6ToV7(migrateV5ToV6(migrateV4ToV5(migrateV3ToV4(migrateV2ToV3(migrateV1ToV2(parsed))))));
+    if (isSaveV8(parsed)) return parsed;
+    return migrateLegacySave(parsed) ?? DEFAULT_SAVE;
   } catch {
-    // Corrupted local data falls back safely; recovery UI can be added later.
+    return DEFAULT_SAVE;
   }
-
-  return DEFAULT_SAVE;
 }
 
-export function writeSave(save: SaveV7, storage: Storage = localStorage): void {
+export function writeSave(save: SaveV8, storage: Storage = localStorage): void {
   storage.setItem(SAVE_KEY, JSON.stringify(save));
 }
 
-export function clearActiveRun(save: SaveV7): SaveV7 {
+export function clearActiveRun(save: SaveV8): SaveV8 {
   return { ...save, activeRun: null };
 }
 
-function migrateV1ToV2(save: SaveV1): SaveV2 {
+interface LegacyMeta {
+  readonly version: number;
+  readonly discoveredItemIds: readonly string[];
+  readonly discoveredRecipeIds: readonly string[];
+  readonly bestEndlessWave: number;
+  readonly bestCorruptedLoop?: number;
+  readonly settings: SaveSettings;
+  readonly activeRun?: unknown;
+}
+
+interface LegacyRunBase {
+  readonly runSeed: string;
+  readonly shopIndex: number;
+  readonly coins: number;
+  readonly soldOfferIds: readonly string[];
+  readonly backpackItems: readonly PlacedItem[];
+  readonly nextLootSequence: number;
+}
+
+interface LegacyProgressV5 {
+  readonly mode: 'campaign' | 'cashout' | 'endless' | 'complete';
+  readonly campaignEncounterIndex: number;
+  readonly endlessWave: number;
+  readonly score: number;
+}
+
+function migrateLegacySave(value: unknown): SaveV8 | null {
+  if (!isLegacyMeta(value) || value.version < 1 || value.version > 7) return null;
+  const bestCorruptedLoop = value.version >= 6
+    ? value.bestCorruptedLoop
+    : deriveBestCorruptedLoop(value.bestEndlessWave);
+  if (!isNonNegativeInteger(bestCorruptedLoop)) return null;
+
+  if (value.version === 1) {
+    return finalize(value, bestCorruptedLoop, null);
+  }
+
+  const run = migrateLegacyRun(value.version, value.activeRun);
+  if (value.activeRun !== null && value.activeRun !== undefined && !run) return null;
+  return finalize(value, bestCorruptedLoop, run);
+}
+
+function finalize(meta: LegacyMeta, bestCorruptedLoop: number, activeRun: ActiveRunSave | null): SaveV8 {
   return {
-    version: 2,
-    discoveredItemIds: save.discoveredItemIds,
-    discoveredRecipeIds: save.discoveredRecipeIds,
-    bestEndlessWave: save.bestEndlessWave,
-    settings: save.settings,
-    activeRun: null,
+    version: 8,
+    discoveredItemIds: meta.discoveredItemIds,
+    discoveredRecipeIds: meta.discoveredRecipeIds,
+    bestEndlessWave: meta.bestEndlessWave,
+    bestCorruptedLoop,
+    settings: meta.settings,
+    activeRun,
   };
 }
 
-function migrateV2ToV3(save: SaveV2): SaveV3 {
+function migrateLegacyRun(version: number, value: unknown): ActiveRunSave | null {
+  if (value === null || value === undefined) return null;
+  if (!isLegacyRunBase(value)) return null;
+  const run = value as LegacyRunBase & Record<string, unknown>;
+
+  const claimedEncounterIds = version >= 3 && isStringArray(run.claimedEncounterIds)
+    ? run.claimedEncounterIds : version >= 3 ? null : [];
+  if (claimedEncounterIds === null) return null;
+
+  const perkFields = version >= 4 ? readPerkFields(run) : emptyPerkFields();
+  if (!perkFields) return null;
+
+  let progress: RunProgressState;
+  if (version >= 6) {
+    if (!isRunProgressState(run.progress)) return null;
+    progress = run.progress;
+  } else if (version === 5) {
+    if (!isLegacyProgressV5(run.progress)) return null;
+    progress = migrateLegacyProgress(run.progress);
+  } else {
+    progress = createInitialRunProgress();
+  }
+
+  let eventIndex = 0;
+  let pendingEventId: string | null = null;
+  let resolvedEventIds: readonly string[] = [];
+  if (version >= 7) {
+    if (!isNonNegativeInteger(run.eventIndex)
+      || !(run.pendingEventId === null || typeof run.pendingEventId === 'string')
+      || !isStringArray(run.resolvedEventIds)) return null;
+    eventIndex = run.eventIndex;
+    pendingEventId = run.pendingEventId;
+    resolvedEventIds = run.resolvedEventIds;
+  }
+
   return {
-    version: 3,
-    discoveredItemIds: save.discoveredItemIds,
-    discoveredRecipeIds: save.discoveredRecipeIds,
-    bestEndlessWave: save.bestEndlessWave,
-    settings: save.settings,
-    activeRun: save.activeRun ? { ...save.activeRun, claimedEncounterIds: [] } : null,
+    runSeed: run.runSeed,
+    shopIndex: run.shopIndex,
+    coins: run.coins,
+    soldOfferIds: run.soldOfferIds,
+    backpackItems: run.backpackItems,
+    nextLootSequence: run.nextLootSequence,
+    claimedEncounterIds,
+    ...perkFields,
+    progress,
+    eventIndex,
+    pendingEventId,
+    resolvedEventIds,
+    heroId: null,
   };
 }
 
-function migrateV3ToV4(save: SaveV3): SaveV4 {
+function readPerkFields(run: Record<string, unknown>): Pick<ActiveRunSave,
+  'selectedPerkIds' | 'perkChoiceIndex' | 'pendingPerkOfferIds' | 'offeredPerkEncounterIds'> | null {
+  if (!isStringArray(run.selectedPerkIds)
+    || !isNonNegativeInteger(run.perkChoiceIndex)
+    || !isStringArray(run.pendingPerkOfferIds)
+    || !isStringArray(run.offeredPerkEncounterIds)) return null;
   return {
-    version: 4,
-    discoveredItemIds: save.discoveredItemIds,
-    discoveredRecipeIds: save.discoveredRecipeIds,
-    bestEndlessWave: save.bestEndlessWave,
-    settings: save.settings,
-    activeRun: save.activeRun
-      ? {
-          ...save.activeRun,
-          selectedPerkIds: [],
-          perkChoiceIndex: 0,
-          pendingPerkOfferIds: [],
-          offeredPerkEncounterIds: [],
-        }
-      : null,
+    selectedPerkIds: run.selectedPerkIds,
+    perkChoiceIndex: run.perkChoiceIndex,
+    pendingPerkOfferIds: run.pendingPerkOfferIds,
+    offeredPerkEncounterIds: run.offeredPerkEncounterIds,
   };
 }
 
-function migrateV4ToV5(save: SaveV4): SaveV5 {
-  return {
-    version: 5,
-    discoveredItemIds: save.discoveredItemIds,
-    discoveredRecipeIds: save.discoveredRecipeIds,
-    bestEndlessWave: save.bestEndlessWave,
-    settings: save.settings,
-    activeRun: save.activeRun
-      ? {
-          ...save.activeRun,
-          progress: { mode: 'campaign', campaignEncounterIndex: 0, endlessWave: 0, score: 0 },
-        }
-      : null,
-  };
+function emptyPerkFields(): Pick<ActiveRunSave,
+  'selectedPerkIds' | 'perkChoiceIndex' | 'pendingPerkOfferIds' | 'offeredPerkEncounterIds'> {
+  return { selectedPerkIds: [], perkChoiceIndex: 0, pendingPerkOfferIds: [], offeredPerkEncounterIds: [] };
 }
 
-function migrateV5ToV6(save: SaveV5): SaveV6 {
-  return {
-    version: 6,
-    discoveredItemIds: save.discoveredItemIds,
-    discoveredRecipeIds: save.discoveredRecipeIds,
-    bestEndlessWave: save.bestEndlessWave,
-    bestCorruptedLoop: save.bestEndlessWave > 0
-      ? 2 + Math.floor((Math.max(1, save.bestEndlessWave) - 1) / 12)
-      : 0,
-    settings: save.settings,
-    activeRun: save.activeRun
-      ? { ...save.activeRun, progress: migrateLegacyProgress(save.activeRun.progress) }
-      : null,
-  };
-}
-
-function migrateV6ToV7(save: SaveV6): SaveV7 {
-  return {
-    version: 7,
-    discoveredItemIds: save.discoveredItemIds,
-    discoveredRecipeIds: save.discoveredRecipeIds,
-    bestEndlessWave: save.bestEndlessWave,
-    bestCorruptedLoop: save.bestCorruptedLoop,
-    settings: save.settings,
-    activeRun: save.activeRun
-      ? {
-          ...save.activeRun,
-          eventIndex: 0,
-          pendingEventId: null,
-          resolvedEventIds: [],
-        }
-      : null,
-  };
-}
-
-function migrateLegacyProgress(progress: LegacyRunProgressStateV5): RunProgressState {
+function migrateLegacyProgress(progress: LegacyProgressV5): RunProgressState {
   if (progress.mode === 'campaign') {
     return {
       mode: 'campaign',
       campaignEncounterIndex: Math.max(0, Math.min(8, progress.campaignEncounterIndex)),
-      loopNumber: 1,
-      loopEncounterIndex: 0,
-      score: progress.score,
+      loopNumber: 1, loopEncounterIndex: 0, score: progress.score,
     };
   }
   if (progress.mode === 'cashout') {
     return {
-      mode: 'campaign',
-      campaignEncounterIndex: 9,
-      loopNumber: 1,
-      loopEncounterIndex: 0,
-      score: progress.score,
+      mode: 'campaign', campaignEncounterIndex: 9,
+      loopNumber: 1, loopEncounterIndex: 0, score: progress.score,
     };
   }
   if (progress.mode === 'endless') {
-    const legacyWave = Math.max(1, progress.endlessWave);
+    const wave = Math.max(1, progress.endlessWave);
     return {
-      mode: 'loop',
-      campaignEncounterIndex: 11,
-      loopNumber: 2 + Math.floor((legacyWave - 1) / 12),
-      loopEncounterIndex: (legacyWave - 1) % 12,
-      score: progress.score,
+      mode: 'loop', campaignEncounterIndex: 11,
+      loopNumber: 2 + Math.floor((wave - 1) / 12),
+      loopEncounterIndex: (wave - 1) % 12, score: progress.score,
     };
   }
   return {
-    mode: 'complete',
-    campaignEncounterIndex: 11,
-    loopNumber: 1,
-    loopEncounterIndex: 0,
-    score: progress.score,
+    mode: 'complete', campaignEncounterIndex: 11,
+    loopNumber: 1, loopEncounterIndex: 0, score: progress.score,
   };
 }
 
-function isSaveV1(value: unknown): value is SaveV1 {
+function deriveBestCorruptedLoop(bestEndlessWave: number): number {
+  return bestEndlessWave > 0 ? 2 + Math.floor((Math.max(1, bestEndlessWave) - 1) / 12) : 0;
+}
+
+function isSaveV8(value: unknown): value is SaveV8 {
   if (!value || typeof value !== 'object') return false;
-  const candidate = value as Partial<SaveV1>;
-  return candidate.version === 1
+  const candidate = value as Partial<SaveV8>;
+  return candidate.version === 8
     && isStringArray(candidate.discoveredItemIds)
     && isStringArray(candidate.discoveredRecipeIds)
     && isNonNegativeFiniteNumber(candidate.bestEndlessWave)
-    && isSettings(candidate.settings);
-}
-
-function isSaveV2(value: unknown): value is SaveV2 {
-  if (!value || typeof value !== 'object') return false;
-  const candidate = value as Partial<SaveV2>;
-  return candidate.version === 2 && isMeta(candidate) && (candidate.activeRun === null || isActiveRunV2(candidate.activeRun));
-}
-
-function isSaveV3(value: unknown): value is SaveV3 {
-  if (!value || typeof value !== 'object') return false;
-  const candidate = value as Partial<SaveV3>;
-  return candidate.version === 3 && isMeta(candidate) && (candidate.activeRun === null || isActiveRunV3(candidate.activeRun));
-}
-
-function isSaveV4(value: unknown): value is SaveV4 {
-  if (!value || typeof value !== 'object') return false;
-  const candidate = value as Partial<SaveV4>;
-  return candidate.version === 4 && isMeta(candidate) && (candidate.activeRun === null || isActiveRunV4(candidate.activeRun));
-}
-
-function isSaveV5(value: unknown): value is SaveV5 {
-  if (!value || typeof value !== 'object') return false;
-  const candidate = value as Partial<SaveV5>;
-  return candidate.version === 5 && isMeta(candidate) && (candidate.activeRun === null || isActiveRunV5(candidate.activeRun));
-}
-
-function isSaveV6(value: unknown): value is SaveV6 {
-  if (!value || typeof value !== 'object') return false;
-  const candidate = value as Partial<SaveV6>;
-  return candidate.version === 6
-    && isMeta(candidate)
     && isNonNegativeInteger(candidate.bestCorruptedLoop)
-    && (candidate.activeRun === null || isActiveRunV6(candidate.activeRun));
+    && isSettings(candidate.settings)
+    && (candidate.activeRun === null || isActiveRunV8(candidate.activeRun));
 }
 
-function isSaveV7(value: unknown): value is SaveV7 {
+function isActiveRunV8(value: unknown): value is ActiveRunSave {
+  if (!isLegacyRunBase(value)) return false;
+  const run = value as LegacyRunBase & Partial<ActiveRunSave>;
+  return isStringArray(run.claimedEncounterIds)
+    && isStringArray(run.selectedPerkIds)
+    && isNonNegativeInteger(run.perkChoiceIndex)
+    && isStringArray(run.pendingPerkOfferIds)
+    && isStringArray(run.offeredPerkEncounterIds)
+    && isRunProgressState(run.progress)
+    && isNonNegativeInteger(run.eventIndex)
+    && (run.pendingEventId === null || typeof run.pendingEventId === 'string')
+    && isStringArray(run.resolvedEventIds)
+    && (run.heroId === null || isHeroId(run.heroId));
+}
+
+function isLegacyMeta(value: unknown): value is LegacyMeta {
   if (!value || typeof value !== 'object') return false;
-  const candidate = value as Partial<SaveV7>;
-  return candidate.version === 7
-    && isMeta(candidate)
-    && isNonNegativeInteger(candidate.bestCorruptedLoop)
-    && (candidate.activeRun === null || isActiveRunV7(candidate.activeRun));
+  const candidate = value as Partial<LegacyMeta>;
+  return Number.isInteger(candidate.version)
+    && isStringArray(candidate.discoveredItemIds)
+    && isStringArray(candidate.discoveredRecipeIds)
+    && isNonNegativeFiniteNumber(candidate.bestEndlessWave)
+    && isSettings(candidate.settings)
+    && (candidate.version === 1 || 'activeRun' in candidate);
 }
 
-function isMeta(value: {
-  discoveredItemIds?: readonly string[];
-  discoveredRecipeIds?: readonly string[];
-  bestEndlessWave?: number;
-  settings?: SaveSettings;
-}): boolean {
-  return isStringArray(value.discoveredItemIds)
-    && isStringArray(value.discoveredRecipeIds)
-    && isNonNegativeFiniteNumber(value.bestEndlessWave)
-    && isSettings(value.settings);
-}
-
-function isActiveRunV2(value: unknown): value is ActiveRunSaveV2 {
+function isLegacyRunBase(value: unknown): value is LegacyRunBase {
   if (!value || typeof value !== 'object') return false;
-  const candidate = value as Partial<ActiveRunSaveV2>;
-  return typeof candidate.runSeed === 'string'
-    && isNonNegativeInteger(candidate.shopIndex)
-    && isNonNegativeInteger(candidate.coins)
-    && isStringArray(candidate.soldOfferIds)
-    && Array.isArray(candidate.backpackItems)
-    && candidate.backpackItems.every(isPlacedItem)
-    && isPositiveInteger(candidate.nextLootSequence);
+  const run = value as Partial<LegacyRunBase>;
+  return typeof run.runSeed === 'string'
+    && isNonNegativeInteger(run.shopIndex)
+    && isNonNegativeInteger(run.coins)
+    && isStringArray(run.soldOfferIds)
+    && Array.isArray(run.backpackItems)
+    && run.backpackItems.every(isPlacedItem)
+    && isPositiveInteger(run.nextLootSequence);
 }
 
-function isActiveRunV3(value: unknown): value is ActiveRunSaveV3 {
-  return isActiveRunV2(value) && isStringArray((value as Partial<ActiveRunSaveV3>).claimedEncounterIds);
-}
-
-function isActiveRunV4(value: unknown): value is ActiveRunSaveV4 {
-  if (!isActiveRunV3(value)) return false;
-  const candidate = value as Partial<ActiveRunSaveV4>;
-  return isStringArray(candidate.selectedPerkIds)
-    && isNonNegativeInteger(candidate.perkChoiceIndex)
-    && isStringArray(candidate.pendingPerkOfferIds)
-    && isStringArray(candidate.offeredPerkEncounterIds);
-}
-
-function isActiveRunV5(value: unknown): value is ActiveRunSaveV5 {
-  return isActiveRunV4(value) && isLegacyRunProgressState((value as Partial<ActiveRunSaveV5>).progress);
-}
-
-function isActiveRunV6(value: unknown): value is ActiveRunSaveV6 {
-  return isActiveRunV4(value) && isRunProgressState((value as Partial<ActiveRunSaveV6>).progress);
-}
-
-function isActiveRunV7(value: unknown): value is ActiveRunSave {
-  if (!isActiveRunV6(value)) return false;
-  const candidate = value as Partial<ActiveRunSave>;
-  return isNonNegativeInteger(candidate.eventIndex)
-    && (candidate.pendingEventId === null || typeof candidate.pendingEventId === 'string')
-    && isStringArray(candidate.resolvedEventIds);
-}
-
-function isLegacyRunProgressState(value: unknown): value is LegacyRunProgressStateV5 {
+function isLegacyProgressV5(value: unknown): value is LegacyProgressV5 {
   if (!value || typeof value !== 'object') return false;
-  const candidate = value as Partial<LegacyRunProgressStateV5>;
-  return (candidate.mode === 'campaign' || candidate.mode === 'cashout' || candidate.mode === 'endless' || candidate.mode === 'complete')
-    && isIntegerInRange(candidate.campaignEncounterIndex, 0, 8)
-    && isNonNegativeInteger(candidate.endlessWave)
-    && isNonNegativeInteger(candidate.score);
+  const progress = value as Partial<LegacyProgressV5>;
+  return (progress.mode === 'campaign' || progress.mode === 'cashout' || progress.mode === 'endless' || progress.mode === 'complete')
+    && isIntegerInRange(progress.campaignEncounterIndex, 0, 8)
+    && isNonNegativeInteger(progress.endlessWave)
+    && isNonNegativeInteger(progress.score);
 }
 
 function isPlacedItem(value: unknown): value is PlacedItem {
   if (!value || typeof value !== 'object') return false;
-  const candidate = value as Partial<PlacedItem>;
-  return typeof candidate.instanceId === 'string'
-    && typeof candidate.definitionId === 'string'
-    && !!candidate.origin
-    && Number.isInteger(candidate.origin.x)
-    && Number.isInteger(candidate.origin.y)
-    && (candidate.rotation === 0 || candidate.rotation === 1 || candidate.rotation === 2 || candidate.rotation === 3);
+  const item = value as Partial<PlacedItem>;
+  return typeof item.instanceId === 'string'
+    && typeof item.definitionId === 'string'
+    && !!item.origin
+    && Number.isInteger(item.origin.x)
+    && Number.isInteger(item.origin.y)
+    && (item.rotation === 0 || item.rotation === 1 || item.rotation === 2 || item.rotation === 3);
+}
+
+function isHeroId(value: unknown): value is HeroId {
+  return value === 'scavenger' || value === 'engineer' || value === 'alchemist' || value === 'beastfriend';
 }
 
 function isSettings(value: unknown): value is SaveSettings {
   if (!value || typeof value !== 'object') return false;
-  const candidate = value as Partial<SaveSettings>;
-  return isUnitInterval(candidate.musicVolume)
-    && isUnitInterval(candidate.sfxVolume)
-    && typeof candidate.reducedMotion === 'boolean';
+  const settings = value as Partial<SaveSettings>;
+  return isUnitInterval(settings.musicVolume)
+    && isUnitInterval(settings.sfxVolume)
+    && typeof settings.reducedMotion === 'boolean';
 }
 
 function isStringArray(value: unknown): value is readonly string[] {
   return Array.isArray(value) && value.every((entry) => typeof entry === 'string');
 }
-
 function isUnitInterval(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1;
 }
-
 function isNonNegativeFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0;
 }
-
 function isNonNegativeInteger(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value >= 0;
 }
-
 function isPositiveInteger(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value >= 1;
 }
-
 function isIntegerInRange(value: unknown, min: number, max: number): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max;
 }
