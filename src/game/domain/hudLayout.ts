@@ -26,9 +26,9 @@ export function createHudActionLayout(displayWidthCss: number): HudActionLayout 
     ? [
         action('daily', 330, 104, 260, false),
         action('help', 1034, 104, 118, false),
-        action('archive', 1190, 104, 178, false),
-        action('trophies', 1371, 104, 178, false),
-        action('reset', 1520, 104, 136, true),
+        action('archive', 1180, 104, 160, false),
+        action('trophies', 1350, 104, 160, false),
+        action('reset', 1510, 104, 136, true),
       ]
     : [
         action('daily', 278, 104, 228, true),
