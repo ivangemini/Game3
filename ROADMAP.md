@@ -8,7 +8,7 @@
 - [x] Phaser/Vite/TypeScript scaffold
 - [x] CI quality gates
 
-## P1 — Backpack vertical slice [IN PROGRESS]
+## P1 — Backpack vertical slice [DONE]
 - [x] Deterministic grid/shape/rotation placement
 - [x] Mouse + touch drag/drop foundation
 - [x] Valid/invalid cell preview and snap-back
@@ -22,9 +22,9 @@
 - [x] Versioned save v8 with legacy migrations, hero choice, encounter claims, perk state, long-session progression and pending events
 - [x] Progressive backpack: one lower pocket cell unlocks after Boss 1, Boss 2 and Boss 3 each unlock one
 - [x] Shared backpack-layout domain for blocked pocket cells outside Phaser
-- [ ] Final interaction polish against real runtime/assets
+- [x] Final interaction implementation (**lift/depth, validity-weight feedback, cell previews/flashes, elastic two-stage snap, invalid shake, reward arrival, rotation impact, pocket reveal and directional multi-trail synergy activation**)
 
-**Gate:** arranging items is satisfying before combat exists. Current prototype has drag lift, placement previews, elastic snap, invalid-action feedback, synergy activation feedback, fusion and mid-run backpack growth; final polish remains tied to runtime visual review.
+**Gate:** arranging items has the complete intended interaction language in code. Real-browser/mobile feel acceptance is tracked under P8 rather than leaving the gameplay feature itself open.
 
 ## P2 — Combat vertical slice [DONE]
 - [x] Deterministic combat clock/effect queue independent of render FPS
@@ -106,21 +106,23 @@
 - [ ] Final UI atlas / art review refinements (**UI chrome/material atlas, final visual review and browser/mobile acceptance remain**)
 - [x] Combat semantic feedback foundation (**30-object particle pool, item/status rings, hit bursts, boss-frame pulses, outcome flashes, restrained shake, reduced-motion fallback**)
 - [x] Non-combat run feedback foundation (**shop purchase/reward/reroll/error SFX hooks, fusion reveal, event-drop toast, pocket-unlock feedback**)
-- [ ] Final animation/VFX pass across backpack drag/drop, reward staging and final art assets
+- [x] Final animation/VFX implementation across backpack and rewards (**drag lift/drop/snap/invalid feedback, reward cards, coin staging, event drops, fusion anticipation/reveal/settle and directional synergy trails; runtime acceptance remains in P8**)
 - [x] Autoplay-safe WebAudio SFX mixer foundation (**semantic cue fan-out, deterministic synth patches, cooldowns, 10-voice priority budget, page visibility suspend/resume, persisted SFX volume**)
 - [x] Procedural adaptive music foundation (**deterministic menu/combat/boss patterns, persisted Music volume and semantic combat-mode switching**)
-- [ ] Final audio/music asset pass (**authored samples/music, mix tuning, transitions/ducking and portal/ad lifecycle integration**)
+- [ ] Final audio/music asset pass (**authored samples/music and final mix tuning remain; portal/ad suspend/resume lifecycle is implemented**)
 - [x] First-run onboarding flow (**5-step hero → pack → synergy → fight → fusion tutorial, reduced-motion support and persistent Help entry point**)
-- [ ] Final onboarding visual polish against real browser/art assets
-- [ ] loading/thumbnail/store art
+- [x] Final onboarding presentation implementation (**Field Manual layout, five step-specific visual diagrams, progress rail, step accents, transitions and Reduced Motion path**)
+- [x] Branded runtime loading screen (**atlas progress, current-file status, asset-error fallback messaging and portal-ready signal gated until preload completes**)
+- [ ] portal thumbnail/store art
 
-## P7 — Monetization & platform adapters
-- [ ] generic PlatformAdapter
-- [ ] Yandex Games adapter
-- [ ] CrazyGames adapter
-- [ ] rewarded placements
-- [ ] natural-break interstitial flow
-- [ ] cloud/leaderboard hooks where justified
+## P7 — Monetization & platform adapters [DONE]
+- [x] Generic `PlatformAdapter` (**loading/gameplay lifecycle, interstitial/rewarded result contracts, destroy + pause/resume hooks and local fallback**)
+- [x] Yandex Games adapter (**current SDK loader, `YaGames.init`, LoadingAPI, GameplayAPI, fullscreen/rewarded callbacks and safe failure fallback**)
+- [x] CrazyGames adapter (**SDK v3 init, loading/gameplay markup, midgame/rewarded callbacks and safe failure fallback**)
+- [x] Rewarded placement (**optional portal-only `FREE REROLL` in Junk Shop; no reward on dismiss/fail/unavailable, no duplicate in-flight requests**)
+- [x] Natural-break interstitial flow (**cycle-boundary only, never during combat, first-ad delay + cooldown policy, transition continues on ad failure**)
+- [x] Portal audio/pause lifecycle (**Phaser loop + custom WebAudio suspend for ads; visibility changes cannot prematurely resume ad-paused audio**)
+- [x] Cloud/leaderboard launch decision (**deferred for soft launch; add only when retention/competitive behavior justifies backend/platform hooks**)
 
 ## P8 — QA, balance & performance
 - [x] Automated deterministic tests for core run/fusion/event/hero/boss domains
@@ -128,10 +130,11 @@
 - [x] Seeded combat/build simulation reports across weak/typical/strong power bands and boss checkpoints, including boss-rule wrappers
 - [x] Campaign balance sampling excludes second-stage fusion results; loop checkpoints may sample them
 - [x] Static asset + bundle budget gates (**86.2 KiB generated art payload, 9.77 MiB estimated atlas texture memory, 57.1 KiB game/app JS gzip, 404.8 KiB total JS gzip; CI ceilings enforced**)
+- [x] Portal adapter contract tests (**platform detection, Yandex/CrazyGames initialization and rewarded lifecycle semantics, natural-break policy**)
 - [ ] mobile/browser matrix
-- [ ] save migrations/recovery UX
+- [x] Save migrations/recovery UX (**v1–v7 → v8 migrations, previous-valid backup slot, corrupt-primary recovery, safe reset fallback and visible web-shell recovery/write warnings**)
 - [ ] real-device performance profiling (**frame time, peak WebGL memory, portal network waterfall, low-memory lifecycle**)
-- [ ] portal-specific compliance checks
+- [ ] portal-specific compliance checks (**repository integration contract implemented; real Yandex debug panel / CrazyGames SDK tester acceptance still required**)
 
 ## P9 — Soft launch & iteration
 - [ ] release candidate to first portals
