@@ -19,10 +19,11 @@
 - [x] Basic seeded shop/reward choice with run currency and deterministic rerolls
 - [x] Purchased junk enters the real backpack through deterministic legal placement
 - [x] Save/restore current run: backpack, rotations, loot sequence, seed, coins, shop step and sold offers
-- [x] Versioned save v5 with legacy migrations, encounter claims, perk state and run progression
+- [x] Versioned save v6 with legacy migrations, encounter claims, perk state and long-session progression
+- [x] Progressive backpack: one lower pocket cell unlocks after Boss 1, Boss 2 and Boss 3
 - [ ] Final interaction polish against real runtime/assets
 
-**Gate:** arranging items is satisfying before combat exists. Current prototype has drag lift, placement previews, elastic snap, invalid-action feedback and synergy activation feedback; final polish remains tied to runtime visual review.
+**Gate:** arranging items is satisfying before combat exists. Current prototype has drag lift, placement previews, elastic snap, invalid-action feedback, synergy activation feedback and mid-run backpack growth; final polish remains tied to runtime visual review.
 
 ## P2 — Combat vertical slice [IN PROGRESS]
 - [x] Deterministic combat clock/effect queue independent of render FPS
@@ -49,15 +50,18 @@
 - [x] Boss-victory perk overlay with persisted pending choice
 - [x] Six prototype perks that modify tagged combat items
 - [x] Selected perks persist and affect subsequent combat snapshots
-- [x] Three-world campaign skeleton: 3 encounters per world / 9 total
+- [x] Four-world campaign: 3 encounters per world / 12 total
 - [x] Unique encounter IDs, per-encounter rewards and score progression
-- [x] Difficulty/reward escalation across the three worlds
-- [x] Campaign clear decision: cash out or keep the current build
-- [x] Endless mode foundation with scaling HP/damage/reward multiplier and a corrupted boss every fifth wave
-- [x] Best Endless wave persisted in meta save
+- [x] Difficulty/reward escalation across the four worlds
+- [x] Campaign clear decision: Escape/Cash Out or Go Deeper with the same build
+- [x] Corrupted Loop foundation: another 4-world / 12-encounter cycle using the same build
+- [x] Loop depth scales enemy HP/damage/speed and base payout
+- [x] Loop worlds stack 2 mutations in Loop 2, 3 in Loop 3 and up to 4 deeper
+- [x] Safe cash-out only at cycle boundaries; entering a loop commits the player to the full cycle
+- [x] Deepest completed corrupted loop persisted in meta save
 - [x] Seeded world mutation system with six prototype risk/reward rules that modify real encounter stats and payouts
 - [ ] lightweight events between selected encounters
-- [ ] target pacing validation: first boss 3–5 min, base run 12–18 min, strong session 20–40+ min
+- [ ] target pacing validation: first boss 3–5 min, base campaign 20–25 min, strong session 30–50 min, deep session 60+ min
 
 ## P4 — Content-efficient depth
 - [ ] 35–45 launch items
@@ -67,12 +71,13 @@
 - [ ] 6 boss families + modifiers
 - [ ] 20–25 perks
 - [ ] ~15 mutations/events pool
+- [ ] late-run item transformations / secret evolutions
 
 ## P5 — Retention/meta
 - [ ] Itemdex + Recipe Book
 - [ ] unlock milestones
 - [ ] Daily seeded run
-- [x] Endless mode + score foundation
+- [x] Corrupted Loop + score foundation
 - [ ] achievements
 
 ## P6 — Presentation pass
@@ -101,6 +106,6 @@
 
 ## P9 — Soft launch & iteration
 - [ ] release candidate to first portals
-- [ ] measure tutorial completion/first boss/run duration/return behavior
+- [ ] measure tutorial completion/first boss/base-campaign duration/loop-entry/loop-completion/return behavior
 - [ ] tune difficulty/economy/ad pacing
 - [ ] add content only after core retention signals justify it
