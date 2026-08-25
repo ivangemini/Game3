@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { telemetry } from '../../analytics/Telemetry';
 import type { HeroDefinition, HeroId } from '../domain/heroes';
 import { createAuthoredPortraitSlot, heroArtKey } from './authoredArt';
 
@@ -77,6 +78,7 @@ export class HeroChoiceOverlay {
         card.setScale(1);
         portrait.setScale(1.04);
         if (!this.visible) return;
+        telemetry.track('hero_selected', { heroId: hero.id });
         this.onSelected(hero.id);
       });
       this.objects.push(card, titleText, name, portrait, description, pick);
