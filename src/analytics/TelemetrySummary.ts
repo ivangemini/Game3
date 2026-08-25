@@ -19,6 +19,8 @@ export interface SoftLaunchSummary {
   readonly returningSessions: number;
   readonly returningRate: number;
   readonly returnAgeBuckets: Readonly<Record<string, number>>;
+  readonly sessionsWithAgeBucket: number;
+  readonly sessionAgeCoverageRate: number;
   readonly sessionsWithHeroSelection: number;
   readonly heroSelectionSessionRate: number;
   readonly averageTimeToHeroMs: number;
@@ -85,7 +87,7 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
   let fusions = 0;
   let cashouts = 0;
   let cashoutScoreTotal = 0;
-  const returnAgeBuckets: Record<string, number> = {};
+  const sessionAgeBySession = new Map<string, string>();
   const heroSelections: Record<string, number> = {};
   const loopEntries: Record<string, number> = {};
   const combats = new Map<string, CombatAccumulator>();
@@ -107,7 +109,7 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
       }
       case 'session_age': {
         const payload = event.payload as { bucket: string };
-        returnAgeBuckets[payload.bucket] = (returnAgeBuckets[payload.bucket] ?? 0) + 1;
+        if (!sessionAgeBySession.has(event.sessionId)) sessionAgeBySession.set(event.sessionId, payload.bucket);
         break;
       }
       case 'run_started': {
@@ -186,6 +188,15 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
     }
   }
 
+  const returnAgeBuckets: Record<string, number> = {};
+  let sessionsWithAgeBucket = 0;
+  for (const sessionId of sessionStartedAt.keys()) {
+    const bucket = sessionAgeBySession.get(sessionId);
+    if (bucket === undefined) continue;
+    sessionsWithAgeBucket += 1;
+    returnAgeBuckets[bucket] = (returnAgeBuckets[bucket] ?? 0) + 1;
+  }
+
   const timeToHero = sessionLatencies(sessionStartedAt, firstHeroAt);
   const timeToFirstCombat = sessionLatencies(sessionStartedAt, firstCombatAt);
   const timeToFirstBoss = milestoneLatencies(runStartedAt, sessionStartedAt, firstBossAt);
@@ -196,6 +207,8 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
     returningSessions,
     returningRate: ratio(returningSessions, sessions),
     returnAgeBuckets: sortRecord(returnAgeBuckets),
+    sessionsWithAgeBucket,
+    sessionAgeCoverageRate: ratio(sessionsWithAgeBucket, sessionStartedAt.size),
     sessionsWithHeroSelection: timeToHero.length,
     heroSelectionSessionRate: ratio(timeToHero.length, sessions),
     averageTimeToHeroMs: average(timeToHero),
