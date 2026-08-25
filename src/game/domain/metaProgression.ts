@@ -61,7 +61,7 @@ export function createMetaProgressionSnapshot(
   const itemCount = itemIds.size;
   const recipeCount = recipeIds.size;
 
-  const requirements: readonly Array<{
+  const requirements: ReadonlyArray<{
     readonly id: string;
     readonly name: string;
     readonly seal: string;
