@@ -96,6 +96,19 @@ test('boots cleanly, fits the viewport and stays atlas-first', async ({ page }, 
   expect(pageErrors, pageErrors.join('\n')).toEqual([]);
 });
 
+test('suppresses the system context menu inside the game surface', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop', 'context-menu contract runs once in Chromium desktop');
+  await page.goto('/');
+  await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 });
+
+  const prevented = await page.locator('canvas').evaluate((canvas) => {
+    const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, button: 2 });
+    const dispatchResult = canvas.dispatchEvent(event);
+    return event.defaultPrevented && !dispatchResult;
+  });
+  expect(prevented).toBe(true);
+});
+
 test('viewport profile flips portrait gate on resize and recovers', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium-desktop', 'resize sequence runs once in Chromium desktop');
 
