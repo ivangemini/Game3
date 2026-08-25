@@ -12,6 +12,7 @@ const RARITY_WEIGHTS: Record<Rarity, number> = {
   uncommon: 30,
   rare: 15,
   epic: 5,
+  legendary: 1,
 };
 
 const RARITY_BASE_PRICE: Record<Rarity, number> = {
@@ -19,6 +20,7 @@ const RARITY_BASE_PRICE: Record<Rarity, number> = {
   uncommon: 27,
   rare: 40,
   epic: 58,
+  legendary: 85,
 };
 
 export function itemShopPrice(definition: ItemDefinition): number {
