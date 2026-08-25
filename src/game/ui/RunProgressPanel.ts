@@ -3,7 +3,7 @@ import { telemetry } from '../../analytics/Telemetry';
 import { AdBreakPolicy } from '../../platform/AdBreakPolicy';
 import type { PlatformAdapter } from '../../platform/PlatformAdapter';
 import { campaignLabel, loopLabel, type RunEncounterDefinition } from '../data/runEncounters';
-import { loopRewardMultiplier, type RunProgressState } from '../domain/runProgression';
+import { CAMPAIGN_WORLDS, LOOP_WORLDS, loopRewardMultiplier, type RunProgressState } from '../domain/runProgression';
 import { REQUEST_NEW_RUN_EVENT } from './runUiEvents';
 import { PANEL_VISUALS } from './visualTokens';
 
@@ -82,9 +82,9 @@ export class RunProgressPanel {
       const nextLoop = progress.loopNumber + 1;
       const mutationCount = Math.min(4, nextLoop);
       this.titleText.setText('REALITY BROKEN').setColor('#f4a0ff');
-      this.stageText.setText(progress.loopNumber === 1 ? '4 WORLDS COMPLETE' : `LOOP ${progress.loopNumber} COMPLETE`);
+      this.stageText.setText(progress.loopNumber === 1 ? `${CAMPAIGN_WORLDS} WORLDS COMPLETE` : `LOOP ${progress.loopNumber} COMPLETE`);
       this.encounterText.setText('ESCAPE OR GO DEEPER?');
-      this.subtitleText.setText(`Keep this exact build for another 4 corrupted worlds. Each world stacks ${mutationCount} mutations.`);
+      this.subtitleText.setText(`Keep this exact build for another ${LOOP_WORLDS} corrupted worlds. Each world stacks ${mutationCount} mutations.`);
       this.rewardText.setText(`NEXT LOOP  ×${loopRewardMultiplier(nextLoop).toFixed(2)} REWARDS`);
       this.mutationText.setText('GO DEEPER = 12 MORE ENCOUNTERS BEFORE THE NEXT SAFE EXIT.');
       this.createActionButton(this.left + 100, this.top + 280, 'GO DEEPER', 0x49305a, 0xd47cff, () => {
