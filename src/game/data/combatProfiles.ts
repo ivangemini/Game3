@@ -9,6 +9,12 @@ export const PROTOTYPE_COMBAT_PROFILES: readonly CombatItemProfile[] = [
   { definitionId: 'fish-blaster', triggerIntervalMs: 1600, damage: 8, extraLaserDamage: 4 },
   { definitionId: 'poison-flask', triggerIntervalMs: 3600, damage: 0 },
   { definitionId: 'scrap-magnet', triggerIntervalMs: 2800, damage: 1, shieldOnTrigger: 2 },
+  { definitionId: 'shock-toaster', triggerIntervalMs: 1750, damage: 11, extraLaserDamage: 3 },
+  { definitionId: 'cyber-cat', triggerIntervalMs: 1450, damage: 6, extraLaserDamage: 7 },
+  { definitionId: 'biohazard-turbine', triggerIntervalMs: 1950, damage: 6, poisonOnHit: 4 },
+  { definitionId: 'polarity-duck', triggerIntervalMs: 1850, damage: 7, shieldOnTrigger: 3 },
+  { definitionId: 'toxic-fish-cannon', triggerIntervalMs: 1500, damage: 10, extraLaserDamage: 3, poisonOnHit: 2 },
+  { definitionId: 'gravity-toaster', triggerIntervalMs: 2150, damage: 7, shieldOnTrigger: 5 },
 ];
 
 export const PROTOTYPE_COMBAT_PROFILE_MAP = new Map(
