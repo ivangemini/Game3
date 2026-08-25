@@ -1,6 +1,7 @@
 import * as Phaser from 'phaser';
 import { createHudActionLayout, type HudActionId, type HudActionPlacement } from '../domain/hudLayout';
 import { resolveAuthoredTexture, uiArtKey } from './authoredArt';
+import { REQUEST_NEW_RUN_EVENT } from './runUiEvents';
 
 export interface TopHudActionsOptions {
   readonly dailyKey: string;
@@ -46,9 +47,15 @@ export class TopHudActions {
       this.displayWidthCss = nextWidth;
       if (previousMode !== nextMode) this.rebuild();
     };
+    const onRequestNewRun = (): void => {
+      this.clearConfirmation();
+      this.options.onReset();
+    };
     scene.scale.on('resize', onResize);
+    scene.events.on(REQUEST_NEW_RUN_EVENT, onRequestNewRun);
     scene.events.once('shutdown', () => {
       scene.scale.off('resize', onResize);
+      scene.events.off(REQUEST_NEW_RUN_EVENT, onRequestNewRun);
       this.confirmTimer?.destroy();
     });
   }
