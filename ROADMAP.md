@@ -38,10 +38,11 @@
 - [x] TV Tyrant interference 1: deterministic Channel Jam with telegraph
 - [x] TV Tyrant interference 2: Slime Signal targets an occupied backpack cell, telegraphs it, then suppresses touching item triggers
 - [x] Slime Signal is visualized directly over the backpack grid
+- [x] TV Tyrant interference 3: Magnet Scramble prioritizes metal-heavy rows, telegraphs the row and temporarily suppresses crossing item triggers
+- [x] Magnet Scramble is introduced on Boss 2 rather than overloading the first boss, then escalates on Boss 3 / corrupted variants
 - [x] Victory rewards feed the real run/shop economy
 - [x] Encounter rewards are claim-once per run and persisted
 - [x] Fused junk has distinct combat profiles and participates in the existing synergy/perk pipeline
-- [ ] TV Tyrant interference 3: telegraphed row scramble / magnet displacement
 - [ ] Audio hooks
 
 **Gate:** one full mini-run is understandable and fun.
