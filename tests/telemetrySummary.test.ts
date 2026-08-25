@@ -68,6 +68,23 @@ describe('summarizeTelemetry', () => {
     }]);
   });
 
+  it('counts at most one return-age bucket per started session and ignores unmatched age events', () => {
+    const events: TelemetryEnvelope[] = [
+      sessionEvent('a', 1000, 'session_start', { returning: false, platform: 'local', viewportMode: 'standard-landscape' }),
+      sessionEvent('a', 1001, 'session_age', { bucket: 'new' }),
+      sessionEvent('a', 1002, 'session_age', { bucket: 'under-24h' }),
+      sessionEvent('b', 2000, 'session_start', { returning: true, platform: 'yandex', viewportMode: 'compact-landscape' }),
+      sessionEvent('b', 2001, 'session_age', { bucket: '3-7d' }),
+      sessionEvent('c', 3000, 'session_start', { returning: true, platform: 'crazygames', viewportMode: 'compact-landscape' }),
+      sessionEvent('orphan', 4000, 'session_age', { bucket: '30d-plus' }),
+    ];
+
+    const summary = summarizeTelemetry(events);
+    expect(summary.returnAgeBuckets).toEqual({ '3-7d': 1, new: 1 });
+    expect(summary.sessionsWithAgeBucket).toBe(2);
+    expect(summary.sessionAgeCoverageRate).toBeCloseTo(2 / 3);
+  });
+
   it('derives time-to-hero and time-to-first-combat distributions from existing per-session timestamps', () => {
     const events: TelemetryEnvelope[] = [
       sessionEvent('a', 1000, 'session_start', { returning: false, platform: 'local', viewportMode: 'standard-landscape' }),
@@ -146,6 +163,9 @@ describe('summarizeTelemetry', () => {
     const summary = summarizeTelemetry([]);
     expect(summary.sessions).toBe(0);
     expect(summary.returningRate).toBe(0);
+    expect(summary.returnAgeBuckets).toEqual({});
+    expect(summary.sessionsWithAgeBucket).toBe(0);
+    expect(summary.sessionAgeCoverageRate).toBe(0);
     expect(summary.heroSelectionSessionRate).toBe(0);
     expect(summary.averageTimeToHeroMs).toBe(0);
     expect(summary.medianTimeToHeroMs).toBe(0);
