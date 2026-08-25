@@ -1,4 +1,4 @@
-# Junkpack: Boss Rush — Game Design v0.12
+# Junkpack: Boss Rush — Game Design v0.13
 
 ## Elevator pitch
 A compact roguelite inventory autobattler where the player chooses a light rule-bending junk pilot, packs absurd junk into a constrained backpack, discovers spatial synergies and fusion recipes, then fights surreal bosses that directly interfere with build valuation and backpack rules.
@@ -35,19 +35,23 @@ Prototype board: 6×5. Three lower pocket cells start locked; Boss 1, Boss 2 and
 Shapes, rotations, blocked cells, placement legality, physical side-contact and fusion placement are deterministic domain rules. UI coordinates never decide gameplay legality.
 
 ## Items
-Launch target: 35–45 base/shop items. Current prototype: **24 base/shop items + 21 fusion-only results = 45 total item definitions**.
+Launch target: 35–45 base/shop items. Current prototype: **36 base/shop items + 24 fusion-only results = 60 total item definitions**. The lower launch target for base items is reached.
 
-Current content deliberately reuses the same tag vocabulary rather than creating isolated one-off subsystems. The latest cross-family wave adds:
-- Alarm Hamster — Pet / Battery / Chaos;
-- Toxic Umbrella — Weapon / Poison / Metal;
-- Satellite Fork — Weapon / Metal / Antenna;
-- Canned Lightning — Battery / Laser / Chaos;
-- Slime Donut — Food / Slime / Poison;
-- Catellite Dish — Pet / Cat / Antenna / Metal;
-- Emergency Microwave — Device / Food / Metal;
-- Laser Mop — Weapon / Laser / Metal.
+Wave 4 adds 12 bridge items:
+- Fermented Gamepad — Device / Food / Chaos;
+- Magnet Croissant — Food / Magnet / Metal;
+- Slime Pager — Device / Slime / Antenna;
+- Battery Pigeon — Pet / Battery / Antenna;
+- Duck Drill — Pet / Duck / Weapon / Metal;
+- Cat Battery Pack — Pet / Cat / Battery / Device;
+- Poison Printer — Device / Poison / Metal;
+- Laser Kettle — Device / Laser / Food / Metal;
+- Chaos Stapler — Weapon / Metal / Chaos;
+- Antenna Sausage — Food / Antenna / Chaos;
+- Slime Magnet — Slime / Magnet / Metal / Poison;
+- Feral Roomba — Pet / Device / Metal / Chaos.
 
-These items are designed to create multiple existing interactions each: spatial synergies, hero/perk tag bonuses, fusion decisions and boss-specific valuation changes.
+These deliberately reuse the current stat/tag vocabulary. Their value comes from interacting with multiple existing systems at once rather than from one-off bespoke mechanics.
 
 ## Synergies
 Implemented spatial synergy family uses **orthogonal side contact** between occupied item cells. Diagonal proximity does not count.
@@ -64,47 +68,27 @@ Current 10 rules:
 - `METAL → WEAPON`: Weapon gains +1 scrap armor.
 - `CHAOS → LASER`: Laser gains +1 unstable bonus shot.
 
-A single contact may activate multiple rules in opposite directions. Example: Alarm Hamster beside Emergency Microwave activates `BATTERY → DEVICE` on the microwave and `FOOD → PET` on the hamster.
+One contact can activate several rules in both directions. Example: **Battery Pigeon touching Laser Kettle** activates `BATTERY → DEVICE` and `ANTENNA → DEVICE` on the kettle while `FOOD → PET` accelerates the pigeon.
 
 Physical contact can also matter independently of tag synergy: Closet Monster uses contact for anchoring, while Border Shark values perimeter occupancy.
 
 ## Fusion and discovery
-Launch target: 20–30 recipes. Current prototype: **21 recipes**, so the lower launch target is reached.
+Launch target: 20–30 recipes. Current prototype: **24 recipes**, so the launch range is reached.
 
-First-stage recipes:
-- Angry Battery + Cursed Toaster → **Shock Toaster**
-- Laser Cat + Angry Battery → **Cyber Cat**
-- Suspicious Flask + Toxic Fan → **Biohazard Turbine**
-- Mutant Duck + Scrap Magnet → **Polarity Duck**
-- Fish Blaster + Suspicious Flask → **Toxic Fish Cannon**
-- Cursed Toaster + Scrap Magnet → **Gravity Toaster**
-- Feral Router + Angry Battery → **Turbo Router**
-- Slime Can + Wrench Sword → **Slime Sword**
-- Tactical Banana + Laser Cat → **Laser Banana**
-- Pocket Radio + Mutant Duck → **Radio Duck**
-- Panic Noodles + Toxic Fan → **Noodle Fan**
-- Battery Snail + Disco Orb → **Disco Snail**
-- Alarm Hamster + Angry Battery → **Reactor Hamster**
-- Toxic Umbrella + Slime Can → **Acid Parasol**
-- Satellite Fork + Pocket Radio → **Broadcast Trident**
-- Canned Lightning + Disco Orb → **Storm Disco**
-- Slime Donut + Tactical Banana → **Bio Snack Pack**
-- Catellite Dish + Feral Router → **Orbital Cat**
-- Emergency Microwave + Panic Noodles → **Apocalypse Microwave**
-- Laser Mop + Scrap Magnet → **Rail Mop**
+Twenty first-stage recipes build the normal fusion graph. Four second-stage recipes are late-run discovery payoffs:
 
-### Second-stage evolution
-The first late-run transformation is implemented:
+1. Gravity Toaster + Shock Toaster → **Singularity Toaster**
+2. Orbital Cat + Turbo Router → **Cataclysm Satellite**
+3. Bio Snack Pack + Apocalypse Microwave → **Plague Picnic**
+4. Rail Mop + Storm Disco → **Thunder Rail Mop**
 
-**Gravity Toaster + Shock Toaster → Singularity Toaster**.
+Every second-stage ingredient is itself fusion-only. The real inventory is therefore the prerequisite; no separate save flag, level requirement or second fusion engine exists. A recipe becomes actionable only when both prerequisite branches have actually been assembled and the result can legally fit.
 
-Both ingredients are fusion-only results. The inventory itself is therefore the prerequisite: the player must first assemble two independent first-stage fusions before this recipe can become actionable. No extra save flag or gating subsystem is required.
-
-Second-stage recipes should stay sparse and memorable. They are discovery payoffs, not a linear upgrade tree.
+Second-stage recipes stay sparse and memorable. They are long-session discoveries, not a linear upgrade tree.
 
 Fusion unlocks after Boss 1. Ingredients are consumed only if the resulting item has a legal placement in the current backpack. Locked cells still count as blocked. Successful recipes/results are recorded in persistent discovery state.
 
-Fusion also creates boss counterplay: Copycat Auditor fines exact duplicates, so transforming repeated base items into distinct fusion definitions can reduce Duplicate Debt while changing the build identity.
+Fusion also creates boss counterplay: Copycat Auditor fines exact duplicates, so transforming repeated base items into distinct fusion definitions can reduce Duplicate Debt while changing build identity.
 
 ## Run events
 One deterministic event occurs after the first combat of each world: four in campaign and four more per Corrupted Loop. Events are seeded from run seed + event index, persisted before presentation and cannot be rerolled by reload.
@@ -129,17 +113,16 @@ Four prototype heroes are implemented as light rule-benders rather than classes:
 Build resolution order: spatial synergy → hero bonus → run perks → immutable combat snapshot. A hero must never make off-tag items unusable.
 
 ## Perks
-Launch target: 20–25. Current prototype: **16 perks**.
+Launch target: 20–25. Current prototype: **21 perks**, so the lower launch target is reached.
 
-Existing families cover devices, pets, weapons, chaos, metal, antenna, slime, food and global speed. The latest wave adds:
-- Battery Rage — Battery trigger speed;
-- Catnip Optics — Cat bonus laser shot;
-- Poison Pension — Poison-tag poison output;
-- Duck Tape Doctrine — Duck-tag scrap armor;
-- Antenna Afterlife — Antenna speed + armor hybrid;
-- Magnet School — Magnet-tag scrap armor.
+Wave 4 adds:
+- **Laser Tax Refund** — Laser items fire +1 bonus laser shot;
+- **Pet Union** — Pets gain 10% trigger speed +1 scrap armor;
+- **Slime Shell** — Slime gains +1 poison +1 scrap armor;
+- **Food Chain Reaction** — Food gains +1 chaos power;
+- **Device Liability** — Devices apply +1 poison.
 
-Perks should reinforce build identity more often than generic percentages, while still allowing pivots.
+Perks reinforce build identity while remaining inside the same deterministic `ItemBonuses` vocabulary used by synergies and heroes.
 
 ## Bosses
 Launch target: 6 major boss families plus modifiers. **All six prototype families are implemented.**
@@ -178,6 +161,13 @@ After encounter 12:
 
 Entering a loop commits the player until the next cycle boundary. Loop depth scales enemy HP/damage/speed and payouts, stacks more mutations, adds four more deterministic events and rotates boss families. Quitting the app does not destroy the run; persistence resumes the committed loop.
 
+## Balance model
+The seeded build/combat QA model uses the same public item/perk/profile pools and boss wrapper as runtime. It now distinguishes fusion tiers:
+- campaign checkpoints may sample base + first-stage fusion results;
+- Corrupted Loop checkpoints may sample the complete fusion pool, including the four second-stage transformations.
+
+This keeps campaign reports free of impossible early late-run power while still exercising secret evolutions in deep-run QA.
+
 ## Persistence and discovery
 Current save schema: **v8**. Active run persists run seed, hero ID, economy/shop state, backpack placements/rotations, generated sequence, progression/loop state, claim-once encounter rewards, selected perks and deterministic event state.
 
@@ -198,4 +188,4 @@ For long sessions, preferred ad moments are boss clears, world transitions and v
 Real-time PvP, guilds/chat, open world, large story campaign, server-heavy economy, battle pass, dozens of heroes or hundreds of handmade stages.
 
 ## Success criterion for MVP
-A player can choose a hero without class lock-in, complete materially different runs from a compact content pool, understand why a build works, discover first- and second-stage fusions, experience six mechanically distinct boss families, reach the first boss quickly, keep modifying the build after 15–20 minutes and have a credible reason to risk the same successful build for a 30–60+ minute Corrupted Loop session.
+A player can choose a hero without class lock-in, complete materially different runs from a compact content pool, understand why a build works, discover multiple second-stage fusions, experience six mechanically distinct boss families, reach the first boss quickly, keep modifying the build after 15–20 minutes and have a credible reason to risk the same successful build for a 30–60+ minute Corrupted Loop session.

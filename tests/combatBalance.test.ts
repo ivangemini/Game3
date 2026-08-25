@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { SECOND_STAGE_FUSION_RESULT_IDS } from '../src/game/data/fusionRecipes';
 import { PROTOTYPE_ITEM_MAP } from '../src/game/data/items';
 import { validatePlacement } from '../src/game/domain/inventory';
 import {
   BALANCE_CHECKPOINTS,
+  balanceFusionPoolForCheckpoint,
   createCombatBalanceReport,
   generateBalanceBuild,
 } from '../src/game/simulation/combatBalance';
@@ -18,6 +20,21 @@ describe('seeded combat/build balance simulation', () => {
       for (const item of first.inventory.items) {
         expect(validatePlacement(first.inventory, PROTOTYPE_ITEM_MAP, item, item.instanceId).ok).toBe(true);
       }
+    }
+  });
+
+  it('keeps second-stage evolution results out of campaign synthetic fusion pools', () => {
+    const campaignCheckpoint = BALANCE_CHECKPOINTS.find((checkpoint) => checkpoint.id === 'campaign-boss-4');
+    const loopCheckpoint = BALANCE_CHECKPOINTS.find((checkpoint) => checkpoint.id === 'loop-2-boss-4');
+    expect(campaignCheckpoint).toBeDefined();
+    expect(loopCheckpoint).toBeDefined();
+    if (!campaignCheckpoint || !loopCheckpoint) return;
+
+    const campaignIds = new Set(balanceFusionPoolForCheckpoint(campaignCheckpoint).map((item) => item.id));
+    const loopIds = new Set(balanceFusionPoolForCheckpoint(loopCheckpoint).map((item) => item.id));
+    for (const resultId of SECOND_STAGE_FUSION_RESULT_IDS) {
+      expect(campaignIds.has(resultId), `${resultId} leaked into campaign QA`).toBe(false);
+      expect(loopIds.has(resultId), `${resultId} missing from loop QA`).toBe(true);
     }
   });
 

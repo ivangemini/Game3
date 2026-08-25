@@ -1,4 +1,5 @@
 import type { FusionRecipe } from '../domain/fusions';
+import { WAVE4_FUSION_RECIPES, WAVE4_SECOND_STAGE_RECIPE_IDS } from './fusionRecipes.wave4';
 
 export const PROTOTYPE_FUSION_RECIPES: readonly FusionRecipe[] = [
   { id: 'shock-toaster', name: 'Shock Toaster', ingredientDefinitionIds: ['angry-battery', 'cursed-toaster'], resultDefinitionId: 'shock-toaster', hint: 'BATTERY + TOASTER' },
@@ -13,7 +14,6 @@ export const PROTOTYPE_FUSION_RECIPES: readonly FusionRecipe[] = [
   { id: 'radio-duck', name: 'Radio Duck', ingredientDefinitionIds: ['pocket-radio', 'mutant-duck'], resultDefinitionId: 'radio-duck', hint: 'POCKET RADIO + MUTANT DUCK' },
   { id: 'noodle-fan', name: 'Noodle Fan', ingredientDefinitionIds: ['panic-noodles', 'toxic-fan'], resultDefinitionId: 'noodle-fan', hint: 'PANIC NOODLES + TOXIC FAN' },
   { id: 'disco-snail', name: 'Disco Snail', ingredientDefinitionIds: ['battery-snail', 'disco-orb'], resultDefinitionId: 'disco-snail', hint: 'BATTERY SNAIL + DISCO ORB' },
-
   { id: 'reactor-hamster', name: 'Reactor Hamster', ingredientDefinitionIds: ['alarm-hamster', 'angry-battery'], resultDefinitionId: 'reactor-hamster', hint: 'ALARM HAMSTER + BATTERY' },
   { id: 'acid-parasol', name: 'Acid Parasol', ingredientDefinitionIds: ['toxic-umbrella', 'slime-can'], resultDefinitionId: 'acid-parasol', hint: 'TOXIC UMBRELLA + SLIME CAN' },
   { id: 'broadcast-trident', name: 'Broadcast Trident', ingredientDefinitionIds: ['satellite-fork', 'pocket-radio'], resultDefinitionId: 'broadcast-trident', hint: 'SATELLITE FORK + POCKET RADIO' },
@@ -22,11 +22,16 @@ export const PROTOTYPE_FUSION_RECIPES: readonly FusionRecipe[] = [
   { id: 'orbital-cat', name: 'Orbital Cat', ingredientDefinitionIds: ['catellite-dish', 'feral-router'], resultDefinitionId: 'orbital-cat', hint: 'CATELLITE DISH + FERAL ROUTER' },
   { id: 'apocalypse-microwave', name: 'Apocalypse Microwave', ingredientDefinitionIds: ['emergency-microwave', 'panic-noodles'], resultDefinitionId: 'apocalypse-microwave', hint: 'EMERGENCY MICROWAVE + PANIC NOODLES' },
   { id: 'rail-mop', name: 'Rail Mop', ingredientDefinitionIds: ['laser-mop', 'scrap-magnet'], resultDefinitionId: 'rail-mop', hint: 'LASER MOP + SCRAP MAGNET' },
-
-  // Second-stage secret evolution: both ingredients are fusion-only results, so this
-  // cannot exist until the player has already discovered and assembled two recipes.
   { id: 'singularity-toaster', name: 'Singularity Toaster', ingredientDefinitionIds: ['gravity-toaster', 'shock-toaster'], resultDefinitionId: 'singularity-toaster', hint: 'TWO IMPOSSIBLE TOASTERS' },
+  ...WAVE4_FUSION_RECIPES,
 ];
+
+export const SECOND_STAGE_FUSION_RECIPE_IDS = [
+  'singularity-toaster',
+  ...WAVE4_SECOND_STAGE_RECIPE_IDS,
+] as const;
+
+export const SECOND_STAGE_FUSION_RESULT_IDS = new Set<string>(SECOND_STAGE_FUSION_RECIPE_IDS);
 
 export const PROTOTYPE_FUSION_RECIPE_MAP = new Map(
   PROTOTYPE_FUSION_RECIPES.map((recipe) => [recipe.id, recipe]),

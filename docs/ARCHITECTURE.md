@@ -1,4 +1,4 @@
-# Architecture v0.11
+# Architecture v0.12
 
 ## Stack
 - Phaser 4.2.1
@@ -14,6 +14,8 @@ Pure TypeScript simulation and rules. No Phaser imports. Inventory geometry, see
 
 ### `src/game/data/`
 Declarative content: items, combat profiles, encounters, bosses, perks, heroes, events, fusion recipes and balance tables. Stable IDs only.
+
+Large content additions may live in wave modules such as `items.wave4.ts`, `combatProfiles.wave4.ts`, `fusionRecipes.wave4.ts` and `perks.wave4.ts`. Stable aggregators (`items.ts`, `combatProfiles.ts`, `fusionRecipes.ts`, `perks.ts`) remain the public runtime surface so scenes/domain code do not depend on content-wave file layout.
 
 ### `src/game/simulation/`
 Offline/QA simulation that composes domain rules with declarative game data. It remains deterministic and outside Phaser. Pacing reports protect session structure; combat/build reports generate legal seeded backpacks across weak/typical/strong power bands and execute the same combat + boss-rule wrapper used by runtime encounters.
@@ -57,6 +59,11 @@ Combat items retain stable definition IDs, gameplay tags and occupied cells. Bos
 
 The Scavenger's starting-coin bonus is an economy effect applied once when the hero is chosen; combat-oriented heroes never mutate the backpack or combat state directly.
 
+## Fusion tiers
+Fusion remains data-driven: recipes only declare ingredient definition IDs and one result definition ID. Second-stage evolutions use exactly the same domain path as normal recipes; their only distinction is that every ingredient is itself fusion-only.
+
+`SECOND_STAGE_FUSION_RECIPE_IDS` / `SECOND_STAGE_FUSION_RESULT_IDS` are declarative QA/content metadata, not save state. Runtime availability still comes from `findFusionCandidate` against the player's real inventory. This keeps secret transformations discoverable without adding a second fusion engine or progression flag.
+
 ## Combat
 `src/game/domain/combat.ts` owns the generic combat clock and ordered effect queue. The queue resolves by `dueAtMs`, then stable `sequence`, so equal-time effects have a documented deterministic order.
 
@@ -83,7 +90,11 @@ Combat simulation receives explicit elapsed time. Human decision pacing is model
 
 The seeded pacing model composes the real 12-encounter campaign/loop structure with target human decision-time ranges and produces first-boss, campaign, Loop 2 and Loop 3 percentile checkpoints. It is a regression guard, not a substitute for real play telemetry.
 
-The seeded combat/build model generates legal backpacks against the current pocket constraints, samples perk/fusion exposure by power band, feeds those builds through the real synergy/perk/combat pipeline and reports outcomes plus item correlations. It advances through the same boss-rule wrapper used by runtime and now includes seven checkpoints: all four campaign bosses, Loop 2 Copycat Auditor, Loop 2 Border Shark and the Loop 2 final Baby Moon. Synthetic build reports diagnose balance; soft-launch telemetry remains the authority for player behavior.
+The seeded combat/build model generates legal backpacks against current pocket constraints, samples perk/fusion exposure by power band, feeds those builds through the real synergy/perk/combat pipeline and reports outcomes plus item correlations. It advances through the same boss-rule wrapper used by runtime and includes seven checkpoints: all four campaign bosses, Loop 2 Copycat Auditor, Loop 2 Border Shark and the Loop 2 final Baby Moon.
+
+Synthetic fusion availability is progression-aware. Campaign checkpoints exclude all IDs in `SECOND_STAGE_FUSION_RESULT_IDS`; Corrupted Loop checkpoints may sample the full fusion pool. This prevents impossible early-game secret evolutions from distorting campaign reports while still exercising their combat profiles in late-run QA.
+
+Synthetic build reports diagnose balance; soft-launch telemetry remains the authority for player behavior.
 
 ## Saves
 Current schema: **v8**.

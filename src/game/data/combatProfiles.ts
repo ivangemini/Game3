@@ -1,4 +1,5 @@
 import type { CombatItemProfile, EnemyCombatDefinition } from '../domain/combat';
+import { WAVE4_COMBAT_PROFILES } from './combatProfiles.wave4';
 
 export const PROTOTYPE_COMBAT_PROFILES: readonly CombatItemProfile[] = [
   { definitionId: 'laser-cat', triggerIntervalMs: 1800, damage: 4, extraLaserDamage: 4 },
@@ -25,7 +26,6 @@ export const PROTOTYPE_COMBAT_PROFILES: readonly CombatItemProfile[] = [
   { definitionId: 'catellite-dish', triggerIntervalMs: 2000, damage: 5, extraLaserDamage: 3 },
   { definitionId: 'emergency-microwave', triggerIntervalMs: 2300, damage: 6 },
   { definitionId: 'laser-mop', triggerIntervalMs: 1650, damage: 9, extraLaserDamage: 4 },
-
   { definitionId: 'shock-toaster', triggerIntervalMs: 1750, damage: 11, extraLaserDamage: 3 },
   { definitionId: 'cyber-cat', triggerIntervalMs: 1450, damage: 6, extraLaserDamage: 7 },
   { definitionId: 'biohazard-turbine', triggerIntervalMs: 1950, damage: 6, poisonOnHit: 4 },
@@ -47,6 +47,7 @@ export const PROTOTYPE_COMBAT_PROFILES: readonly CombatItemProfile[] = [
   { definitionId: 'apocalypse-microwave', triggerIntervalMs: 1650, damage: 10, poisonOnHit: 3 },
   { definitionId: 'rail-mop', triggerIntervalMs: 1400, damage: 13, extraLaserDamage: 4, shieldOnTrigger: 2 },
   { definitionId: 'singularity-toaster', triggerIntervalMs: 1300, damage: 15, extraLaserDamage: 5, shieldOnTrigger: 6 },
+  ...WAVE4_COMBAT_PROFILES,
 ];
 
 export const PROTOTYPE_COMBAT_PROFILE_MAP = new Map(

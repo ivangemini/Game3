@@ -6,7 +6,7 @@
 This complements `PACING_MODEL.md`: pacing QA protects the intended session structure, while combat/build QA exposes difficulty cliffs, ineffective power growth, boss-counter failures and suspicious item correlations.
 
 ## Checkpoints
-The report now covers seven high-value gates:
+The report covers seven high-value gates:
 
 - Campaign Boss 1 — TV Tyrant;
 - Campaign Boss 2 — Deadline Snail;
@@ -30,7 +30,12 @@ These are QA sampling bands, not player classes and not a hidden difficulty syst
 ## Build generation
 Builds are deterministic from the report seed. Items are placed only through `validatePlacement`, so blocked pocket cells, item shapes, rotations and collisions are respected.
 
-The generator samples current base items and, after fusion is available, some fusion-result items. This deliberately explores legal build space efficiently; it does **not** pretend every sampled fusion inventory was reached through an exact shop/recipe/economy history. A future economy-path simulator may add that constraint if soft-launch data shows it is necessary.
+The generator samples current base items and, after fusion is available, fusion-result items. Fusion sampling is now progression-aware:
+
+- **campaign checkpoints** exclude every ID in `SECOND_STAGE_FUSION_RESULT_IDS`, so impossible late-run evolutions cannot appear at Boss 2/3/4;
+- **Corrupted Loop checkpoints** may sample the complete fusion pool, including Singularity Toaster, Cataclysm Satellite, Plague Picnic and Thunder Rail Mop.
+
+This deliberately explores legal build space efficiently; it does **not** pretend every sampled fusion inventory was reached through an exact shop/recipe/economy history. A future economy-path simulator may add that constraint if soft-launch data shows it is necessary.
 
 Selected perks use the real perk definitions, and the resulting inventory/perks are converted through the real synergy + perk + combat-build pipeline before combat starts.
 
@@ -55,8 +60,8 @@ For every checkpoint × power band the report records:
 The item delta is a **diagnostic correlation**, not proof that an item causes the win. It is useful for finding candidates for deeper inspection, especially when one item repeatedly dominates across several checkpoints.
 
 ## Regression policy
-Tests gate determinism, legal placement, complete report shape, stable power-band construction and deterministic boss-rule behavior. Dedicated boss tests also compare large single advances with many 100ms advances so wrapper timing cannot silently become render-FPS dependent.
+Tests gate determinism, legal placement, complete report shape, stable power-band construction, deterministic boss-rule behavior and second-stage progression boundaries. Dedicated boss tests also compare large single advances with many 100ms advances so wrapper timing cannot silently become render-FPS dependent.
 
-The suite intentionally does not hard-code desired boss win-rate thresholds yet: the content pool is still prototype-sized and arbitrary thresholds would fossilize unvalidated balance.
+The suite intentionally does not hard-code desired boss win-rate thresholds yet: the content pool is still pre-soft-launch and arbitrary thresholds would fossilize unvalidated balance.
 
 Before soft launch, measured playtests should establish target bands for boss win rate, combat duration and build power. Those measured ranges can then be promoted into automated regression thresholds.

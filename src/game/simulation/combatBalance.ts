@@ -1,4 +1,5 @@
 import { PROTOTYPE_COMBAT_PROFILE_MAP } from '../data/combatProfiles';
+import { SECOND_STAGE_FUSION_RESULT_IDS } from '../data/fusionRecipes';
 import { PROTOTYPE_BASE_ITEMS, PROTOTYPE_FUSION_ITEMS, PROTOTYPE_ITEM_MAP } from '../data/items';
 import { PROTOTYPE_PERKS, PROTOTYPE_PERK_MAP } from '../data/perks';
 import { createLoopEncounter, getRunEncounter, type RunEncounterDefinition } from '../data/runEncounters';
@@ -107,6 +108,12 @@ const POWER_TUNING: Readonly<Record<BalancePowerBand, {
   strong: { itemDelta: 1, perkDelta: 1, fusionDelta: 0.16 },
 };
 
+export function balanceFusionPoolForCheckpoint(checkpoint: BalanceCheckpoint) {
+  return checkpoint.cycle === 'loop'
+    ? PROTOTYPE_FUSION_ITEMS
+    : PROTOTYPE_FUSION_ITEMS.filter((item) => !SECOND_STAGE_FUSION_RESULT_IDS.has(item.id));
+}
+
 export function generateBalanceBuild(
   checkpoint: BalanceCheckpoint,
   powerBand: BalancePowerBand,
@@ -117,6 +124,7 @@ export function generateBalanceBuild(
   const requestedItemCount = Math.max(2, checkpoint.typicalItemCount + tuning.itemDelta);
   const perkCount = Math.max(0, Math.min(PROTOTYPE_PERKS.length, checkpoint.typicalPerkCount + tuning.perkDelta));
   const fusionChance = clamp01(checkpoint.fusionChance + tuning.fusionDelta);
+  const eligibleFusionItems = balanceFusionPoolForCheckpoint(checkpoint);
   let inventory: InventoryState = {
     width: BACKPACK_WIDTH,
     height: BACKPACK_HEIGHT,
@@ -131,7 +139,7 @@ export function generateBalanceBuild(
   while (inventory.items.length < requestedItemCount && attempts < maxAttempts) {
     attempts += 1;
     const useFusion = checkpoint.fusionChance > 0 && rng.next() < fusionChance;
-    const pool = useFusion ? PROTOTYPE_FUSION_ITEMS : PROTOTYPE_BASE_ITEMS;
+    const pool = useFusion ? eligibleFusionItems : PROTOTYPE_BASE_ITEMS;
     const definition = rng.pick(pool);
     const instanceId = `sim-${sequence}-${definition.id}`;
     sequence += 1;

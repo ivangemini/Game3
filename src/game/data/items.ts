@@ -1,4 +1,5 @@
 import type { ItemDefinition } from '../domain/types';
+import { WAVE4_BASE_ITEMS, WAVE4_SECOND_STAGE_ITEMS } from './items.wave4';
 
 export const PROTOTYPE_BASE_ITEMS: readonly ItemDefinition[] = [
   { id: 'laser-cat', name: 'Laser Cat', shape: [{ x: 0, y: 0 }, { x: 1, y: 0 }], tags: ['pet', 'cat', 'laser'], rarity: 'rare', description: 'A cat with deeply irresponsible eye-laser privileges.' },
@@ -17,7 +18,6 @@ export const PROTOTYPE_BASE_ITEMS: readonly ItemDefinition[] = [
   { id: 'disco-orb', name: 'Disco Orb', shape: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 }], tags: ['device', 'laser', 'chaos'], rarity: 'rare', description: 'Turns every emergency into a poorly supervised dance floor.' },
   { id: 'panic-noodles', name: 'Panic Noodles', shape: [{ x: 0, y: 0 }], tags: ['food', 'poison'], rarity: 'common', description: 'Instant noodles with a very delayed list of side effects.' },
   { id: 'feral-router', name: 'Feral Router', shape: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }], tags: ['device', 'metal', 'antenna', 'chaos'], rarity: 'rare', description: 'The Wi-Fi password changes whenever it senses fear.' },
-
   { id: 'alarm-hamster', name: 'Alarm Hamster', shape: [{ x: 0, y: 0 }, { x: 1, y: 0 }], tags: ['pet', 'battery', 'chaos'], rarity: 'uncommon', description: 'Runs on panic, static and several tiny unpaid overtime shifts.' },
   { id: 'toxic-umbrella', name: 'Toxic Umbrella', shape: [{ x: 0, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 }], tags: ['weapon', 'poison', 'metal'], rarity: 'rare', description: 'Keeps acid rain off you by sending the acid somewhere else.' },
   { id: 'satellite-fork', name: 'Satellite Fork', shape: [{ x: 0, y: 0 }, { x: 0, y: 1 }, { x: 0, y: 2 }], tags: ['weapon', 'metal', 'antenna'], rarity: 'uncommon', description: 'A dinner utensil certified for low-orbit signal acquisition.' },
@@ -26,6 +26,7 @@ export const PROTOTYPE_BASE_ITEMS: readonly ItemDefinition[] = [
   { id: 'catellite-dish', name: 'Catellite Dish', shape: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 }], tags: ['pet', 'cat', 'antenna', 'metal'], rarity: 'rare', description: 'Tracks satellites, birds and forbidden red laser dots.' },
   { id: 'emergency-microwave', name: 'Emergency Microwave', shape: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 }], tags: ['device', 'food', 'metal'], rarity: 'uncommon', description: 'For emergencies where the emergency is insufficiently heated.' },
   { id: 'laser-mop', name: 'Laser Mop', shape: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }, { x: 2, y: 1 }], tags: ['weapon', 'laser', 'metal'], rarity: 'rare', description: 'Cleans floors by removing both dirt and most of the floor.' },
+  ...WAVE4_BASE_ITEMS,
 ];
 
 export const PROTOTYPE_FUSION_ITEMS: readonly ItemDefinition[] = [
@@ -41,7 +42,6 @@ export const PROTOTYPE_FUSION_ITEMS: readonly ItemDefinition[] = [
   { id: 'radio-duck', name: 'Radio Duck', shape: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }], tags: ['pet', 'duck', 'antenna', 'device', 'chaos'], rarity: 'epic', description: 'Broadcasts quacking on frequencies no regulator acknowledges.' },
   { id: 'noodle-fan', name: 'Noodle Fan', shape: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }, { x: 3, y: 0 }], tags: ['food', 'poison', 'device', 'metal'], rarity: 'epic', description: 'Distributes hot noodles evenly across the battlefield.' },
   { id: 'disco-snail', name: 'Disco Snail', shape: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 }], tags: ['pet', 'battery', 'laser', 'chaos', 'device'], rarity: 'epic', description: 'Still slow. The lasers are not.' },
-
   { id: 'reactor-hamster', name: 'Reactor Hamster', shape: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }], tags: ['pet', 'battery', 'device', 'chaos'], rarity: 'epic', description: 'A tiny renewable-energy disaster with cheeks full of capacitors.' },
   { id: 'acid-parasol', name: 'Acid Parasol', shape: [{ x: 0, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 }, { x: 2, y: 1 }], tags: ['weapon', 'poison', 'slime', 'metal'], rarity: 'epic', description: 'Elegant weather protection for weather you created yourself.' },
   { id: 'broadcast-trident', name: 'Broadcast Trident', shape: [{ x: 0, y: 0 }, { x: 0, y: 1 }, { x: 0, y: 2 }, { x: 1, y: 1 }], tags: ['weapon', 'metal', 'antenna', 'device'], rarity: 'epic', description: 'Stabs three frequencies at once and receives complaints on all of them.' },
@@ -51,6 +51,7 @@ export const PROTOTYPE_FUSION_ITEMS: readonly ItemDefinition[] = [
   { id: 'apocalypse-microwave', name: 'Apocalypse Microwave', shape: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 }, { x: 2, y: 1 }], tags: ['device', 'food', 'metal', 'poison'], rarity: 'epic', description: 'The timer says 00:30. Civilization has less.' },
   { id: 'rail-mop', name: 'Rail Mop', shape: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }, { x: 3, y: 0 }, { x: 3, y: 1 }], tags: ['weapon', 'laser', 'metal', 'magnet'], rarity: 'epic', description: 'Magnetically accelerates cleanliness beyond recommended limits.' },
   { id: 'singularity-toaster', name: 'Singularity Toaster', shape: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 }, { x: 2, y: 1 }], tags: ['device', 'metal', 'magnet', 'laser', 'chaos'], rarity: 'epic', description: 'A second-stage breakfast event from which crumbs cannot escape.' },
+  ...WAVE4_SECOND_STAGE_ITEMS,
 ];
 
 export const PROTOTYPE_ITEMS: readonly ItemDefinition[] = [

@@ -13,7 +13,7 @@
 - [x] Mouse + touch drag/drop foundation
 - [x] Valid/invalid cell preview and snap-back
 - [x] Selected-item rotation with placement validation
-- [x] 24 prototype absurd-junk base items
+- [x] 36 prototype absurd-junk base items
 - [x] 10 real side-contact gameplay synergies with deterministic derived bonuses
 - [x] Live synergy links, active-link badges and activation feedback
 - [x] Basic seeded shop/reward choice with run currency and deterministic rerolls
@@ -53,7 +53,7 @@
 - [x] Seeded shops/rewards foundation
 - [x] Deterministic 3-choice perk generation excluding already-owned perks
 - [x] Boss-victory perk overlay with persisted pending choice
-- [x] Sixteen prototype perks that modify tagged combat items
+- [x] Twenty-one prototype perks that modify tagged combat items
 - [x] Selected perks persist and affect subsequent combat snapshots
 - [x] Four-world campaign: 3 encounters per world / 12 total
 - [x] Unique encounter IDs, per-encounter rewards and score progression
@@ -68,20 +68,19 @@
 - [x] Six deterministic surreal run events with two choices each
 - [x] Events trigger after the first fight of each world, persist across reload and block progression until resolved
 - [x] Event choices consume/award the real run currency and can grant real backpack items
-- [x] Twenty-one prototype fusion recipes with deterministic ingredient/result handling
+- [x] Twenty-four prototype fusion recipes with deterministic ingredient/result handling
 - [x] Fusion unlocks after Boss 1 and respects currently locked backpack cells
 - [ ] Runtime pacing validation: first boss 3–5 min, base campaign 20–25 min, strong session 30–50 min, deep session 60+ min. Seeded target-model regression coverage is implemented; real play telemetry remains required.
 
 ## P4 — Content-efficient depth [IN PROGRESS]
-- [ ] 35–45 launch base items (**24 prototype base items implemented**)
-- [x] 20–30 launch fusion recipes (**21 prototype recipes implemented**)
+- [x] 35–45 launch base items (**36 prototype base items implemented**)
+- [x] 20–30 launch fusion recipes (**24 prototype recipes implemented**)
 - [x] Expanded tag/synergy-family foundation: 10 spatial contact rules across core + food/antenna/slime cross-links
 - [x] 4 prototype heroes with persisted per-run choice and real economy/combat effects
 - [x] 6 boss families + modifiers (TV Tyrant + Deadline Snail + Closet Monster + Baby Moon + Copycat Auditor + Border Shark)
-- [ ] 20–25 perks (**16 prototype perks implemented**)
+- [x] 20–25 perks (**21 prototype perks implemented**)
 - [ ] ~15 mutations/events pool (12 combined prototype rules/events currently)
-- [x] First late-run second-stage evolution: Gravity Toaster + Shock Toaster → Singularity Toaster
-- [ ] Expand secret transformation pool beyond the first prototype
+- [x] Late-run second-stage evolution pool: **4 fusion-only transformations** with no extra save gating
 
 ## P5 — Retention/meta
 - [ ] Itemdex + Recipe Book UI
@@ -111,6 +110,7 @@
 - [x] Automated deterministic tests for core run/fusion/event/hero/boss domains
 - [x] Seeded pacing target simulation with percentile bands and target hit rates
 - [x] Seeded combat/build simulation reports across weak/typical/strong power bands and boss checkpoints, including boss-rule wrappers
+- [x] Campaign balance sampling excludes second-stage fusion results; loop checkpoints may sample them
 - [ ] mobile/browser matrix
 - [ ] save migrations/recovery UX
 - [ ] performance profiling and asset budgets
