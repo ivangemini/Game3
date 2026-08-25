@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { telemetry, registerSession } from './analytics/Telemetry';
 import { GameAudio } from './game/audio/GameAudio';
 import { gameConfig } from './game/config';
 import { SAVE_NOTICE_EVENT, type SaveNoticeDetail } from './persistence/save';
@@ -106,6 +107,14 @@ async function bootstrap(): Promise<void> {
   }
 
   const activePlatform = platform;
+  const viewport = classifyViewport(window.innerWidth, window.innerHeight);
+  const session = registerSession(window.localStorage);
+  telemetry.track('session_start', {
+    returning: session.returning,
+    platform: activePlatform.id,
+    viewportMode: viewport.mode,
+  });
+
   const runtimeConfig: Phaser.Types.Core.GameConfig = {
     ...gameConfig,
     callbacks: {
