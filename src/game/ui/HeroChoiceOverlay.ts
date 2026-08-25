@@ -35,8 +35,8 @@ export class HeroChoiceOverlay {
       stroke: '#11121a',
       strokeThickness: 6,
     }).setOrigin(0.5).setDepth(222);
-    const subtitle = this.scene.add.text(800, 258, 'A light rule-bender for this run — not a class lock.', {
-      fontSize: '16px', color: '#bdb7c7',
+    const subtitle = this.scene.add.text(800, 258, 'ONE TAP → STRAIGHT INTO THE RUN  •  HELP OPENS THE FIELD MANUAL ANYTIME', {
+      fontSize: '14px', color: '#bdb7c7', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(222);
     this.objects.push(backdrop, panel, title, subtitle);
 
@@ -58,7 +58,7 @@ export class HeroChoiceOverlay {
         fontSize: '12px', color: '#d5cedd', align: 'center', lineSpacing: 3,
         wordWrap: { width: 216 },
       }).setOrigin(0.5).setDepth(224);
-      const pick = this.scene.add.text(x, 622, 'START WITH HERO', {
+      const pick = this.scene.add.text(x, 622, 'PICK & PLAY', {
         fontSize: '13px', color: '#dfffc5', fontStyle: 'bold',
       }).setOrigin(0.5).setDepth(224);
 
