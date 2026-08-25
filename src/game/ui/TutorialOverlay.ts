@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { telemetry } from '../../analytics/Telemetry';
 import { ONBOARDING_STEPS } from '../domain/onboarding';
 
 const DEPTH = 1300;
@@ -27,13 +28,14 @@ export class TutorialOverlay {
     this.content = scene.add.container(0, 0);
     this.root.add([blocker, shadow, panel, inner, this.content]);
 
-    const escape = (): void => this.hide();
+    const escape = (): void => this.skip();
     scene.input.keyboard?.on('keydown-ESC', escape);
     scene.events.once('shutdown', () => scene.input.keyboard?.off('keydown-ESC', escape));
   }
 
   show(startStep = 0): void {
     this.stepIndex = Math.max(0, Math.min(ONBOARDING_STEPS.length - 1, Math.floor(startStep)));
+    telemetry.track('tutorial_opened', { step: this.stepIndex + 1 });
     this.root.setVisible(true);
     this.refresh();
     if (this.reducedMotion) return void this.root.setAlpha(1);
@@ -59,6 +61,17 @@ export class TutorialOverlay {
   }
 
   isVisible(): boolean { return this.root.visible; }
+
+  private complete(): void {
+    telemetry.track('tutorial_completed', { stepCount: ONBOARDING_STEPS.length });
+    this.hide();
+  }
+
+  private skip(): void {
+    if (!this.root.visible) return;
+    telemetry.track('tutorial_skipped', { step: this.stepIndex + 1 });
+    this.hide();
+  }
 
   private refresh(): void {
     this.content.removeAll(true);
@@ -95,9 +108,9 @@ export class TutorialOverlay {
     this.drawStepRail(accent);
     if (this.stepIndex > 0) this.addButton(480, 680, 190, '‹ BACK', () => this.changeStep(-1), false, accent);
     this.addButton(800, 680, finalStep ? 330 : 240, finalStep ? 'GOT IT • BUILD JUNK' : 'NEXT ›', () => {
-      if (finalStep) this.hide(); else this.changeStep(1);
+      if (finalStep) this.complete(); else this.changeStep(1);
     }, true, accent);
-    if (!finalStep) this.addButton(1120, 680, 190, 'SKIP', () => this.hide(), false, accent);
+    if (!finalStep) this.addButton(1120, 680, 190, 'SKIP', () => this.skip(), false, accent);
   }
 
   private changeStep(delta: number): void {
@@ -178,34 +191,29 @@ export class TutorialOverlay {
 
   private drawStepRail(accent: number): void {
     const y = 600;
+    const startX = 690;
     ONBOARDING_STEPS.forEach((step, index) => {
       const active = index === this.stepIndex;
       const complete = index < this.stepIndex;
-      const x = 608 + index * 96;
-      const node = this.scene.add.circle(x, y, active ? 9 : 6, active ? accent : complete ? 0xb5ff4d : 0x555b69, 1);
-      this.content.add(node);
-      if (active) {
-        const ring = this.scene.add.circle(x, y, 14, accent, 0).setStrokeStyle(2, accent, 0.45);
-        this.content.add(ring);
-        if (!this.reducedMotion) this.scene.tweens.add({ targets: ring, scaleX: 1.25, scaleY: 1.25, alpha: 0, duration: 650, repeat: -1 });
-      }
-      if (index < ONBOARDING_STEPS.length - 1) this.content.add(this.scene.add.rectangle(x + 48, y, 72, 2, complete ? 0x7ba83f : 0x414653, 1));
-      if (active) this.content.add(this.scene.add.text(x, y + 18, step.id.toUpperCase(), { fontSize: '8px', color: '#d9d2df', fontStyle: 'bold' }).setOrigin(0.5, 0));
+      const color = active ? accent : complete ? 0xb5ff4d : 0x5b5964;
+      this.content.add(this.scene.add.circle(startX + index * 56, y, active ? 8 : 6, color, active ? 1 : 0.72));
     });
   }
 
-  private addButton(x: number, y: number, width: number, label: string, callback: () => void, primary: boolean, accent: number): void {
-    const idle = primary ? 0x303a28 : 0x292c37;
-    const hover = primary ? 0x3f4e31 : 0x3a3e4a;
-    const rect = this.scene.add.rectangle(x, y, width, 48, idle, 1).setStrokeStyle(2, primary ? accent : 0x666c7c).setInteractive({ useHandCursor: true });
-    const text = this.scene.add.text(x, y, label, { fontSize: '13px', color: primary ? '#f8fff1' : '#e0dde6', fontStyle: 'bold' }).setOrigin(0.5);
-    rect.on('pointerover', () => rect.setFillStyle(hover));
-    rect.on('pointerout', () => rect.setFillStyle(idle));
-    rect.on('pointerdown', () => { rect.setScale(0.97); text.setScale(0.97); });
-    const restore = (): void => { rect.setScale(1); text.setScale(1); };
-    rect.on('pointerup', () => { restore(); callback(); });
-    rect.on('pointerupoutside', restore);
-    this.content.add([rect, text]);
+  private addButton(x: number, y: number, width: number, labelText: string, action: () => void, primary: boolean, accent: number): void {
+    const fill = primary ? accent : 0x242733;
+    const button = this.scene.add.rectangle(x, y, width, 42, fill, primary ? 0.22 : 1)
+      .setStrokeStyle(primary ? 3 : 2, primary ? accent : 0x696474)
+      .setInteractive({ useHandCursor: true });
+    const label = this.scene.add.text(x, y, labelText, {
+      fontSize: '13px', color: primary ? '#f7f2e8' : '#c8c3ce', fontStyle: 'bold', stroke: '#0b0c10', strokeThickness: primary ? 3 : 0,
+    }).setOrigin(0.5);
+    button.on('pointerover', () => button.setAlpha(0.82));
+    button.on('pointerout', () => button.setAlpha(1));
+    button.on('pointerdown', () => { button.setScale(0.97); label.setScale(0.97); });
+    button.on('pointerupoutside', () => { button.setScale(1); label.setScale(1); });
+    button.on('pointerup', () => { button.setScale(1); label.setScale(1); action(); });
+    this.content.add([button, label]);
   }
 
   private hex(color: number): string { return `#${color.toString(16).padStart(6, '0')}`; }
