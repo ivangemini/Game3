@@ -115,14 +115,16 @@ describe('summarizeTelemetry', () => {
     expect(summary.p90TimeToFirstCombatMs).toBe(20000);
   });
 
-  it('derives first-boss reach and base-campaign completion pacing from existing encounter events', () => {
+  it('derives first-boss reach and six-world campaign completion pacing from existing encounter events', () => {
     const events: TelemetryEnvelope[] = [
       sessionEvent('a', 0, 'session_start', { returning: false, platform: 'local', viewportMode: 'standard-landscape' }),
       sessionEvent('a', 180_000, 'combat_started', { encounterId: 'w1-tv-tyrant', stage: 'World 1 · Boss' }),
       sessionEvent('a', 1_260_000, 'combat_finished', { encounterId: 'w4-baby-moon', outcome: 'victory', durationMs: 55_000 }),
+      sessionEvent('a', 1_980_000, 'combat_finished', { encounterId: 'w6-border-shark', outcome: 'victory', durationMs: 70_000 }),
       sessionEvent('b', 10_000, 'session_start', { returning: false, platform: 'local', viewportMode: 'standard-landscape' }),
       sessionEvent('b', 250_000, 'combat_started', { encounterId: 'w1-tv-tyrant', stage: 'World 1 · Boss' }),
       sessionEvent('b', 1_510_000, 'combat_finished', { encounterId: 'w4-baby-moon', outcome: 'victory', durationMs: 62_000 }),
+      sessionEvent('b', 2_350_000, 'combat_finished', { encounterId: 'w6-border-shark', outcome: 'victory', durationMs: 76_000 }),
       sessionEvent('c', 20_000, 'session_start', { returning: false, platform: 'local', viewportMode: 'standard-landscape' }),
       sessionEvent('c', 350_000, 'combat_started', { encounterId: 'w1-tv-tyrant', stage: 'World 1 · Boss' }),
       sessionEvent('d', 30_000, 'session_start', { returning: false, platform: 'local', viewportMode: 'standard-landscape' }),
@@ -136,9 +138,9 @@ describe('summarizeTelemetry', () => {
     expect(summary.p90TimeToFirstBossMs).toBe(330_000);
     expect(summary.sessionsCompletingBaseCampaign).toBe(2);
     expect(summary.baseCampaignCompletionRate).toBe(0.5);
-    expect(summary.averageBaseCampaignDurationMs).toBeCloseTo((1_260_000 + 1_500_000) / 2);
-    expect(summary.medianBaseCampaignDurationMs).toBe(1_260_000);
-    expect(summary.p90BaseCampaignDurationMs).toBe(1_500_000);
+    expect(summary.averageBaseCampaignDurationMs).toBeCloseTo((1_980_000 + 2_340_000) / 2);
+    expect(summary.medianBaseCampaignDurationMs).toBe(1_980_000);
+    expect(summary.p90BaseCampaignDurationMs).toBe(2_340_000);
   });
 
   it('uses nearest-rank percentiles for skewed combat durations', () => {
