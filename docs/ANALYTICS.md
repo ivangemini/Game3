@@ -4,7 +4,7 @@
 
 Telemetry exists to answer retention, pacing, balance and monetization questions. It must not collect names, emails, advertising identifiers, fingerprints, IP-derived identifiers or persistent cross-site IDs.
 
-The client uses an ephemeral session ID and a local boolean `returning` marker. Builds send nothing externally unless `VITE_ANALYTICS_ENDPOINT` is configured.
+The client uses an ephemeral session ID and a local boolean `returning` marker. Builds send nothing externally unless `VITE_ANALYTICS_ENDPOINT` is configured. `npm run release:soft-launch` requires that endpoint to be an absolute HTTPS URL.
 
 ## Delivery contract
 
@@ -36,7 +36,7 @@ The receiver should return any 2xx response after accepting the batch. It should
 
 - `session_start` — new/returning boolean, platform adapter and viewport mode.
 - `run_started` — standard or Daily run.
-- `tutorial_opened`, `tutorial_completed`, `tutorial_skipped` — onboarding funnel.
+- `tutorial_opened`, `tutorial_completed`, `tutorial_skipped` — opt-in Field Manual funnel.
 - `hero_selected` — run hero choice.
 - `shop_purchase` — successful item purchase and price.
 - `shop_reroll` — successful paid or rewarded reroll.
@@ -52,15 +52,16 @@ Only successful game-state mutations are tracked for purchase, reroll, event and
 ## Primary soft-launch questions
 
 1. What share of sessions reach hero choice, first combat and first boss?
-2. Where does onboarding abandonment occur?
-3. How long do real combats and full runs take versus the pacing model?
-4. Which encounters produce anomalous defeat rates or duration spikes?
-5. How often do players use events and fusion before entering Loop 2?
-6. What share of completed campaigns choose another loop versus cash-out?
-7. Is rewarded reroll completion healthy without becoming required for progression?
-8. Do returning sessions improve after balance/content changes?
+2. How quickly does a new session reach hero choice and first combat after the one-click onboarding change?
+3. How often is the optional Field Manual opened and completed?
+4. How long do real combats and full runs take versus the pacing model?
+5. Which encounters produce anomalous defeat rates or duration spikes?
+6. How often do players use events and fusion before entering Loop 2?
+7. What share of completed campaigns choose another loop versus cash-out?
+8. Is rewarded reroll completion healthy without becoming required for progression?
+9. Do returning sessions improve after balance/content changes?
 
-`src/analytics/TelemetrySummary.ts` provides a deterministic first-pass aggregator for session return rate, onboarding completion, hero distribution, shop/reroll activity, rewarded-ad completion, event/fusion usage, loop depth, cash-out score and encounter win-rate/duration.
+`src/analytics/TelemetrySummary.ts` provides a deterministic first-pass aggregator. In addition to rates/counts it reports average, median and p90 time-to-hero, time-to-first-combat and per-encounter combat duration. Median is the default central pacing signal; p90 is the long-tail regression signal; averages remain useful for continuity with earlier reports but should not be tuned in isolation.
 
 ## Guardrails
 
