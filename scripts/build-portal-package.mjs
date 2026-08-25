@@ -20,8 +20,9 @@ const manifestFiles = [];
 for (const relative of files) {
   const absolute = path.join(distRoot, relative);
   const bytes = new Uint8Array(await fs.readFile(absolute));
-  payload[toPosix(relative)] = bytes;
-  manifestFiles.push({ path: toPosix(relative), bytes: bytes.byteLength });
+  const normalizedPath = toPosix(relative);
+  payload[normalizedPath] = bytes;
+  manifestFiles.push({ path: normalizedPath, bytes: bytes.byteLength, sha256: hash(bytes) });
 }
 
 const archive = zipSync(payload, { level: 9 });
@@ -34,13 +35,13 @@ for (const file of storeFiles) {
   const source = path.join(storeSourceRoot, file);
   const destination = path.join(storeReleaseRoot, file);
   await fs.copyFile(source, destination);
-  const stat = await fs.stat(destination);
-  storeManifest.push({ path: `store/${file}`, bytes: stat.size });
+  const bytes = new Uint8Array(await fs.readFile(destination));
+  storeManifest.push({ path: `store/${file}`, bytes: bytes.byteLength, sha256: hash(bytes) });
 }
 
-const sha256 = createHash('sha256').update(archive).digest('hex');
+const sha256 = hash(archive);
 const manifest = {
-  version: 1,
+  version: 2,
   sourceSha: process.env.GITHUB_SHA ?? null,
   archive: archiveName,
   bytes: archive.byteLength,
@@ -66,6 +67,10 @@ async function collectFiles(directory, prefix = '') {
     else if (entry.isFile()) result.push(relative);
   }
   return result;
+}
+
+function hash(bytes) {
+  return createHash('sha256').update(bytes).digest('hex');
 }
 
 function toPosix(value) {
