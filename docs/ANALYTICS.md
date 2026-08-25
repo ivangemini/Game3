@@ -49,6 +49,26 @@ The receiver should return any 2xx response after accepting the batch. It should
 
 Only successful game-state mutations are tracked for purchase, reroll, event and fusion events; blocked clicks are intentionally excluded.
 
+## Generate a soft-launch report
+
+Export accepted telemetry as either JSON or NDJSON. The report tool accepts individual envelopes, `{ "events": [...] }` batches, arrays of batches or line-delimited mixtures of those shapes.
+
+```bash
+npm run analytics:report -- telemetry.ndjson
+```
+
+By default it writes a compact Markdown report to stdout. To persist both machine-readable and review-friendly outputs:
+
+```bash
+npm run analytics:report -- telemetry.ndjson \
+  --json reports/soft-launch.json \
+  --markdown reports/soft-launch.md
+```
+
+The command uses the repository's actual `src/analytics/TelemetrySummary.ts` implementation rather than maintaining a second set of formulas. CI runs the command against `scripts/fixtures/telemetry-smoke.json`, so changes to the summary contract must remain executable through the reporting workflow.
+
+For the first balance pass, treat median as the central pacing signal and p90 as the long-tail regression signal. Do not tune from a single encounter with only a handful of attempts; compare reach, attempt count, win rate and duration together. A high p90 with a healthy median usually indicates a long-tail problem rather than a globally slow encounter.
+
 ## Primary soft-launch questions
 
 1. What share of sessions reach hero choice, first combat and first boss?
