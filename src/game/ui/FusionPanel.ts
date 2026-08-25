@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { telemetry } from '../../analytics/Telemetry';
 import { findAvailableFusions, type FusionCandidate, type FusionRecipe } from '../domain/fusions';
 import type { ItemDefinition, PlacedItem } from '../domain/types';
 import { createItemGlyph } from './ItemGlyph';
@@ -182,6 +183,10 @@ export class FusionPanel {
       this.statusText.setText('NO LEGAL SPACE FOR THE RESULT.').setColor('#ff9aab');
       return;
     }
+    telemetry.track('fusion_used', {
+      recipeId: candidate.recipe.id,
+      resultDefinitionId: candidate.recipe.resultDefinitionId,
+    });
     this.options.onFeedback?.({ kind: 'success', recipe: candidate.recipe });
     this.statusText.setText('FUSION COMPLETE • HOLD ONTO SOMETHING').setColor('#c9ff72');
     this.refresh(true);
