@@ -6,6 +6,15 @@ function event(name: TelemetryEventName, payload: TelemetryEnvelope['payload'], 
   return { name, payload, sessionId: `s-${index}`, timestampMs: index } as TelemetryEnvelope;
 }
 
+function sessionEvent(
+  sessionId: string,
+  timestampMs: number,
+  name: TelemetryEventName,
+  payload: TelemetryEnvelope['payload'],
+): TelemetryEnvelope {
+  return { name, payload, sessionId, timestampMs } as TelemetryEnvelope;
+}
+
 describe('summarizeTelemetry', () => {
   it('aggregates funnel, economy, ads, run depth and combat metrics', () => {
     const events: TelemetryEnvelope[] = [
@@ -52,10 +61,36 @@ describe('summarizeTelemetry', () => {
     }]);
   });
 
+  it('derives time-to-hero and time-to-first-combat from existing per-session timestamps', () => {
+    const events: TelemetryEnvelope[] = [
+      sessionEvent('a', 1000, 'session_start', { returning: false, platform: 'local', viewportMode: 'standard-landscape' }),
+      sessionEvent('a', 4000, 'hero_selected', { heroId: 'engineer' }),
+      sessionEvent('a', 9000, 'combat_started', { encounterId: 'w1-1', stage: 'World 1' }),
+      sessionEvent('a', 12000, 'combat_started', { encounterId: 'w1-2', stage: 'World 1' }),
+      sessionEvent('b', 2000, 'session_start', { returning: false, platform: 'local', viewportMode: 'standard-landscape' }),
+      sessionEvent('b', 7000, 'hero_selected', { heroId: 'scavenger' }),
+      sessionEvent('c', 3000, 'session_start', { returning: true, platform: 'yandex', viewportMode: 'compact-landscape' }),
+      sessionEvent('c', 2500, 'hero_selected', { heroId: 'engineer' }),
+    ];
+
+    const summary = summarizeTelemetry(events);
+    expect(summary.sessions).toBe(3);
+    expect(summary.sessionsWithHeroSelection).toBe(2);
+    expect(summary.heroSelectionSessionRate).toBeCloseTo(2 / 3);
+    expect(summary.averageTimeToHeroMs).toBe(4000);
+    expect(summary.sessionsWithFirstCombat).toBe(1);
+    expect(summary.firstCombatSessionRate).toBeCloseTo(1 / 3);
+    expect(summary.averageTimeToFirstCombatMs).toBe(8000);
+  });
+
   it('returns stable zero rates for an empty stream', () => {
     const summary = summarizeTelemetry([]);
     expect(summary.sessions).toBe(0);
     expect(summary.returningRate).toBe(0);
+    expect(summary.heroSelectionSessionRate).toBe(0);
+    expect(summary.averageTimeToHeroMs).toBe(0);
+    expect(summary.firstCombatSessionRate).toBe(0);
+    expect(summary.averageTimeToFirstCombatMs).toBe(0);
     expect(summary.tutorialCompletionRate).toBe(0);
     expect(summary.rewardedAdCompletionRate).toBe(0);
     expect(summary.averageCashoutScore).toBe(0);
