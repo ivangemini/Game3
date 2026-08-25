@@ -9,6 +9,7 @@ The run panel presents the base campaign as six explicit world segments.
 - completed worlds use a completed-state segment;
 - the current campaign world uses a distinct active-state segment;
 - future worlds remain muted;
+- state is not communicated by color alone: segment labels use `✓n` for completed worlds and `>n` for the active world;
 - campaign encounter position is shown as `n/18`;
 - Corrupted Loop encounter position is shown separately as `n/12`;
 - after a non-final campaign boss, the status area holds `WORLD n CLEARED` until the next fight begins;
@@ -18,6 +19,13 @@ The rail is intentionally compact and secondary to the current encounter/boss st
 
 ## Progress derivation
 `completedCampaignWorldCount()` derives campaign world completion from the existing `RunProgressState` and the shared `ENCOUNTERS_PER_WORLD` constant. No extra persistent field is introduced. Completed campaign progress therefore survives through the existing run save automatically and cannot diverge from encounter progression.
+
+The helper derives completed encounters from the stored campaign index rather than assuming every non-campaign state came from the current six-world structure. This keeps old archived/loop states honest when inspecting legacy data.
+
+## Pre-expansion v8 compatibility
+The campaign extension kept save schema v8 because no fields changed, but the meaning of one previously valid state did change. Before the extension, `deep-choice + loopNumber 1 + campaignEncounterIndex 11` meant the four-world campaign had just been cleared. In the six-world build that state would otherwise offer an early cash-out/loop before Worlds 5–6.
+
+`loadSave()` therefore performs an idempotent semantic normalization for exactly that impossible-in-the-new-build breakpoint. It resumes the run at campaign encounter index 12, the first encounter of World 5, while preserving the backpack, coins, seed, score, discoveries, selected/pending perks, claimed rewards and event state. Genuine six-world breakpoints at index 17 and existing deeper-loop runs are left unchanged.
 
 ## Analytics contract
 The soft-launch summary derives a six-row campaign continuation funnel from the existing victorious campaign-boss `combat_finished` events:
