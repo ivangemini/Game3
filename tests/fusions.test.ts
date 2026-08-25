@@ -37,7 +37,7 @@ describe('fusion domain', () => {
     if (!result.ok) return;
     expect(result.state.items).toHaveLength(1);
     expect(result.resultItem.definitionId).toBe('shock-toaster');
-    expect(result.ingredientInstanceIds.sort()).toEqual(['battery-a', 'toaster-b']);
+    expect([...result.ingredientInstanceIds].sort()).toEqual(['battery-a', 'toaster-b']);
   });
 
   it('does not consume anything when required ingredients are missing', () => {
