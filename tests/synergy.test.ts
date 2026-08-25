@@ -9,6 +9,11 @@ describe('synergy compatibility entry point', () => {
       'poison-weapon',
       'duck-chaos',
       'magnet-metal',
+      'food-pet',
+      'antenna-device',
+      'slime-poison',
+      'metal-weapon',
+      'chaos-laser',
     ]);
   });
 });

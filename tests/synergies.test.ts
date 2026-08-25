@@ -32,8 +32,9 @@ describe('inventory synergies', () => {
       'duck-chaos',
       'magnet-metal',
       'magnet-metal',
+      'chaos-laser',
     ]);
-    expect(snapshot.bonusesByInstanceId['cat-1']?.bonusLaserShots).toBe(1);
+    expect(snapshot.bonusesByInstanceId['cat-1']?.bonusLaserShots).toBe(2);
     expect(snapshot.bonusesByInstanceId['toaster-1']?.triggerSpeedPct).toBe(25);
     expect(snapshot.bonusesByInstanceId['fish-1']?.poisonOnHit).toBe(2);
     expect(snapshot.bonusesByInstanceId['duck-1']?.chaosPower).toBe(1);
