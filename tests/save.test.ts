@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createInitialRunProgress } from '../src/game/domain/runProgression';
-import { DEFAULT_SAVE, loadSave, writeSave, type SaveV6 } from '../src/persistence/save';
+import { DEFAULT_SAVE, loadSave, writeSave, type SaveV7 } from '../src/persistence/save';
 
 class MemoryStorage implements Storage {
   private readonly values = new Map<string, string>();
@@ -13,9 +13,9 @@ class MemoryStorage implements Storage {
 }
 
 describe('save persistence', () => {
-  it('round-trips active run inventory, rewards, perks and loop progression', () => {
+  it('round-trips active run inventory, rewards, perks, events and loop progression', () => {
     const storage = new MemoryStorage();
-    const save: SaveV6 = {
+    const save: SaveV7 = {
       ...DEFAULT_SAVE,
       bestCorruptedLoop: 3,
       activeRun: {
@@ -26,6 +26,9 @@ describe('save persistence', () => {
         pendingPerkOfferIds: ['laser-pet', 'chaos-license', 'scrap-plating'],
         offeredPerkEncounterIds: ['w1-tv-tyrant'],
         progress: { mode: 'loop', campaignEncounterIndex: 11, loopNumber: 3, loopEncounterIndex: 4, score: 1550 },
+        eventIndex: 3,
+        pendingEventId: 'cat-courier',
+        resolvedEventIds: ['fish-shrine', 'slime-pawnshop'],
         backpackItems: [{
           instanceId: 'loot-5-laser-cat', definitionId: 'laser-cat',
           origin: { x: 2, y: 1 }, rotation: 1,
@@ -36,7 +39,7 @@ describe('save persistence', () => {
     expect(loadSave(storage)).toEqual(save);
   });
 
-  it('migrates v1 meta saves into v6 without inventing a run', () => {
+  it('migrates v1 meta saves into v7 without inventing a run', () => {
     const storage = new MemoryStorage();
     storage.setItem('junkpack.save', JSON.stringify({
       version: 1,
@@ -44,13 +47,13 @@ describe('save persistence', () => {
       settings: { musicVolume: 0.5, sfxVolume: 0.75, reducedMotion: true },
     }));
     const migrated = loadSave(storage);
-    expect(migrated.version).toBe(6);
+    expect(migrated.version).toBe(7);
     expect(migrated.discoveredItemIds).toEqual(['laser-cat']);
     expect(migrated.activeRun).toBeNull();
     expect(migrated.bestCorruptedLoop).toBe(2);
   });
 
-  it('migrates v2-v4 active runs with safe progression defaults', () => {
+  it('migrates v2-v4 active runs with safe progression and event defaults', () => {
     for (const version of [2, 3, 4] as const) {
       const storage = new MemoryStorage();
       storage.setItem('junkpack.save', JSON.stringify({
@@ -68,8 +71,11 @@ describe('save persistence', () => {
         },
       }));
       const migrated = loadSave(storage);
-      expect(migrated.version).toBe(6);
+      expect(migrated.version).toBe(7);
       expect(migrated.activeRun?.progress).toEqual(createInitialRunProgress());
+      expect(migrated.activeRun?.eventIndex).toBe(0);
+      expect(migrated.activeRun?.pendingEventId).toBeNull();
+      expect(migrated.activeRun?.resolvedEventIds).toEqual([]);
     }
   });
 
@@ -92,6 +98,7 @@ describe('save persistence', () => {
     expect(migrated.activeRun?.progress).toEqual({
       mode: 'campaign', campaignEncounterIndex: 9, loopNumber: 1, loopEncounterIndex: 0, score: 2200,
     });
+    expect(migrated.activeRun?.eventIndex).toBe(0);
   });
 
   it('maps old v5 endless waves into corrupted loops', () => {
@@ -116,6 +123,27 @@ describe('save persistence', () => {
     });
   });
 
+  it('migrates v6 active runs without creating a phantom event', () => {
+    const storage = new MemoryStorage();
+    storage.setItem('junkpack.save', JSON.stringify({
+      version: 6,
+      discoveredItemIds: [], discoveredRecipeIds: [], bestEndlessWave: 0, bestCorruptedLoop: 2,
+      settings: DEFAULT_SAVE.settings,
+      activeRun: {
+        runSeed: 'v6-run', shopIndex: 2, coins: 51,
+        soldOfferIds: [], backpackItems: [], nextLootSequence: 3,
+        claimedEncounterIds: [], selectedPerkIds: [], perkChoiceIndex: 0,
+        pendingPerkOfferIds: [], offeredPerkEncounterIds: [],
+        progress: { mode: 'campaign', campaignEncounterIndex: 4, loopNumber: 1, loopEncounterIndex: 0, score: 800 },
+      },
+    }));
+    const migrated = loadSave(storage);
+    expect(migrated.version).toBe(7);
+    expect(migrated.activeRun?.eventIndex).toBe(0);
+    expect(migrated.activeRun?.pendingEventId).toBeNull();
+    expect(migrated.activeRun?.resolvedEventIds).toEqual([]);
+  });
+
   it('falls back safely when persisted progression is malformed', () => {
     const storage = new MemoryStorage();
     storage.setItem('junkpack.save', JSON.stringify({
@@ -123,6 +151,7 @@ describe('save persistence', () => {
       activeRun: {
         runSeed: 'bad', shopIndex: 0, coins: 10, soldOfferIds: [], claimedEncounterIds: [],
         selectedPerkIds: [], perkChoiceIndex: 0, pendingPerkOfferIds: [], offeredPerkEncounterIds: [],
+        eventIndex: 0, pendingEventId: null, resolvedEventIds: [],
         backpackItems: [], nextLootSequence: 1,
         progress: { mode: 'campaign', campaignEncounterIndex: 99, loopNumber: 1, loopEncounterIndex: 0, score: 0 },
       },
