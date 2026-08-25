@@ -97,9 +97,9 @@ The command uses the repository's actual `src/analytics/TelemetrySummary.ts` imp
 
 ## Return-age semantics and coverage
 
-`session_age` is deliberately privacy-minimal. The aggregator accepts at most one age bucket per ephemeral session and only includes it when that session also has a `session_start`. Duplicate `session_age` delivery therefore cannot inflate the distribution, and unmatched/orphan events do not count toward coverage.
+`session_age` is deliberately privacy-minimal. The aggregator accepts at most one age bucket per ephemeral session, so duplicate delivery cannot inflate the distribution. A partial export that contains `session_age` events but omits the matching `session_start` still preserves those deduplicated buckets for backward-compatible distribution analysis.
 
-`sessionAgeCoverageRate` is the share of unique started sessions that have one accepted age bucket. The Markdown report uses **95%** as an operational instrumentation gate after at least **10 session starts**. This is a data-quality check, not a retention target.
+`sessionAgeCoverageRate` is stricter: it is the share of unique started sessions that have one accepted age bucket, so unmatched/orphan age events never increase coverage. The Markdown report uses **95%** as an operational instrumentation gate after at least **10 session starts**. This is a data-quality check, not a retention target.
 
 The age-bucket mix is **not** D1/D7 cohort retention. There is intentionally no persistent analytics identity or cohort denominator, so a bucket such as `3-7d` means only that an observed session came from a browser whose local first-seen state is 3–7 days old. Use it as a coarse return-age distribution and trend signal, not as a substitute for identity-based cohort analysis.
 
