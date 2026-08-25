@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { PROTOTYPE_FUSION_ITEMS, PROTOTYPE_ITEMS } from '../src/game/data/items';
+import { PROTOTYPE_FUSION_ITEMS, PROTOTYPE_ITEMS, PROTOTYPE_SHOP_ITEMS } from '../src/game/data/items';
+import { SECOND_STAGE_FUSION_RESULT_IDS } from '../src/game/data/fusionRecipes';
 import {
   AUTHORED_ART_ASSETS,
   bossArtKeyForEnemyId,
@@ -7,47 +8,44 @@ import {
   heroArtKey,
 } from '../src/game/ui/authoredArt';
 
-const WAVE_2_FUSION_IDS = [
-  'shock-toaster',
-  'cyber-cat',
-  'biohazard-turbine',
-  'polarity-duck',
-  'toxic-fish-cannon',
-  'gravity-toaster',
-  'turbo-router',
-  'slime-sword',
-] as const;
-
 describe('authored art contract', () => {
-  it('ships 32 item assets, four hero portraits and all six boss portraits with unique stable keys', () => {
-    expect(AUTHORED_ART_ASSETS.filter((asset) => asset.kind === 'item')).toHaveLength(32);
+  it('ships authored art for all 60 items, four heroes and all six boss families', () => {
+    expect(AUTHORED_ART_ASSETS.filter((asset) => asset.kind === 'item')).toHaveLength(60);
     expect(AUTHORED_ART_ASSETS.filter((asset) => asset.kind === 'hero')).toHaveLength(4);
     expect(AUTHORED_ART_ASSETS.filter((asset) => asset.kind === 'boss')).toHaveLength(6);
     expect(new Set(AUTHORED_ART_ASSETS.map((asset) => asset.key)).size).toBe(AUTHORED_ART_ASSETS.length);
     expect(new Set(AUTHORED_ART_ASSETS.map((asset) => asset.url)).size).toBe(AUTHORED_ART_ASSETS.length);
   });
 
-  it('keeps authored item assets aligned with the live 60-item catalog and above 50 percent coverage', () => {
+  it('keeps authored item assets exactly aligned with the live item catalog', () => {
     const itemAssets = AUTHORED_ART_ASSETS.filter((entry) => entry.kind === 'item');
     const liveIds = new Set(PROTOTYPE_ITEMS.map((item) => item.id));
+    const authoredIds = new Set<string>();
 
     for (const asset of itemAssets) {
       expect(asset.key.startsWith('item.')).toBe(true);
       const definitionId = asset.key.slice('item.'.length);
+      authoredIds.add(definitionId);
       expect(asset.url).toBe(`/assets/art/items/${definitionId}.svg`);
       expect(liveIds.has(definitionId), `authored art points at missing item ${definitionId}`).toBe(true);
     }
 
-    expect(itemAssets.length / PROTOTYPE_ITEMS.length).toBeGreaterThanOrEqual(0.5);
+    expect(authoredIds).toEqual(liveIds);
+    expect(itemAssets).toHaveLength(PROTOTYPE_ITEMS.length);
     expect(hasAuthoredArt('item.laser-cat')).toBe(true);
+    expect(hasAuthoredArt('item.thunder-rail-mop')).toBe(true);
     expect(hasAuthoredArt('item.nonexistent-junk')).toBe(false);
   });
 
-  it('gives the eight wave-2 evolution rewards authored art and keeps them fusion-only', () => {
-    const fusionIds = new Set(PROTOTYPE_FUSION_ITEMS.map((item) => item.id));
-    for (const id of WAVE_2_FUSION_IDS) {
-      expect(fusionIds.has(id), `${id} should remain fusion-only`).toBe(true);
-      expect(hasAuthoredArt(`item.${id}`), `${id} should have authored art`).toBe(true);
+  it('covers every shop item, fusion result and secret second-stage evolution', () => {
+    for (const item of PROTOTYPE_SHOP_ITEMS) {
+      expect(hasAuthoredArt(`item.${item.id}`), `shop item ${item.id} should have authored art`).toBe(true);
+    }
+    for (const item of PROTOTYPE_FUSION_ITEMS) {
+      expect(hasAuthoredArt(`item.${item.id}`), `fusion item ${item.id} should have authored art`).toBe(true);
+    }
+    for (const id of SECOND_STAGE_FUSION_RESULT_IDS) {
+      expect(hasAuthoredArt(`item.${id}`), `second-stage ${id} should have authored art`).toBe(true);
     }
   });
 
