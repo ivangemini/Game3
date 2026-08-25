@@ -6,7 +6,12 @@ export type SynergyId =
   | 'battery-device'
   | 'poison-weapon'
   | 'duck-chaos'
-  | 'magnet-metal';
+  | 'magnet-metal'
+  | 'food-pet'
+  | 'antenna-device'
+  | 'slime-poison'
+  | 'metal-weapon'
+  | 'chaos-laser';
 
 export type SynergyBonusKey =
   | 'triggerSpeedPct'
@@ -101,6 +106,51 @@ export const SYNERGY_RULES: readonly SynergyRule[] = [
     bonusRecipient: 'source',
     effectText: 'Magnet gains +1 scrap armor.',
     bonus: { key: 'scrapArmor', amount: 1 },
+  },
+  {
+    id: 'food-pet',
+    label: 'FOOD → PET',
+    sourceTag: 'food',
+    targetTag: 'pet',
+    bonusRecipient: 'target',
+    effectText: 'Fed pet triggers 20% faster.',
+    bonus: { key: 'triggerSpeedPct', amount: 20 },
+  },
+  {
+    id: 'antenna-device',
+    label: 'ANTENNA → DEVICE',
+    sourceTag: 'antenna',
+    targetTag: 'device',
+    bonusRecipient: 'target',
+    effectText: 'Connected device triggers 15% faster.',
+    bonus: { key: 'triggerSpeedPct', amount: 15 },
+  },
+  {
+    id: 'slime-poison',
+    label: 'SLIME → POISON',
+    sourceTag: 'slime',
+    targetTag: 'poison',
+    bonusRecipient: 'source',
+    effectText: 'Slime applies +2 poison on trigger.',
+    bonus: { key: 'poisonOnHit', amount: 2 },
+  },
+  {
+    id: 'metal-weapon',
+    label: 'METAL → WEAPON',
+    sourceTag: 'metal',
+    targetTag: 'weapon',
+    bonusRecipient: 'target',
+    effectText: 'Reinforced weapon contributes +1 scrap armor.',
+    bonus: { key: 'scrapArmor', amount: 1 },
+  },
+  {
+    id: 'chaos-laser',
+    label: 'CHAOS → LASER',
+    sourceTag: 'chaos',
+    targetTag: 'laser',
+    bonusRecipient: 'target',
+    effectText: 'Laser fires +1 unstable bonus shot.',
+    bonus: { key: 'bonusLaserShots', amount: 1 },
   },
 ];
 

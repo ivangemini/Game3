@@ -1,4 +1,4 @@
-# Junkpack: Boss Rush — Game Design v0.5
+# Junkpack: Boss Rush — Game Design v0.6
 
 ## Elevator pitch
 A compact roguelite inventory autobattler where the player packs absurd junk into a constrained backpack, discovers synergies and fusion recipes, then fights surreal bosses that directly interfere with the backpack's rules.
@@ -44,32 +44,45 @@ Later loops may introduce cursed or conditional pocket variants, but launch shou
 ### Items
 Launch target: 35–45 base items across weapons, devices, materials/potions, defensive junk and pets/creatures. Each item has stable ID, shape, tags, rarity and effects.
 
-The prototype currently has eight base/shop items plus six fusion-only results. Fusion results intentionally do not enter the normal shop pool; their value comes from discovery and sacrificing ingredients.
+The prototype currently has **16 base/shop items plus 12 fusion-only results**. The second content wave adds tactical food, antenna electronics and slime junk so early shop choices can cross-link with existing pet/device/poison/weapon/laser families. Fusion results intentionally do not enter the normal shop pool; their value comes from discovery, sacrificing ingredients and changing the build's spatial geometry.
 
 ### Synergies
-The first implemented synergy family uses **orthogonal side contact** between occupied item cells. Diagonal proximity does not count. This makes placement itself part of build power rather than treating the backpack as passive storage.
+The implemented synergy family uses **orthogonal side contact** between occupied item cells. Diagonal proximity does not count. This makes placement itself part of build power rather than treating the backpack as passive storage.
 
-Prototype rules:
+Current rules:
 - `CAT → LASER`: an adjacent laser-compatible item grants the Cat +1 laser shot.
 - `BATTERY → DEVICE`: an adjacent Battery makes a Device trigger 25% faster.
 - `POISON → WEAPON`: adjacent Poison makes a Weapon apply +2 poison.
 - `DUCK → CHAOS`: touching a Chaos item grants the Duck +1 chaos power.
 - `MAGNET → METAL`: each adjacent Metal item grants the Magnet +1 scrap armor.
+- `FOOD → PET`: adjacent Pet triggers 20% faster.
+- `ANTENNA → DEVICE`: adjacent Device triggers 15% faster.
+- `SLIME → POISON`: Slime gains +2 poison-on-hit from touching Poison.
+- `METAL → WEAPON`: adjacent Weapon contributes +1 scrap armor.
+- `CHAOS → LASER`: adjacent Laser fires +1 unstable bonus shot.
 
-Rules resolve deterministically from stable item instance IDs. Multiple valid contacts may stack where the rule is designed to stack. The combat system consumes these derived bonuses later; Phaser rendering is not the source of truth.
+Rules resolve deterministically from stable item instance IDs. Multiple valid contacts may stack where the rule is designed to stack. The new families deliberately reuse the existing combat bonus vocabulary, so content depth grows without creating a bespoke combat subsystem for every item.
+
+A single contact can participate in multiple readable rules when tags justify it. For example Tactical Banana next to Laser Cat can activate both `FOOD → PET` and `CHAOS → LASER`, creating a meaningful packing payoff.
 
 Future synergy families may add directional arcs or row/column rules, but they must stay visually readable and testable without Phaser.
 
 ### Fusion/discovery
 Launch target remains 20–30 recipes. Fusion is a build pivot, not a linear `Item I + Item I = Item II` ladder.
 
-The first implemented recipes are deliberately absurd and change tags/combat profiles:
+Implemented recipes deliberately change tags/combat profiles:
 - Angry Battery + Cursed Toaster → **Shock Toaster**
 - Laser Cat + Angry Battery → **Cyber Cat**
 - Suspicious Flask + Toxic Fan → **Biohazard Turbine**
 - Mutant Duck + Scrap Magnet → **Polarity Duck**
 - Fish Blaster + Suspicious Flask → **Toxic Fish Cannon**
 - Cursed Toaster + Scrap Magnet → **Gravity Toaster**
+- Feral Router + Angry Battery → **Turbo Router**
+- Slime Can + Wrench Sword → **Slime Sword**
+- Tactical Banana + Laser Cat → **Laser Banana**
+- Pocket Radio + Mutant Duck → **Radio Duck**
+- Panic Noodles + Toxic Fan → **Noodle Fan**
+- Battery Snail + Disco Orb → **Disco Snail**
 
 Fusion unlocks after Boss 1. Both ingredients are consumed only when the resulting item has a legal placement in the current backpack. Locked pocket cells still count as blocked, so fusion cannot bypass spatial progression. If the result cannot fit, the original items remain untouched.
 
@@ -98,10 +111,10 @@ Launch target: 4 heroes, each a light rule-bender rather than a hard class lock:
 ### Bosses
 Launch target: 6 major boss families plus modifiers. Each boss changes backpack valuation/positioning and has clear telegraphs and counterplay.
 
-The first implemented boss family is TV Tyrant. Its current prototype attacks the build with Channel Jam and Slime Signal. World 4 introduces Baby Moon as a separate visual/fantasy target while the first prototype still reuses proven interference primitives until its own boss rules are implemented.
+The first implemented boss family is TV Tyrant. Its prototype attacks the build with Channel Jam, Slime Signal and Magnet Scramble; later variants stack the interference more aggressively. World 4 introduces Baby Moon as a separate visual/fantasy target while the prototype still reuses proven interference primitives until its own boss rules are implemented.
 
 ### Perks
-20–25 run perks. Examples: Big Pockets, Overclock, Laser Pet, Pyromaniac/chaos-style effects. Perks should modify rules and build identity more often than flat percentages.
+Launch target: 20–25 run perks. The prototype currently has **10** perks covering devices, pets, weapons, chaos, metal, antenna, slime, food and global trigger speed. Perks should modify build identity more often than provide generic flat percentages, but lightweight tag bonuses remain useful while the content pool is still being validated.
 
 ### World mutations
 Campaign mutations are seeded per run and stay stable across a world so the player can adapt instead of facing arbitrary per-fight noise. They alter real enemy/reward values and therefore create risk/reward decisions cheaply.

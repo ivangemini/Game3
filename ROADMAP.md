@@ -13,8 +13,8 @@
 - [x] Mouse + touch drag/drop foundation
 - [x] Valid/invalid cell preview and snap-back
 - [x] Selected-item rotation with placement validation
-- [x] 8 prototype absurd-junk base items
-- [x] 5 real side-contact gameplay synergies with deterministic derived bonuses
+- [x] 16 prototype absurd-junk base items
+- [x] 10 real side-contact gameplay synergies with deterministic derived bonuses
 - [x] Live synergy links, active-link badges and activation feedback
 - [x] Basic seeded shop/reward choice with run currency and deterministic rerolls
 - [x] Purchased junk enters the real backpack through deterministic legal placement
@@ -51,7 +51,7 @@
 - [x] Seeded shops/rewards foundation
 - [x] Deterministic 3-choice perk generation excluding already-owned perks
 - [x] Boss-victory perk overlay with persisted pending choice
-- [x] Six prototype perks that modify tagged combat items
+- [x] Ten prototype perks that modify tagged combat items
 - [x] Selected perks persist and affect subsequent combat snapshots
 - [x] Four-world campaign: 3 encounters per world / 12 total
 - [x] Unique encounter IDs, per-encounter rewards and score progression
@@ -66,17 +66,17 @@
 - [x] Six deterministic surreal run events with two choices each
 - [x] Events trigger after the first fight of each world, persist across reload and block progression until resolved
 - [x] Event choices consume/award the real run currency and can grant real backpack items
-- [x] Six prototype fusion recipes with deterministic ingredient/result handling
+- [x] Twelve prototype fusion recipes with deterministic ingredient/result handling
 - [x] Fusion unlocks after Boss 1 and respects currently locked backpack cells
 - [ ] Runtime pacing validation: first boss 3–5 min, base campaign 20–25 min, strong session 30–50 min, deep session 60+ min. Seeded target-model regression coverage is implemented; real play telemetry remains required.
 
-## P4 — Content-efficient depth
-- [ ] 35–45 launch base items
-- [ ] 20–30 launch fusion recipes (6 prototype recipes implemented)
-- [ ] tag/synergy families
+## P4 — Content-efficient depth [IN PROGRESS]
+- [ ] 35–45 launch base items (16 prototype base items implemented)
+- [ ] 20–30 launch fusion recipes (12 prototype recipes implemented)
+- [x] Expanded tag/synergy-family foundation: 10 spatial contact rules across core + food/antenna/slime cross-links
 - [ ] 4 heroes
 - [ ] 6 boss families + modifiers
-- [ ] 20–25 perks
+- [ ] 20–25 perks (10 prototype perks implemented)
 - [ ] ~15 mutations/events pool (12 combined prototype rules/events currently)
 - [ ] late-run secret transformations / second-stage evolutions
 

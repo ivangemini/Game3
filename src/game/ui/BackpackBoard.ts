@@ -46,6 +46,11 @@ const SYNERGY_COLORS: Record<SynergyId, number> = {
   'poison-weapon': 0xb967ff,
   'duck-chaos': 0xffa64d,
   'magnet-metal': 0x58d7ff,
+  'food-pet': 0xffdd66,
+  'antenna-device': 0x7cf2ff,
+  'slime-poison': 0x83ff72,
+  'metal-weapon': 0xc8d0da,
+  'chaos-laser': 0xff7df0,
 };
 
 const ITEM_LABELS: Readonly<Record<string, string>> = {
@@ -57,6 +62,20 @@ const ITEM_LABELS: Readonly<Record<string, string>> = {
   'fish-blaster': 'FISH\nBLASTER',
   'poison-flask': 'POISON',
   'scrap-magnet': 'SCRAP\nMAGNET',
+  'tactical-banana': 'TACTICAL\nBANANA',
+  'pocket-radio': 'POCKET\nRADIO',
+  'slime-can': 'SLIME\nCAN',
+  'wrench-sword': 'WRENCH\nSWORD',
+  'battery-snail': 'BATTERY\nSNAIL',
+  'disco-orb': 'DISCO\nORB',
+  'panic-noodles': 'PANIC\nNOODLES',
+  'feral-router': 'FERAL\nROUTER',
+  'turbo-router': 'TURBO\nROUTER',
+  'slime-sword': 'SLIME\nSWORD',
+  'laser-banana': 'LASER\nBANANA',
+  'radio-duck': 'RADIO\nDUCK',
+  'noodle-fan': 'NOODLE\nFAN',
+  'disco-snail': 'DISCO\nSNAIL',
 };
 
 const POCKET_UNLOCK_ORDER: readonly Cell[] = [

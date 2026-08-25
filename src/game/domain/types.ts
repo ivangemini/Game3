@@ -15,7 +15,9 @@ export type ItemTag =
   | 'laser'
   | 'magnet'
   | 'chaos'
-  | 'food';
+  | 'food'
+  | 'antenna'
+  | 'slime';
 
 export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic';
 
