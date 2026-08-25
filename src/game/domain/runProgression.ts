@@ -105,6 +105,14 @@ export function loopRewardMultiplier(loopNumber: number): number {
   return Number(Math.pow(1.55, safeLoop - 1).toFixed(2));
 }
 
+export function completedCampaignWorldCount(state: RunProgressState): number {
+  if (state.mode !== 'campaign') return CAMPAIGN_WORLDS;
+  return Math.min(
+    CAMPAIGN_WORLDS,
+    Math.floor(state.campaignEncounterIndex / ENCOUNTERS_PER_WORLD),
+  );
+}
+
 export function backpackUnlockedPocketCount(state: RunProgressState): number {
   if (state.mode !== 'campaign') return MAX_BASE_POCKET_UNLOCKS;
   return Math.min(
