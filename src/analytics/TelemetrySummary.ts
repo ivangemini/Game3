@@ -18,6 +18,7 @@ export interface SoftLaunchSummary {
   readonly sessions: number;
   readonly returningSessions: number;
   readonly returningRate: number;
+  readonly returnAgeBuckets: Readonly<Record<string, number>>;
   readonly sessionsWithHeroSelection: number;
   readonly heroSelectionSessionRate: number;
   readonly averageTimeToHeroMs: number;
@@ -84,6 +85,7 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
   let fusions = 0;
   let cashouts = 0;
   let cashoutScoreTotal = 0;
+  const returnAgeBuckets: Record<string, number> = {};
   const heroSelections: Record<string, number> = {};
   const loopEntries: Record<string, number> = {};
   const combats = new Map<string, CombatAccumulator>();
@@ -101,6 +103,11 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
         const payload = event.payload as { returning: boolean };
         if (payload.returning) returningSessions += 1;
         rememberEarliest(sessionStartedAt, event.sessionId, event.timestampMs);
+        break;
+      }
+      case 'session_age': {
+        const payload = event.payload as { bucket: string };
+        returnAgeBuckets[payload.bucket] = (returnAgeBuckets[payload.bucket] ?? 0) + 1;
         break;
       }
       case 'run_started': {
@@ -188,6 +195,7 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
     sessions,
     returningSessions,
     returningRate: ratio(returningSessions, sessions),
+    returnAgeBuckets: sortRecord(returnAgeBuckets),
     sessionsWithHeroSelection: timeToHero.length,
     heroSelectionSessionRate: ratio(timeToHero.length, sessions),
     averageTimeToHeroMs: average(timeToHero),
