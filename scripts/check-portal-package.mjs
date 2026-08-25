@@ -11,6 +11,15 @@ const YANDEX_UNCOMPRESSED_LIMIT = 100 * MIB;
 const CRAZY_TOTAL_LIMIT = 250 * MIB;
 const CRAZY_MOBILE_INITIAL_TARGET = 20 * MIB;
 const CRAZY_FILE_COUNT_LIMIT = 1500;
+const REQUIRED_RUNTIME_FILES = [
+  'index.html',
+  'assets/atlas/junk-items.svg',
+  'assets/atlas/junk-items.json',
+  'assets/atlas/junk-portraits.svg',
+  'assets/atlas/junk-portraits.json',
+  'assets/atlas/junk-ui.svg',
+  'assets/atlas/junk-ui.json',
+];
 
 const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
 const archivePath = path.join(releaseRoot, manifest.archive);
@@ -36,6 +45,9 @@ const uncompressedBytes = Object.values(files).reduce((sum, bytes) => sum + byte
 
 if (archivedPaths.length !== manifest.fileCount) failures.push(`fileCount mismatch: manifest=${manifest.fileCount} actual=${archivedPaths.length}`);
 if (rootIndexCount !== 1) failures.push(`archive must contain exactly one index.html at ZIP root; found ${rootIndexCount}`);
+for (const required of REQUIRED_RUNTIME_FILES) {
+  if (!archivedPaths.includes(required)) failures.push(`required runtime file is missing: ${required}`);
+}
 if (archivedPaths.length > CRAZY_FILE_COUNT_LIMIT) failures.push(`CrazyGames file-count limit exceeded: ${archivedPaths.length} > ${CRAZY_FILE_COUNT_LIMIT}`);
 if (uncompressedBytes > YANDEX_UNCOMPRESSED_LIMIT) failures.push(`Yandex uncompressed archive limit exceeded: ${formatMiB(uncompressedBytes)} > 100 MiB`);
 if (uncompressedBytes > CRAZY_TOTAL_LIMIT) failures.push(`CrazyGames total size limit exceeded: ${formatMiB(uncompressedBytes)} > 250 MiB`);
@@ -83,6 +95,7 @@ if (failures.length > 0) {
   console.log(`  files: ${archivedPaths.length}`);
   console.log(`  uncompressed: ${formatMiB(uncompressedBytes)}`);
   console.log(`  sha256: ${sha256}`);
+  console.log(`  required runtime files: ${REQUIRED_RUNTIME_FILES.length}`);
   console.log(`  store assets: ${manifest.storeFiles.length}`);
 }
 
