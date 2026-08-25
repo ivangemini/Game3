@@ -1,7 +1,11 @@
 import * as Phaser from 'phaser';
+import { AdBreakPolicy } from '../../platform/AdBreakPolicy';
+import type { PlatformAdapter } from '../../platform/PlatformAdapter';
 import { campaignLabel, loopLabel, type RunEncounterDefinition } from '../data/runEncounters';
 import { loopRewardMultiplier, type RunProgressState } from '../domain/runProgression';
 import { PANEL_VISUALS } from './visualTokens';
+
+const PLATFORM_REGISTRY_KEY = 'junkpack.platform-adapter';
 
 export interface RunProgressPanelOptions {
   readonly getProgress: () => RunProgressState;
@@ -21,6 +25,9 @@ export class RunProgressPanel {
   private readonly mutationText: Phaser.GameObjects.Text;
   private readonly statusText: Phaser.GameObjects.Text;
   private readonly actionObjects: Phaser.GameObjects.GameObject[] = [];
+  private readonly adBreakPolicy: AdBreakPolicy;
+  private gameplayMarkedActive = false;
+  private interstitialInFlight = false;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -28,6 +35,7 @@ export class RunProgressPanel {
     private readonly top: number,
     private readonly options: RunProgressPanelOptions,
   ) {
+    this.adBreakPolicy = new AdBreakPolicy({ sessionStartedAtMs: runtimeNowMs() });
     this.drawShell();
     this.titleText = scene.add.text(left + 14, top + 13, 'RUN', {
       fontFamily: 'Arial Black, Impact, sans-serif', fontSize: '22px', color: '#d7ff8c',
@@ -55,10 +63,12 @@ export class RunProgressPanel {
     this.statusText = scene.add.text(left + 14, top + 326, '', {
       fontSize: '11px', color: '#a49dab', lineSpacing: 2, wordWrap: { width: 172 },
     });
+    scene.events.once('shutdown', () => this.stopGameplayMarkup());
     this.refresh();
   }
 
   refresh(message?: string): void {
+    this.stopGameplayMarkup();
     for (const object of this.actionObjects) object.destroy();
     this.actionObjects.length = 0;
 
@@ -75,8 +85,12 @@ export class RunProgressPanel {
       this.subtitleText.setText(`Keep this exact build for another 4 corrupted worlds. Each world stacks ${mutationCount} mutations.`);
       this.rewardText.setText(`NEXT LOOP  ×${loopRewardMultiplier(nextLoop).toFixed(2)} REWARDS`);
       this.mutationText.setText('GO DEEPER = 12 MORE ENCOUNTERS BEFORE THE NEXT SAFE EXIT.');
-      this.createActionButton(this.left + 100, this.top + 280, 'GO DEEPER', 0x49305a, 0xd47cff, () => this.options.onEnterCorruptedLoop());
-      this.createActionButton(this.left + 100, this.top + 317, 'ESCAPE / CASH OUT', 0x33432a, 0xa8ff68, () => this.options.onCashOut());
+      this.createActionButton(this.left + 100, this.top + 280, 'GO DEEPER', 0x49305a, 0xd47cff, () => {
+        void this.runCycleBoundaryAction(() => this.options.onEnterCorruptedLoop());
+      });
+      this.createActionButton(this.left + 100, this.top + 317, 'ESCAPE / CASH OUT', 0x33432a, 0xa8ff68, () => {
+        void this.runCycleBoundaryAction(() => this.options.onCashOut());
+      });
       return;
     }
 
@@ -105,6 +119,7 @@ export class RunProgressPanel {
     this.mutationText.setText(this.mutationSummary(encounter));
     this.createActionButton(this.left + 100, this.top + 302, '▶ START FIGHT', 0x443253, 0xd07cff, () => {
       const started = this.options.onStartEncounter(encounter);
+      if (started) this.startGameplayMarkup();
       this.statusText.setText(started ? 'FIGHT LIVE • BACKPACK SNAPSHOT LOCKED' : 'BLOCKED • FINISH THE CURRENT CHOICE / FIGHT FIRST');
     });
   }
@@ -128,6 +143,47 @@ export class RunProgressPanel {
     return `MUTATIONS ×${encounter.modifiers.length}\n${names}`;
   }
 
+  private startGameplayMarkup(): void {
+    if (this.gameplayMarkedActive) return;
+    this.gameplayMarkedActive = true;
+    this.platformAdapter()?.gameplayStart();
+  }
+
+  private stopGameplayMarkup(): void {
+    if (!this.gameplayMarkedActive) return;
+    this.gameplayMarkedActive = false;
+    this.platformAdapter()?.gameplayStop();
+  }
+
+  private async runCycleBoundaryAction(action: () => void): Promise<void> {
+    if (this.interstitialInFlight) return;
+    const platform = this.platformAdapter();
+    const nowMs = runtimeNowMs();
+    const eligible = platform && platform.id !== 'local' && this.adBreakPolicy.canShowInterstitial({
+      breakPoint: 'cycle-boundary',
+      gameplayActive: this.gameplayMarkedActive,
+      nowMs,
+    });
+    if (!eligible || !platform) {
+      action();
+      return;
+    }
+
+    this.interstitialInFlight = true;
+    this.statusText.setText('NATURAL BREAK • AD MAY PLAY BEFORE CONTINUING');
+    try {
+      const result = await platform.showInterstitial();
+      if (result === 'shown') this.adBreakPolicy.recordInterstitialShown(runtimeNowMs());
+    } finally {
+      this.interstitialInFlight = false;
+      action();
+    }
+  }
+
+  private platformAdapter(): PlatformAdapter | undefined {
+    return this.scene.registry.get(PLATFORM_REGISTRY_KEY) as PlatformAdapter | undefined;
+  }
+
   private createActionButton(
     x: number,
     y: number,
@@ -145,7 +201,13 @@ export class RunProgressPanel {
     button.on('pointerover', () => button.setAlpha(0.84));
     button.on('pointerout', () => button.setAlpha(1));
     button.on('pointerdown', () => { button.setScale(0.97); label.setScale(0.97); shadow.setScale(0.97); });
-    button.on('pointerup', () => { button.setScale(1); label.setScale(1); shadow.setScale(1); onClick(); });
+    const restore = (): void => { button.setScale(1); label.setScale(1); shadow.setScale(1); };
+    button.on('pointerupoutside', restore);
+    button.on('pointerup', () => { restore(); onClick(); });
     this.actionObjects.push(shadow, button, label);
   }
+}
+
+function runtimeNowMs(): number {
+  return typeof performance !== 'undefined' ? performance.now() : Date.now();
 }
