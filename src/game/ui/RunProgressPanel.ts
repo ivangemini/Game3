@@ -190,8 +190,7 @@ export class RunProgressPanel {
 
   private updateCampaignRail(progress: RunProgressState, encounter: RunEncounterDefinition | null): void {
     const visible = progress.mode === 'campaign'
-      || (progress.mode === 'deep-choice' && progress.loopNumber === 1)
-      || (progress.mode === 'complete' && progress.loopNumber === 1);
+      || (progress.mode === 'deep-choice' && progress.loopNumber === 1);
     const completed = completedCampaignWorldCount(progress);
     const currentWorld = progress.mode === 'campaign' ? (encounter?.world ?? Math.min(CAMPAIGN_WORLDS, completed + 1)) : CAMPAIGN_WORLDS;
 
