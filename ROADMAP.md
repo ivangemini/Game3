@@ -82,11 +82,11 @@
 - [x] ~15 mutations/events pool (**6 world mutations + 9 run events = 15 combined entries**)
 - [x] Late-run second-stage evolution pool: **4 fusion-only transformations** with no extra save gating
 
-## P5 — Retention/meta [IN PROGRESS]
+## P5 — Retention/meta [DONE]
 - [x] Itemdex + Recipe Book UI (**Junk Archive: 60 item slots + 24 recipe slots, hidden unknown payloads, pagination and collection progress**)
 - [x] Discovery state for items and fusion recipes
 - [x] Unlock milestones (**5 derived Archive Ranks with cosmetic seals; final Void Archivist requires full current collection + Corrupted Loop 2**)
-- [ ] Daily seeded run
+- [x] Daily seeded run (**UTC `daily:YYYY-MM-DD` identity reusing the full deterministic campaign pipeline**)
 - [x] Corrupted Loop + score foundation
 - [x] Achievements (**13 derived Trophy Shelf goals across items, recipes, secret evolutions and loop depth**)
 
