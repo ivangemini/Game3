@@ -2,7 +2,7 @@ import * as Phaser from 'phaser';
 import { ONBOARDING_STEPS } from '../domain/onboarding';
 
 const DEPTH = 1300;
-const STEP_ACCENTS: Record<string, number> = {
+const STEP_ACCENTS: Readonly<Record<string, number>> = {
   hero: 0x7cf2ff,
   pack: 0xb5ff4d,
   synergy: 0xff91e6,
@@ -20,13 +20,10 @@ export class TutorialOverlay {
     private readonly reducedMotion: boolean,
   ) {
     this.root = scene.add.container(0, 0).setDepth(DEPTH).setVisible(false);
-    const blocker = scene.add.rectangle(800, 450, 1600, 900, 0x050609, 0.96)
-      .setInteractive({ useHandCursor: false });
+    const blocker = scene.add.rectangle(800, 450, 1600, 900, 0x050609, 0.96).setInteractive();
     const shadow = scene.add.rectangle(806, 462, 1050, 630, 0x020306, 0.72);
-    const panel = scene.add.rectangle(800, 454, 1040, 620, 0x11141d, 1)
-      .setStrokeStyle(3, 0x6f6282, 1);
-    const inner = scene.add.rectangle(800, 454, 1018, 598, 0x171a24, 0.36)
-      .setStrokeStyle(1, 0xa696bd, 0.16);
+    const panel = scene.add.rectangle(800, 454, 1040, 620, 0x11141d, 1).setStrokeStyle(3, 0x6f6282);
+    const inner = scene.add.rectangle(800, 454, 1018, 598, 0x171a24, 0.36).setStrokeStyle(1, 0xa696bd, 0.16);
     this.content = scene.add.container(0, 0);
     this.root.add([blocker, shadow, panel, inner, this.content]);
 
@@ -39,25 +36,15 @@ export class TutorialOverlay {
     this.stepIndex = Math.max(0, Math.min(ONBOARDING_STEPS.length - 1, Math.floor(startStep)));
     this.root.setVisible(true);
     this.refresh();
-    if (this.reducedMotion) {
-      this.root.setAlpha(1);
-      return;
-    }
+    if (this.reducedMotion) return void this.root.setAlpha(1);
     this.root.setAlpha(0).setScale(0.985);
-    this.scene.tweens.add({
-      targets: this.root,
-      alpha: 1,
-      scaleX: 1,
-      scaleY: 1,
-      duration: 180,
-      ease: 'Quad.Out',
-    });
+    this.scene.tweens.add({ targets: this.root, alpha: 1, scaleX: 1, scaleY: 1, duration: 180, ease: 'Quad.Out' });
   }
 
   hide(): void {
     if (!this.root.visible) return;
     if (this.reducedMotion) {
-      this.root.setVisible(false).setAlpha(1);
+      this.root.setVisible(false).setAlpha(1).setScale(1);
       return;
     }
     this.scene.tweens.add({
@@ -71,9 +58,7 @@ export class TutorialOverlay {
     });
   }
 
-  isVisible(): boolean {
-    return this.root.visible;
-  }
+  isVisible(): boolean { return this.root.visible; }
 
   private refresh(): void {
     this.content.removeAll(true);
@@ -81,70 +66,47 @@ export class TutorialOverlay {
     const finalStep = this.stepIndex === ONBOARDING_STEPS.length - 1;
     const accent = STEP_ACCENTS[step.id] ?? 0xff91e6;
 
-    const sectionPlate = this.scene.add.rectangle(800, 190, 900, 42, 0x0c0f16, 0.9)
-      .setStrokeStyle(1, accent, 0.24);
-    const accentBar = this.scene.add.rectangle(354, 190, 8, 42, accent, 1);
-    this.content.add([sectionPlate, accentBar]);
-
-    this.content.add(this.scene.add.text(375, 177, 'JUNKPACK FIELD MANUAL', {
-      fontFamily: 'Arial Black, Impact, sans-serif',
-      fontSize: '20px', color: '#f7f2e8', stroke: '#090a0d', strokeThickness: 5,
-    }));
-    this.content.add(this.scene.add.text(1240, 179, `${String(this.stepIndex + 1).padStart(2, '0')} / ${String(ONBOARDING_STEPS.length).padStart(2, '0')}`, {
-      fontSize: '12px', color: '#c6bfcc', fontStyle: 'bold',
-    }).setOrigin(1, 0));
+    this.content.add([
+      this.scene.add.rectangle(800, 190, 900, 42, 0x0c0f16, 0.9).setStrokeStyle(1, accent, 0.24),
+      this.scene.add.rectangle(354, 190, 8, 42, accent, 1),
+      this.scene.add.text(375, 177, 'JUNKPACK FIELD MANUAL', {
+        fontFamily: 'Arial Black, Impact, sans-serif', fontSize: '20px', color: '#f7f2e8', stroke: '#090a0d', strokeThickness: 5,
+      }),
+      this.scene.add.text(1240, 179, `${String(this.stepIndex + 1).padStart(2, '0')} / ${String(ONBOARDING_STEPS.length).padStart(2, '0')}`, {
+        fontSize: '12px', color: '#c6bfcc', fontStyle: 'bold',
+      }).setOrigin(1, 0),
+    ]);
 
     this.drawStepVisual(step.id, accent);
 
-    this.content.add(this.scene.add.text(620, 254, step.eyebrow, {
-      fontSize: '12px', color: this.hex(accent), fontStyle: 'bold', letterSpacing: 1,
-    }));
-    this.content.add(this.scene.add.text(620, 288, step.title, {
-      fontFamily: 'Arial Black, Impact, sans-serif',
-      fontSize: '28px', color: '#f7f2e8', wordWrap: { width: 610 },
-    }));
-    this.content.add(this.scene.add.text(620, 370, step.body, {
-      fontSize: '17px', color: '#c9c7cf', lineSpacing: 7, wordWrap: { width: 600 },
-    }));
-
-    const callout = this.scene.add.rectangle(920, 510, 600, 92, 0x211d2a, 1)
-      .setStrokeStyle(2, accent, 0.58);
-    const calloutMark = this.scene.add.circle(646, 510, 14, accent, 0.16)
-      .setStrokeStyle(2, accent, 0.85);
-    const calloutText = this.scene.add.text(676, 480, step.callout, {
-      fontSize: '14px', color: '#e8d7f3', fontStyle: 'bold',
-      lineSpacing: 4, wordWrap: { width: 515 },
-    });
-    this.content.add([callout, calloutMark, calloutText]);
+    this.content.add([
+      this.scene.add.text(620, 254, step.eyebrow, { fontSize: '12px', color: this.hex(accent), fontStyle: 'bold', letterSpacing: 1 }),
+      this.scene.add.text(620, 288, step.title, {
+        fontFamily: 'Arial Black, Impact, sans-serif', fontSize: '28px', color: '#f7f2e8', wordWrap: { width: 610 },
+      }),
+      this.scene.add.text(620, 370, step.body, { fontSize: '17px', color: '#c9c7cf', lineSpacing: 7, wordWrap: { width: 600 } }),
+      this.scene.add.rectangle(920, 510, 600, 92, 0x211d2a, 1).setStrokeStyle(2, accent, 0.58),
+      this.scene.add.circle(646, 510, 14, accent, 0.16).setStrokeStyle(2, accent, 0.85),
+      this.scene.add.text(676, 480, step.callout, {
+        fontSize: '14px', color: '#e8d7f3', fontStyle: 'bold', lineSpacing: 4, wordWrap: { width: 515 },
+      }),
+    ]);
 
     this.drawStepRail(accent);
-    if (this.stepIndex > 0) this.addButton(480, 680, 190, '‹ BACK', () => {
-      this.stepIndex -= 1;
-      this.refreshWithTransition();
-    }, false, accent);
+    if (this.stepIndex > 0) this.addButton(480, 680, 190, '‹ BACK', () => this.changeStep(-1), false, accent);
     this.addButton(800, 680, finalStep ? 330 : 240, finalStep ? 'GOT IT • BUILD JUNK' : 'NEXT ›', () => {
-      if (finalStep) this.hide();
-      else {
-        this.stepIndex += 1;
-        this.refreshWithTransition();
-      }
+      if (finalStep) this.hide(); else this.changeStep(1);
     }, true, accent);
     if (!finalStep) this.addButton(1120, 680, 190, 'SKIP', () => this.hide(), false, accent);
   }
 
-  private refreshWithTransition(): void {
-    if (this.reducedMotion) {
-      this.refresh();
-      return;
-    }
+  private changeStep(delta: number): void {
+    this.stepIndex = Math.max(0, Math.min(ONBOARDING_STEPS.length - 1, this.stepIndex + delta));
+    if (this.reducedMotion) return this.refresh();
     this.scene.tweens.add({
-      targets: this.content,
-      alpha: 0,
-      x: -10,
-      duration: 80,
-      ease: 'Quad.In',
+      targets: this.content, alpha: 0, x: delta > 0 ? -10 : 10, duration: 80, ease: 'Quad.In',
       onComplete: () => {
-        this.content.setX(10);
+        this.content.setX(delta > 0 ? 10 : -10);
         this.refresh();
         this.scene.tweens.add({ targets: this.content, alpha: 1, x: 0, duration: 130, ease: 'Quad.Out' });
       },
@@ -154,14 +116,11 @@ export class TutorialOverlay {
   private drawStepVisual(stepId: string, accent: number): void {
     const x = 480;
     const y = 397;
-    const frame = this.scene.add.rectangle(x, y, 220, 300, 0x0d1018, 1)
-      .setStrokeStyle(3, accent, 0.72);
-    const inset = this.scene.add.rectangle(x, y, 196, 276, 0x1e212b, 0.82)
-      .setStrokeStyle(1, accent, 0.18);
-    const stamp = this.scene.add.text(x, y + 116, stepId.toUpperCase(), {
-      fontSize: '10px', color: this.hex(accent), fontStyle: 'bold', letterSpacing: 2,
-    }).setOrigin(0.5);
-    this.content.add([frame, inset, stamp]);
+    this.content.add([
+      this.scene.add.rectangle(x, y, 220, 300, 0x0d1018, 1).setStrokeStyle(3, accent, 0.72),
+      this.scene.add.rectangle(x, y, 196, 276, 0x1e212b, 0.82).setStrokeStyle(1, accent, 0.18),
+      this.scene.add.text(x, y + 116, stepId.toUpperCase(), { fontSize: '10px', color: this.hex(accent), fontStyle: 'bold', letterSpacing: 2 }).setOrigin(0.5),
+    ]);
 
     if (stepId === 'hero') this.drawHeroVisual(x, y, accent);
     else if (stepId === 'pack') this.drawPackVisual(x, y, accent);
@@ -171,50 +130,50 @@ export class TutorialOverlay {
   }
 
   private drawHeroVisual(x: number, y: number, accent: number): void {
-    const halo = this.scene.add.circle(x, y - 38, 56, accent, 0.09).setStrokeStyle(3, accent, 0.72);
-    const head = this.scene.add.circle(x, y - 52, 24, 0xf2d3b1, 1).setStrokeStyle(3, 0x513d49);
-    const body = this.scene.add.rectangle(x, y + 8, 92, 86, 0x354255, 1).setStrokeStyle(3, accent, 0.72);
-    const badge = this.scene.add.circle(x + 34, y - 2, 13, accent, 1).setStrokeStyle(2, 0x11141d);
-    this.content.add([halo, head, body, badge]);
+    this.content.add([
+      this.scene.add.circle(x, y - 38, 56, accent, 0.09).setStrokeStyle(3, accent, 0.72),
+      this.scene.add.circle(x, y - 52, 24, 0xf2d3b1, 1).setStrokeStyle(3, 0x513d49),
+      this.scene.add.rectangle(x, y + 8, 92, 86, 0x354255, 1).setStrokeStyle(3, accent, 0.72),
+      this.scene.add.circle(x + 34, y - 2, 13, accent, 1).setStrokeStyle(2, 0x11141d),
+    ]);
   }
 
   private drawPackVisual(x: number, y: number, accent: number): void {
-    const cells: Phaser.GameObjects.Rectangle[] = [];
     for (let row = 0; row < 4; row += 1) {
       for (let column = 0; column < 3; column += 1) {
-        cells.push(this.scene.add.rectangle(x - 54 + column * 54, y - 76 + row * 54, 46, 46, 0x292c35, 1)
-          .setStrokeStyle(2, 0x5b514d));
+        this.content.add(this.scene.add.rectangle(x - 54 + column * 54, y - 76 + row * 54, 46, 46, 0x292c35, 1).setStrokeStyle(2, 0x5b514d));
       }
     }
-    const item = this.scene.add.rectangle(x - 27, y - 49, 96, 42, accent, 0.75).setStrokeStyle(3, 0xf4ffe7);
-    this.content.add([...cells, item]);
+    this.content.add(this.scene.add.rectangle(x - 27, y - 49, 96, 42, accent, 0.75).setStrokeStyle(3, 0xf4ffe7));
   }
 
   private drawSynergyVisual(x: number, y: number, accent: number): void {
-    const left = this.scene.add.rectangle(x - 52, y - 18, 70, 88, 0x4a4036, 1).setStrokeStyle(3, 0xffd56e);
-    const right = this.scene.add.rectangle(x + 52, y - 18, 70, 88, 0x2f4550, 1).setStrokeStyle(3, 0x7cf2ff);
-    const link = this.scene.add.rectangle(x, y - 18, 34, 7, accent, 1);
-    const node = this.scene.add.circle(x, y - 18, 10, accent, 1).setStrokeStyle(2, 0xffffff, 0.75);
-    this.content.add([left, right, link, node]);
+    this.content.add([
+      this.scene.add.rectangle(x - 52, y - 18, 70, 88, 0x4a4036, 1).setStrokeStyle(3, 0xffd56e),
+      this.scene.add.rectangle(x + 52, y - 18, 70, 88, 0x2f4550, 1).setStrokeStyle(3, 0x7cf2ff),
+      this.scene.add.rectangle(x, y - 18, 34, 7, accent, 1),
+      this.scene.add.circle(x, y - 18, 10, accent, 1).setStrokeStyle(2, 0xffffff, 0.75),
+    ]);
   }
 
   private drawFightVisual(x: number, y: number, accent: number): void {
-    const player = this.scene.add.circle(x - 55, y + 18, 30, 0x7cf2ff, 0.55).setStrokeStyle(3, 0x7cf2ff);
-    const boss = this.scene.add.circle(x + 52, y - 30, 48, accent, 0.28).setStrokeStyle(4, accent);
-    const telegraph = this.scene.add.triangle(x, y + 52, -18, 14, 18, 14, 0, -15, 0xffd56e, 0.9);
-    const beam = this.scene.add.rectangle(x - 2, y - 5, 55, 5, accent, 0.8).setAngle(-18);
-    this.content.add([player, boss, telegraph, beam]);
+    this.content.add([
+      this.scene.add.circle(x - 55, y + 18, 30, 0x7cf2ff, 0.55).setStrokeStyle(3, 0x7cf2ff),
+      this.scene.add.circle(x + 52, y - 30, 48, accent, 0.28).setStrokeStyle(4, accent),
+      this.scene.add.triangle(x, y + 52, -18, 14, 18, 14, 0, -15, 0xffd56e, 0.9),
+      this.scene.add.rectangle(x - 2, y - 5, 55, 5, accent, 0.8).setAngle(-18),
+    ]);
   }
 
   private drawFusionVisual(x: number, y: number, accent: number): void {
-    const left = this.scene.add.rectangle(x - 62, y - 38, 58, 58, 0x44505c, 1).setStrokeStyle(3, 0x7cf2ff);
-    const right = this.scene.add.rectangle(x + 62, y - 38, 58, 58, 0x57424f, 1).setStrokeStyle(3, 0xff91e6);
-    const plus = this.scene.add.text(x, y - 38, '+', {
-      fontFamily: 'Arial Black, Impact, sans-serif', fontSize: '28px', color: '#f7f2e8',
-    }).setOrigin(0.5);
-    const result = this.scene.add.diamond(x, y + 50, 78, 78, accent, 0.36).setStrokeStyle(4, accent);
-    const arrow = this.scene.add.text(x, y + 2, '↓', { fontSize: '24px', color: this.hex(accent) }).setOrigin(0.5);
-    this.content.add([left, right, plus, result, arrow]);
+    const result = this.scene.add.rectangle(x, y + 50, 58, 58, accent, 0.36).setStrokeStyle(4, accent).setAngle(45);
+    this.content.add([
+      this.scene.add.rectangle(x - 62, y - 38, 58, 58, 0x44505c, 1).setStrokeStyle(3, 0x7cf2ff),
+      this.scene.add.rectangle(x + 62, y - 38, 58, 58, 0x57424f, 1).setStrokeStyle(3, 0xff91e6),
+      this.scene.add.text(x, y - 38, '+', { fontFamily: 'Arial Black, Impact, sans-serif', fontSize: '28px', color: '#f7f2e8' }).setOrigin(0.5),
+      result,
+      this.scene.add.text(x, y + 2, '↓', { fontSize: '24px', color: this.hex(accent) }).setOrigin(0.5),
+    ]);
   }
 
   private drawStepRail(accent: number): void {
@@ -228,49 +187,26 @@ export class TutorialOverlay {
       if (active) {
         const ring = this.scene.add.circle(x, y, 14, accent, 0).setStrokeStyle(2, accent, 0.45);
         this.content.add(ring);
-        if (!this.reducedMotion) {
-          this.scene.tweens.add({ targets: ring, scaleX: 1.25, scaleY: 1.25, alpha: 0, duration: 650, repeat: -1 });
-        }
+        if (!this.reducedMotion) this.scene.tweens.add({ targets: ring, scaleX: 1.25, scaleY: 1.25, alpha: 0, duration: 650, repeat: -1 });
       }
-      if (index < ONBOARDING_STEPS.length - 1) {
-        this.content.add(this.scene.add.rectangle(x + 48, y, 72, 2, complete ? 0x7ba83f : 0x414653, 1));
-      }
-      if (active) {
-        this.content.add(this.scene.add.text(x, y + 18, step.id.toUpperCase(), {
-          fontSize: '8px', color: '#d9d2df', fontStyle: 'bold',
-        }).setOrigin(0.5, 0));
-      }
+      if (index < ONBOARDING_STEPS.length - 1) this.content.add(this.scene.add.rectangle(x + 48, y, 72, 2, complete ? 0x7ba83f : 0x414653, 1));
+      if (active) this.content.add(this.scene.add.text(x, y + 18, step.id.toUpperCase(), { fontSize: '8px', color: '#d9d2df', fontStyle: 'bold' }).setOrigin(0.5, 0));
     });
   }
 
-  private addButton(
-    x: number,
-    y: number,
-    width: number,
-    label: string,
-    callback: () => void,
-    primary: boolean,
-    accent: number,
-  ): void {
+  private addButton(x: number, y: number, width: number, label: string, callback: () => void, primary: boolean, accent: number): void {
     const idle = primary ? 0x303a28 : 0x292c37;
     const hover = primary ? 0x3f4e31 : 0x3a3e4a;
-    const rect = this.scene.add.rectangle(x, y, width, 48, idle, 1)
-      .setStrokeStyle(2, primary ? accent : 0x666c7c)
-      .setInteractive({ useHandCursor: true });
-    const text = this.scene.add.text(x, y, label, {
-      fontSize: '13px', color: primary ? '#f8fff1' : '#e0dde6', fontStyle: 'bold',
-    }).setOrigin(0.5);
+    const rect = this.scene.add.rectangle(x, y, width, 48, idle, 1).setStrokeStyle(2, primary ? accent : 0x666c7c).setInteractive({ useHandCursor: true });
+    const text = this.scene.add.text(x, y, label, { fontSize: '13px', color: primary ? '#f8fff1' : '#e0dde6', fontStyle: 'bold' }).setOrigin(0.5);
     rect.on('pointerover', () => rect.setFillStyle(hover));
     rect.on('pointerout', () => rect.setFillStyle(idle));
     rect.on('pointerdown', () => { rect.setScale(0.97); text.setScale(0.97); });
-    rect.on('pointerup', () => {
-      rect.setScale(1); text.setScale(1); callback();
-    });
-    rect.on('pointerupoutside', () => { rect.setScale(1); text.setScale(1); });
+    const restore = (): void => { rect.setScale(1); text.setScale(1); };
+    rect.on('pointerup', () => { restore(); callback(); });
+    rect.on('pointerupoutside', restore);
     this.content.add([rect, text]);
   }
 
-  private hex(color: number): string {
-    return `#${color.toString(16).padStart(6, '0')}`;
-  }
+  private hex(color: number): string { return `#${color.toString(16).padStart(6, '0')}`; }
 }
