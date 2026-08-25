@@ -22,8 +22,8 @@ function summary(overrides = {}) {
     p90TimeToFirstBossMs: 330000,
     sessionsCompletingBaseCampaign: 2,
     baseCampaignCompletionRate: 0.5,
-    medianBaseCampaignDurationMs: 1320000,
-    p90BaseCampaignDurationMs: 1500000,
+    medianBaseCampaignDurationMs: 2100000,
+    p90BaseCampaignDurationMs: 2460000,
     tutorialOpened: 2,
     tutorialCompleted: 1,
     tutorialSkipped: 0,
@@ -60,7 +60,7 @@ describe('soft-launch report', () => {
     expect(parseTelemetryText(`${JSON.stringify(event)}\n${JSON.stringify({ events: [event] })}`)).toEqual([event, event]);
   });
 
-  it('surfaces first-boss and base-campaign pacing targets alongside p50/p90', () => {
+  it('surfaces first-boss and six-world campaign pacing targets alongside p50/p90', () => {
     const markdown = renderMarkdown(summary());
     expect(markdown).toContain('Return-age telemetry coverage: **100.0%** (4/4)');
     expect(markdown).toContain('## Review signals');
@@ -70,8 +70,8 @@ describe('soft-launch report', () => {
     expect(markdown).toContain('p50 4.0 min, p90 5.5 min');
     expect(markdown).toContain('Target p50: **3–5 min**');
     expect(markdown).toContain('Base campaign completion');
-    expect(markdown).toContain('p50 22.0 min, p90 25.0 min');
-    expect(markdown).toContain('Target p50: **20–25 min**');
+    expect(markdown).toContain('p50 35.0 min, p90 41.0 min');
+    expect(markdown).toContain('Target p50: **32–42 min**');
     expect(markdown).toContain('| w1-tv-tyrant | 3 | 66.7% | 50.0 s | 48.0 s | 1.1 min |');
   });
 
@@ -83,12 +83,12 @@ describe('soft-launch report', () => {
       sessionsWithFirstBoss: 24,
       medianTimeToFirstBossMs: 240000,
       sessionsCompletingBaseCampaign: 18,
-      medianBaseCampaignDurationMs: 1320000,
+      medianBaseCampaignDurationMs: 2160000,
     }));
 
     expect(signals).toContain('[ON TARGET] Return-age instrumentation coverage is 97.5%.');
     expect(signals).toContain('[ON TARGET] First-boss pacing p50 is 4.0 min within the 3.0 min–5.0 min target.');
-    expect(signals).toContain('[ON TARGET] Base-campaign pacing p50 is 22.0 min within the 20.0 min–25.0 min target.');
+    expect(signals).toContain('[ON TARGET] Base-campaign pacing p50 is 36.0 min within the 32.0 min–42.0 min target.');
   });
 
   it('flags instrumentation and pacing deviations once samples are large enough', () => {
@@ -99,11 +99,11 @@ describe('soft-launch report', () => {
       sessionsWithFirstBoss: 24,
       medianTimeToFirstBossMs: 360000,
       sessionsCompletingBaseCampaign: 18,
-      medianBaseCampaignDurationMs: 1620000,
+      medianBaseCampaignDurationMs: 2640000,
     }));
 
     expect(signals).toContain('[WATCH] Return-age instrumentation coverage is 80.0%; target is at least 95.0% before interpreting age-bucket mix.');
     expect(signals).toContain('[WATCH] First-boss pacing p50 is 6.0 min, slower than the 3.0 min–5.0 min target.');
-    expect(signals).toContain('[WATCH] Base-campaign pacing p50 is 27.0 min, slower than the 20.0 min–25.0 min target.');
+    expect(signals).toContain('[WATCH] Base-campaign pacing p50 is 44.0 min, slower than the 32.0 min–42.0 min target.');
   });
 });
