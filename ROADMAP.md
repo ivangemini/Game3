@@ -98,7 +98,8 @@
 - [x] Tactile core gameplay UI foundation (**leather/scrap backpack shell, explicit locked pockets, silhouette item glyphs, rarity frames, restyled junk shop/fusion lab/run panel and stronger logical typography**)
 - [ ] Full in-game HUD reflow / small-text legibility on real mobile landscape (**logical hierarchy pass implemented; real-device/browser acceptance still required**)
 - [x] Item art replacement pipeline foundation (**stable `junk-items` atlas + `item.<definitionId>` frame contract with automatic procedural fallback**)
-- [ ] Final authored art + packed item/boss/UI atlases
+- [x] Authored art wave 1 (**12 high-frequency item SVGs + all 4 hero portraits + TV Tyrant combat portrait; lazy TextureManager adoption with fallback and atlas-compatible keys**)
+- [ ] Final authored catalog + packed item/boss/UI atlases (**remaining items/bosses/UI art, review refinements, packing/compression and browser/mobile acceptance**)
 - [x] Combat semantic feedback foundation (**30-object particle pool, item/status rings, hit bursts, boss-frame pulses, outcome flashes, restrained shake, reduced-motion fallback**)
 - [x] Non-combat run feedback foundation (**shop purchase/reward/reroll/error SFX hooks, fusion reveal, event-drop toast, pocket-unlock feedback**)
 - [ ] Final animation/VFX pass across backpack drag/drop, reward staging and final art assets
