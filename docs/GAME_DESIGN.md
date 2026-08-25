@@ -1,4 +1,4 @@
-# Junkpack: Boss Rush — Game Design v0.4
+# Junkpack: Boss Rush — Game Design v0.5
 
 ## Elevator pitch
 A compact roguelite inventory autobattler where the player packs absurd junk into a constrained backpack, discovers synergies and fusion recipes, then fights surreal bosses that directly interfere with the backpack's rules.
@@ -11,8 +11,8 @@ Web-first: Yandex Games, CrazyGames and compatible HTML5 portals. Short onboardi
 2. Place and rotate them in a constrained backpack with locked pocket cells.
 3. Form adjacency, direction and tag synergies.
 4. Fight a short automatic battle with readable item triggers.
-5. Earn currency/item choice/event.
-6. Rearrange or pivot the build.
+5. Earn currency and hit occasional surreal choice-events.
+6. Rearrange, buy or fuse junk to pivot the build.
 7. Defeat a boss, open more backpack space and choose one of three perks.
 8. Continue through four compact worlds.
 9. After the campaign finale, Escape/Cash Out or take the same build into a full Corrupted Loop.
@@ -26,7 +26,7 @@ Web-first: Yandex Games, CrazyGames and compatible HTML5 portals. Short onboardi
 - Target first full campaign: ~20–25 minutes.
 - Target strong session: ~30–50 minutes if the player enters Loop 2.
 - Deep session: 60+ minutes through additional corrupted loops.
-- Do not extend session length with HP sponges alone. Length must come from repacking, purchases, perks, mutations, pocket growth and repeated build pivots.
+- Do not extend session length with HP sponges alone. Length must come from repacking, purchases, perks, events, fusions, mutations, pocket growth and repeated build pivots.
 
 The first boss is a checkpoint, not the end of the run. A player should understand the fantasy quickly, then spend the rest of the session making the backpack increasingly powerful and increasingly strange.
 
@@ -44,6 +44,8 @@ Later loops may introduce cursed or conditional pocket variants, but launch shou
 ### Items
 Launch target: 35–45 base items across weapons, devices, materials/potions, defensive junk and pets/creatures. Each item has stable ID, shape, tags, rarity and effects.
 
+The prototype currently has eight base/shop items plus six fusion-only results. Fusion results intentionally do not enter the normal shop pool; their value comes from discovery and sacrificing ingredients.
+
 ### Synergies
 The first implemented synergy family uses **orthogonal side contact** between occupied item cells. Diagonal proximity does not count. This makes placement itself part of build power rather than treating the backpack as passive storage.
 
@@ -59,9 +61,36 @@ Rules resolve deterministically from stable item instance IDs. Multiple valid co
 Future synergy families may add directional arcs or row/column rules, but they must stay visually readable and testable without Phaser.
 
 ### Fusion/discovery
-20–30 launch recipes. Some are obvious; some appear as `???` in a Recipe Book until discovered. Fusion should create meaningful build branches rather than linear +1 tiers only.
+Launch target remains 20–30 recipes. Fusion is a build pivot, not a linear `Item I + Item I = Item II` ladder.
 
-Late-run transformations are a deliberate retention extension: familiar items may evolve into stranger forms after specific recipe/perk/loop conditions. These should be sparse and memorable rather than a large linear upgrade tree.
+The first implemented recipes are deliberately absurd and change tags/combat profiles:
+- Angry Battery + Cursed Toaster → **Shock Toaster**
+- Laser Cat + Angry Battery → **Cyber Cat**
+- Suspicious Flask + Toxic Fan → **Biohazard Turbine**
+- Mutant Duck + Scrap Magnet → **Polarity Duck**
+- Fish Blaster + Suspicious Flask → **Toxic Fish Cannon**
+- Cursed Toaster + Scrap Magnet → **Gravity Toaster**
+
+Fusion unlocks after Boss 1. Both ingredients are consumed only when the resulting item has a legal placement in the current backpack. Locked pocket cells still count as blocked, so fusion cannot bypass spatial progression. If the result cannot fit, the original items remain untouched.
+
+The result has its own tags and combat profile, so a fusion may destroy one synergy, create another, change backpack geometry or push the player into a different build family. Successful recipes/results are recorded in persistent discovery state for the future Recipe Book and Itemdex.
+
+Later-run transformations may add second-stage or secret recipes tied to perks/loop conditions, but they should remain sparse and memorable rather than forming a large linear upgrade tree.
+
+### Run events
+A long session needs short decisions that are not all combat/shop screens. The prototype therefore schedules one deterministic event after the first combat of each world: four in the base campaign and four more in every Corrupted Loop.
+
+Events are seeded from `runSeed + eventIndex`, persisted before presentation and cannot be rerolled by reloading. A pending event blocks the next encounter until one choice resolves. Choices spend or award the real run currency and may add real items to the backpack; an item-reward choice cannot complete if there is no legal backpack space.
+
+Implemented prototype event pool:
+- **Cursed Vending Machine** — mystery purchase or coin gamble.
+- **Cat Courier** — expensive guaranteed Laser Cat or cheaper random parcel.
+- **Duck Tax Office** — buy into duck bureaucracy or file a risky appeal.
+- **Microwave Oracle** — purchase appliance junk or harvest free static coins.
+- **Slime Pawnshop** — mystery crate or sell fabricated advice.
+- **Shrine of the Armed Fish** — buy a Fish Blaster or take a free Suspicious Flask.
+
+Immediate repeats are suppressed when alternatives exist. Events should resolve in seconds, create a build/economy decision, then return the player to packing rather than becoming a dialogue-heavy subsystem.
 
 ### Heroes
 Launch target: 4 heroes, each a light rule-bender rather than a hard class lock: Scavenger, Engineer, Alchemist/Witch, Beastmaster-like archetype. Names/art are provisional.
@@ -87,10 +116,10 @@ Implemented prototype pool:
 
 The four campaign worlds receive deterministic non-repeating mutations from the seed. Corrupted loops stack multiple different mutations simultaneously: 2 in Loop 2, 3 in Loop 3 and up to 4 in deeper loops.
 
-Launch target remains ~15 mutations/events once the core loop proves fun.
+Launch target remains a larger mutation/event pool once the core loop proves fun.
 
 ### Campaign and Corrupted Loops
-Campaign is four worlds with three encounters each. Bosses sit at the end of each world and can grant a three-choice perk. Between encounters the player can repack and spend rewards.
+Campaign is four worlds with three encounters each. Bosses sit at the end of each world and can grant a three-choice perk. Between encounters the player can repack, spend rewards, resolve scheduled events and fuse compatible junk.
 
 After encounter 12, show a clear high-stakes decision:
 - **Escape / Cash Out** — end the run and lock the score; or
@@ -104,9 +133,16 @@ Each deeper loop:
 - keeps the same 4-world rhythm so the player retains orientation;
 - stacks more world mutations;
 - reuses encounter templates with corrupted names/stats rather than requiring dozens of handmade stages;
+- inserts four additional deterministic events;
+- keeps fusion/discovery opportunities alive as new ingredients enter the backpack;
 - grants boss perks while the available perk pool still has meaningful choices.
 
 This system is the main low-scope mechanism for 30–60+ minute sessions.
+
+### Persistence and discovery
+Active-run persistence is schema-versioned. Save v7 stores backpack/shop/perks/progression plus the deterministic event cursor, pending event and event history. Legacy saves migrate forward without inventing a pending event.
+
+Persistent discovery currently records item IDs and successful fusion recipe IDs. The UI for Itemdex/Recipe Book is still future work, but discovery state is already generated by real gameplay rather than being retrofitted later.
 
 ### Meta
 Itemdex/Recipe Book, achievements, Daily seeded run, deepest completed Corrupted Loop and score. Keep permanent power creep limited.
@@ -117,10 +153,10 @@ Original absurd junk-surrealism: laser cats, cursed appliances, mutant ducks, ta
 ## Monetization hooks
 Rewarded: revive, post-boss reward multiplier, reroll, bonus chest/attempt. Interstitial: only natural transitions subject to platform policy. No forced interruption during active combat or backpack manipulation.
 
-For long sessions, ad pacing must respect the run rhythm. Boss clear / world transition / voluntary reward moments are preferred over arbitrary timers.
+For long sessions, ad pacing must respect the run rhythm. Boss clear / world transition / voluntary reward moments are preferred over arbitrary timers. Run events themselves should not silently become ad prompts.
 
 ## Non-goals for launch
 Real-time PvP, guilds/chat, open world, large story campaign, server-heavy economy, battle pass, dozens of heroes, hundreds of handmade stages.
 
 ## Success criterion for MVP
-A player can complete materially different runs using the same compact content pool, understands why a build works, experiences bosses changing backpack rules, reaches the first boss quickly, keeps modifying the build after 15–20 minutes, and has a credible reason to risk the same successful build for a 30–60+ minute session through Corrupted Loops.
+A player can complete materially different runs using the same compact content pool, understands why a build works, experiences bosses changing backpack rules, reaches the first boss quickly, keeps modifying the build after 15–20 minutes through events/fusions/pocket growth, and has a credible reason to risk the same successful build for a 30–60+ minute session through Corrupted Loops.
