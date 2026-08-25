@@ -55,6 +55,15 @@ describe('audio synthesis patches', () => {
         expect(layer.gain, id).toBeGreaterThan(0);
         expect(layer.gain, id).toBeLessThanOrEqual(1);
       }
+      for (const layer of patch.noiseLayers) {
+        expect(['lowpass', 'highpass', 'bandpass']).toContain(layer.filterType);
+        expect(layer.startHz, id).toBeGreaterThan(0);
+        expect(layer.endHz, id).toBeGreaterThan(0);
+        expect(layer.durationMs, id).toBeGreaterThan(0);
+        expect(layer.q, id).toBeGreaterThan(0);
+        expect(layer.gain, id).toBeGreaterThan(0);
+        expect(layer.gain, id).toBeLessThanOrEqual(1);
+      }
     }
   });
 
@@ -69,7 +78,14 @@ describe('audio synthesis patches', () => {
     expect(ratio).toBeLessThan(1.15);
   });
 
-  it('gives boss impacts more peak gain than their telegraphs', () => {
+  it('adds transient texture to impacts, bosses and staged UI without wasting it on every tiny trigger', () => {
+    expect(synthPatchForCue(cue('item.trigger')).noiseLayers).toHaveLength(0);
+    expect(synthPatchForCue(cue('player.hit')).noiseLayers.length).toBeGreaterThan(0);
+    expect(synthPatchForCue(cue('boss.eclipse.impact')).noiseLayers.length).toBeGreaterThan(0);
+    expect(synthPatchForCue(cue('ui.fusion')).noiseLayers.length).toBeGreaterThan(0);
+  });
+
+  it('gives boss impacts more peak tonal gain than their telegraphs', () => {
     const telegraph = synthPatchForCue(cue('boss.eclipse.telegraph'));
     const impact = synthPatchForCue(cue('boss.eclipse.impact'));
     const maxGain = (layers: typeof telegraph.layers): number => Math.max(...layers.map((layer) => layer.gain));
