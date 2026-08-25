@@ -4,7 +4,7 @@
 
 Telemetry exists to answer retention, pacing, balance and monetization questions. It must not collect names, emails, advertising identifiers, fingerprints, IP-derived identifiers or persistent cross-site IDs.
 
-The client uses an ephemeral session ID and a local boolean `returning` marker. Builds send nothing externally unless `VITE_ANALYTICS_ENDPOINT` is configured. `npm run release:soft-launch` requires that endpoint to be an absolute HTTPS URL.
+The client uses an ephemeral session ID plus local first-seen state only to emit a coarse return-age bucket. The local first-seen timestamp never leaves the browser and is not an analytics identity. Builds send nothing externally unless `VITE_ANALYTICS_ENDPOINT` is configured. `npm run release:soft-launch` requires that endpoint to be an absolute HTTPS URL.
 
 ## Delivery contract
 
@@ -62,6 +62,7 @@ The `telemetry/` and `reports/` directories are gitignored so raw session export
 ## Event vocabulary
 
 - `session_start` — new/returning boolean, platform adapter and viewport mode.
+- `session_age` — coarse local age bucket: `new`, `under-24h`, `1-2d`, `3-7d`, `8-30d`, `30d-plus` or `unknown`. No first-seen timestamp is transmitted.
 - `run_started` — standard or Daily run.
 - `tutorial_opened`, `tutorial_completed`, `tutorial_skipped` — opt-in Field Manual funnel.
 - `hero_selected` — run hero choice.
@@ -94,6 +95,14 @@ npm run analytics:report -- telemetry.ndjson \
 
 The command uses the repository's actual `src/analytics/TelemetrySummary.ts` implementation rather than maintaining a second set of formulas. CI runs the command against `scripts/fixtures/telemetry-smoke.json`, so changes to the summary contract must remain executable through the reporting workflow.
 
+## Return-age semantics and coverage
+
+`session_age` is deliberately privacy-minimal. The aggregator accepts at most one age bucket per ephemeral session and only includes it when that session also has a `session_start`. Duplicate `session_age` delivery therefore cannot inflate the distribution, and unmatched/orphan events do not count toward coverage.
+
+`sessionAgeCoverageRate` is the share of unique started sessions that have one accepted age bucket. The Markdown report uses **95%** as an operational instrumentation gate after at least **10 session starts**. This is a data-quality check, not a retention target.
+
+The age-bucket mix is **not** D1/D7 cohort retention. There is intentionally no persistent analytics identity or cohort denominator, so a bucket such as `3-7d` means only that an observed session came from a browser whose local first-seen state is 3–7 days old. Use it as a coarse return-age distribution and trend signal, not as a substitute for identity-based cohort analysis.
+
 ## Pacing measurement anchors
 
 Start-of-session UX and run pacing intentionally use different clocks:
@@ -107,6 +116,16 @@ This avoids counting time spent on a portal page before a new run begins as camp
 
 For the first balance pass, treat median as the central pacing signal and p90 as the long-tail regression signal. Do not tune from a single encounter with only a handful of attempts; compare reach, attempt count, win rate and duration together. A high p90 with a healthy median usually indicates a long-tail problem rather than a globally slow encounter.
 
+## Sample-aware review signals
+
+The Markdown report includes operational review signals so a small export does not trigger premature balance changes:
+
+- return-age coverage gate: at least **10** session starts before evaluating the 95% instrumentation target;
+- first-boss pacing gate: at least **20** sessions that reached the first boss before comparing p50 against the 3–5 minute target;
+- base-campaign pacing gate: at least **15** completed base campaigns before comparing p50 against the 20–25 minute target.
+
+Below a gate the report emits `[DATA]` and explicitly recommends holding tuning. Once the sample floor is met it emits `[ON TARGET]` or `[WATCH]` against the already-defined pacing targets. These floors are conservative operational review thresholds, not statistical-significance tests and not proof of causality. Balance changes still require looking at the full funnel, encounter attempts/win rates, p90 tails and the actual change made between samples.
+
 ## Primary soft-launch questions
 
 1. What share of sessions reach hero choice, first combat and first boss?
@@ -117,9 +136,9 @@ For the first balance pass, treat median as the central pacing signal and p90 as
 6. How often do players use events and fusion before entering Loop 2?
 7. What share of completed campaigns choose another loop versus cash-out?
 8. Is rewarded reroll completion healthy without becoming required for progression?
-9. Do returning sessions improve after balance/content changes?
+9. Does the coarse return-age mix improve after balance/content changes without degrading the core funnel?
 
-`src/analytics/TelemetrySummary.ts` provides a deterministic first-pass aggregator. In addition to rates/counts it reports average, median and p90 time-to-hero, time-to-first-combat, time-to-first-boss, base-campaign duration and per-encounter combat duration. Median is the default central pacing signal; p90 is the long-tail regression signal; averages remain useful for continuity with earlier reports but should not be tuned in isolation.
+`src/analytics/TelemetrySummary.ts` provides a deterministic first-pass aggregator. In addition to rates/counts it reports return-age instrumentation coverage, average/median/p90 time-to-hero, time-to-first-combat, time-to-first-boss, base-campaign duration and per-encounter combat duration. Median is the default central pacing signal; p90 is the long-tail regression signal; averages remain useful for continuity with earlier reports but should not be tuned in isolation.
 
 ## Guardrails
 
