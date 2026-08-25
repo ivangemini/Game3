@@ -41,6 +41,7 @@ export interface CrazyGamesPlatformAdapterOptions {
 export class CrazyGamesPlatformAdapter implements PlatformAdapter {
   readonly id = 'crazygames';
   private initialized = false;
+  private loadingStarted = false;
   private readonly hooks: PlatformLifecycleHooks;
   private readonly loadScript: (url: string) => Promise<void>;
 
@@ -53,14 +54,17 @@ export class CrazyGamesPlatformAdapter implements PlatformAdapter {
     if (this.initialized) return;
     if (!window.CrazyGames?.SDK) await this.loadScript(CRAZY_SDK_URL);
     if (!window.CrazyGames?.SDK) throw new Error('CrazyGames SDK loaded without CrazyGames.SDK global.');
-    window.CrazyGames.SDK.game.loadingStart?.();
     await window.CrazyGames.SDK.init();
     this.initialized = true;
+    window.CrazyGames.SDK.game.loadingStart?.();
+    this.loadingStarted = true;
   }
 
   async ready(): Promise<void> {
     await this.ensureInitialized();
+    if (!this.loadingStarted) return;
     window.CrazyGames?.SDK.game.loadingStop?.();
+    this.loadingStarted = false;
   }
 
   getLocale(): string {
@@ -87,6 +91,7 @@ export class CrazyGamesPlatformAdapter implements PlatformAdapter {
 
   destroy(): void {
     this.initialized = false;
+    this.loadingStarted = false;
   }
 
   private async requestAd(kind: 'midgame' | 'rewarded'): Promise<AdResult> {
