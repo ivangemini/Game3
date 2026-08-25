@@ -13,6 +13,12 @@ export interface SoftLaunchSummary {
   readonly sessions: number;
   readonly returningSessions: number;
   readonly returningRate: number;
+  readonly sessionsWithHeroSelection: number;
+  readonly heroSelectionSessionRate: number;
+  readonly averageTimeToHeroMs: number;
+  readonly sessionsWithFirstCombat: number;
+  readonly firstCombatSessionRate: number;
+  readonly averageTimeToFirstCombatMs: number;
   readonly standardRunsStarted: number;
   readonly dailyRunsStarted: number;
   readonly tutorialOpened: number;
@@ -54,6 +60,9 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
   const heroSelections: Record<string, number> = {};
   const loopEntries: Record<string, number> = {};
   const combats = new Map<string, { attempts: number; victories: number; defeats: number; durationTotal: number }>();
+  const sessionStartedAt = new Map<string, number>();
+  const firstHeroAt = new Map<string, number>();
+  const firstCombatAt = new Map<string, number>();
 
   for (const event of events) {
     switch (event.name) {
@@ -61,6 +70,7 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
         sessions += 1;
         const payload = event.payload as { returning: boolean };
         if (payload.returning) returningSessions += 1;
+        rememberEarliest(sessionStartedAt, event.sessionId, event.timestampMs);
         break;
       }
       case 'run_started': {
@@ -75,6 +85,7 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
       case 'hero_selected': {
         const payload = event.payload as { heroId: string };
         heroSelections[payload.heroId] = (heroSelections[payload.heroId] ?? 0) + 1;
+        rememberEarliest(firstHeroAt, event.sessionId, event.timestampMs);
         break;
       }
       case 'shop_purchase': shopPurchases += 1; break;
@@ -92,6 +103,9 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
         }
         break;
       }
+      case 'combat_started':
+        rememberEarliest(firstCombatAt, event.sessionId, event.timestampMs);
+        break;
       case 'run_event_choice': eventChoices += 1; break;
       case 'fusion_used': fusions += 1; break;
       case 'loop_entered': {
@@ -120,10 +134,19 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
     }
   }
 
+  const timeToHero = sessionLatencies(sessionStartedAt, firstHeroAt);
+  const timeToFirstCombat = sessionLatencies(sessionStartedAt, firstCombatAt);
+
   return {
     sessions,
     returningSessions,
     returningRate: ratio(returningSessions, sessions),
+    sessionsWithHeroSelection: timeToHero.length,
+    heroSelectionSessionRate: ratio(timeToHero.length, sessions),
+    averageTimeToHeroMs: average(timeToHero),
+    sessionsWithFirstCombat: timeToFirstCombat.length,
+    firstCombatSessionRate: ratio(timeToFirstCombat.length, sessions),
+    averageTimeToFirstCombatMs: average(timeToFirstCombat),
     standardRunsStarted,
     dailyRunsStarted,
     tutorialOpened,
@@ -153,6 +176,26 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
       }))
       .sort((a, b) => a.encounterId.localeCompare(b.encounterId)),
   };
+}
+
+function rememberEarliest(target: Map<string, number>, sessionId: string, timestampMs: number): void {
+  if (!Number.isFinite(timestampMs)) return;
+  const existing = target.get(sessionId);
+  if (existing === undefined || timestampMs < existing) target.set(sessionId, timestampMs);
+}
+
+function sessionLatencies(starts: ReadonlyMap<string, number>, milestones: ReadonlyMap<string, number>): number[] {
+  const values: number[] = [];
+  for (const [sessionId, milestoneAt] of milestones) {
+    const startAt = starts.get(sessionId);
+    if (startAt === undefined || milestoneAt < startAt) continue;
+    values.push(milestoneAt - startAt);
+  }
+  return values;
+}
+
+function average(values: readonly number[]): number {
+  return values.length > 0 ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
 }
 
 function ratio(numerator: number, denominator: number): number {
