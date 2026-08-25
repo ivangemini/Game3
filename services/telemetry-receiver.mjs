@@ -21,6 +21,9 @@ const EVENT_NAMES = new Set([
   'ad_result',
 ]);
 
+const SAFE_ID = /^[A-Za-z0-9._:-]+$/;
+const SAFE_SESSION_ID = /^[A-Za-z0-9._-]+$/;
+
 export const MAX_BODY_BYTES = 128 * 1024;
 export const MAX_EVENTS_PER_BATCH = 100;
 
@@ -32,21 +35,28 @@ export function validateTelemetryBatch(value) {
     return { ok: false, error: `events must contain 1-${MAX_EVENTS_PER_BATCH} entries` };
   }
 
+  const events = [];
   for (let index = 0; index < value.events.length; index += 1) {
     const event = value.events[index];
     if (!event || typeof event !== 'object' || Array.isArray(event)) return { ok: false, error: `events[${index}] must be an object` };
     if (!EVENT_NAMES.has(event.name)) return { ok: false, error: `events[${index}].name is unknown` };
-    if (typeof event.sessionId !== 'string' || event.sessionId.length < 4 || event.sessionId.length > 128) {
-      return { ok: false, error: `events[${index}].sessionId is invalid` };
-    }
+    if (!validToken(event.sessionId, 4, 128, SAFE_SESSION_ID)) return { ok: false, error: `events[${index}].sessionId is invalid` };
     if (!Number.isFinite(event.timestampMs) || event.timestampMs < 0) return { ok: false, error: `events[${index}].timestampMs is invalid` };
     if (!event.payload || typeof event.payload !== 'object' || Array.isArray(event.payload)) {
       return { ok: false, error: `events[${index}].payload must be an object` };
     }
     if (JSON.stringify(event.payload).length > 4096) return { ok: false, error: `events[${index}].payload is too large` };
+    if (!validatePayload(event.name, event.payload)) return { ok: false, error: `events[${index}].payload is invalid for ${event.name}` };
+
+    events.push({
+      name: event.name,
+      payload: event.payload,
+      sessionId: event.sessionId,
+      timestampMs: event.timestampMs,
+    });
   }
 
-  return { ok: true, events: value.events };
+  return { ok: true, events };
 }
 
 export function createTelemetryServer(options = {}) {
@@ -57,7 +67,7 @@ export function createTelemetryServer(options = {}) {
   const appendEvents = async (events) => {
     const lines = events.map((event) => JSON.stringify(event)).join('\n') + '\n';
     await fs.mkdir(path.dirname(outputFile), { recursive: true });
-    writeChain = writeChain.then(() => fs.appendFile(outputFile, lines, 'utf8'));
+    writeChain = writeChain.catch(() => undefined).then(() => fs.appendFile(outputFile, lines, 'utf8'));
     await writeChain;
   };
 
@@ -108,20 +118,106 @@ export function createTelemetryServer(options = {}) {
   });
 }
 
+function validatePayload(name, payload) {
+  switch (name) {
+    case 'session_start':
+      return onlyKeys(payload, ['returning', 'platform', 'viewportMode'])
+        && typeof payload.returning === 'boolean'
+        && validText(payload.platform, 1, 32)
+        && validText(payload.viewportMode, 1, 32);
+    case 'run_started':
+      return onlyKeys(payload, ['mode']) && (payload.mode === 'standard' || payload.mode === 'daily');
+    case 'tutorial_opened':
+    case 'tutorial_skipped':
+      return onlyKeys(payload, ['step']) && validInteger(payload.step, 1, 20);
+    case 'tutorial_completed':
+      return onlyKeys(payload, ['stepCount']) && validInteger(payload.stepCount, 1, 20);
+    case 'hero_selected':
+      return onlyKeys(payload, ['heroId']) && validToken(payload.heroId, 1, 64);
+    case 'shop_purchase':
+      return onlyKeys(payload, ['definitionId', 'price'])
+        && validToken(payload.definitionId, 1, 96)
+        && validNumber(payload.price, 0, 1_000_000);
+    case 'shop_reroll':
+      return onlyKeys(payload, ['source', 'shopIndex'])
+        && (payload.source === 'coins' || payload.source === 'rewarded')
+        && validInteger(payload.shopIndex, 0, 1_000_000);
+    case 'combat_started':
+      return onlyKeys(payload, ['encounterId', 'stage'])
+        && validToken(payload.encounterId, 1, 96)
+        && validText(payload.stage, 1, 128);
+    case 'combat_finished':
+      return onlyKeys(payload, ['encounterId', 'outcome', 'durationMs'])
+        && validToken(payload.encounterId, 1, 96)
+        && (payload.outcome === 'victory' || payload.outcome === 'defeat')
+        && validNumber(payload.durationMs, 0, 3_600_000);
+    case 'run_event_choice':
+      return onlyKeys(payload, ['eventId', 'choiceId'])
+        && validToken(payload.eventId, 1, 96)
+        && validToken(payload.choiceId, 1, 96);
+    case 'fusion_used':
+      return onlyKeys(payload, ['recipeId', 'resultDefinitionId'])
+        && validToken(payload.recipeId, 1, 96)
+        && validToken(payload.resultDefinitionId, 1, 96);
+    case 'loop_entered':
+      return onlyKeys(payload, ['loopNumber']) && validInteger(payload.loopNumber, 1, 1000);
+    case 'run_cashout':
+      return onlyKeys(payload, ['loopNumber', 'score'])
+        && validInteger(payload.loopNumber, 0, 1000)
+        && validNumber(payload.score, 0, 1_000_000_000_000);
+    case 'ad_result':
+      return onlyKeys(payload, ['placement', 'format', 'result'])
+        && (payload.placement === 'shop-free-reroll' || payload.placement === 'cycle-boundary')
+        && (payload.format === 'rewarded' || payload.format === 'interstitial')
+        && ['rewarded', 'dismissed', 'unavailable', 'failed', 'shown'].includes(payload.result);
+    default:
+      return false;
+  }
+}
+
+function onlyKeys(value, keys) {
+  const actual = Object.keys(value).sort();
+  const expected = [...keys].sort();
+  return actual.length === expected.length && actual.every((key, index) => key === expected[index]);
+}
+
+function validToken(value, minLength, maxLength, pattern = SAFE_ID) {
+  return typeof value === 'string'
+    && value.length >= minLength
+    && value.length <= maxLength
+    && pattern.test(value);
+}
+
+function validText(value, minLength, maxLength) {
+  return typeof value === 'string' && value.length >= minLength && value.length <= maxLength && !/[\u0000-\u001f\u007f]/.test(value);
+}
+
+function validInteger(value, min, max) {
+  return Number.isInteger(value) && value >= min && value <= max;
+}
+
+function validNumber(value, min, max) {
+  return Number.isFinite(value) && value >= min && value <= max;
+}
+
 function readBody(request, maxBytes) {
   return new Promise((resolve, reject) => {
     const chunks = [];
     let bytes = 0;
+    let tooLarge = false;
     request.on('data', (chunk) => {
       bytes += chunk.length;
       if (bytes > maxBytes) {
-        reject(new Error('request body too large'));
-        request.destroy();
+        tooLarge = true;
+        chunks.length = 0;
         return;
       }
-      chunks.push(chunk);
+      if (!tooLarge) chunks.push(chunk);
     });
-    request.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+    request.on('end', () => {
+      if (tooLarge) reject(new Error('request body too large'));
+      else resolve(Buffer.concat(chunks).toString('utf8'));
+    });
     request.on('error', reject);
   });
 }
@@ -150,7 +246,7 @@ async function runCli() {
   const server = createTelemetryServer();
   server.listen(port, host, () => {
     console.log(`[telemetry] listening on http://${host}:${port}`);
-    console.log(`[telemetry] POST /v1/events · GET /health`);
+    console.log('[telemetry] POST /v1/events · GET /health');
   });
 }
 
