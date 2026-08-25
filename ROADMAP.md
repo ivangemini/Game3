@@ -82,8 +82,8 @@
 - [x] ~15 mutations/events pool (**6 world mutations + 9 run events = 15 combined entries**)
 - [x] Late-run second-stage evolution pool: **4 fusion-only transformations** with no extra save gating
 
-## P5 — Retention/meta
-- [ ] Itemdex + Recipe Book UI
+## P5 — Retention/meta [IN PROGRESS]
+- [x] Itemdex + Recipe Book UI (**Junk Archive: 60 item slots + 24 recipe slots, hidden unknown payloads, pagination and collection progress**)
 - [x] Discovery state for items and fusion recipes
 - [ ] unlock milestones
 - [ ] Daily seeded run
