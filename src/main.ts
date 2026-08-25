@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { GameAudio } from './game/audio/GameAudio';
 import { gameConfig } from './game/config';
 import { LocalPlatformAdapter, type PlatformAdapter } from './platform/PlatformAdapter';
 import { createPlatformAdapter } from './platform/platformFactory';
@@ -6,6 +7,7 @@ import { applyViewportProfile, classifyViewport } from './platform/viewport';
 import './styles.css';
 
 const PLATFORM_REGISTRY_KEY = 'junkpack.platform-adapter';
+const AUDIO_REGISTRY_KEY = 'junkpack.game-audio';
 
 const orientationGate = document.createElement('div');
 orientationGate.id = 'orientation-gate';
@@ -32,12 +34,17 @@ let game: Phaser.Game | null = null;
 let platform: PlatformAdapter | null = null;
 let disposed = false;
 
+const runtimeAudio = (): GameAudio | undefined => game?.registry.get(AUDIO_REGISTRY_KEY) as GameAudio | undefined;
+
 const pauseForPlatform = (): void => {
+  runtimeAudio()?.suspendForPlatform();
   game?.loop.sleep();
 };
 
 const resumeForPlatform = (): void => {
-  if (!disposed) game?.loop.wake();
+  if (disposed) return;
+  game?.loop.wake();
+  runtimeAudio()?.resumeFromPlatform();
 };
 
 async function bootstrap(): Promise<void> {
