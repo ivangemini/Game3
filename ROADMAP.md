@@ -53,7 +53,7 @@
 - [x] Seeded shops/rewards foundation
 - [x] Deterministic 3-choice perk generation excluding already-owned perks
 - [x] Boss-victory perk overlay with persisted pending choice
-- [x] Twenty-one prototype perks that modify tagged combat items
+- [x] Twenty-seven prototype perks that modify tagged combat items through the shared bonus vocabulary
 - [x] Selected perks persist and affect subsequent combat snapshots
 - [x] Four-world campaign: 3 encounters per world / 12 total
 - [x] Unique encounter IDs, per-encounter rewards and score progression
@@ -64,10 +64,11 @@
 - [x] Loop worlds stack 2 mutations in Loop 2, 3 in Loop 3 and up to 4 deeper
 - [x] Safe cash-out only at cycle boundaries; entering a loop commits the player to the full cycle
 - [x] Deepest completed corrupted loop persisted in meta save
-- [x] Seeded world mutation system with six prototype risk/reward rules that modify real encounter stats and payouts
-- [x] Nine deterministic surreal run events with two choices each
+- [x] Six launch world mutations for campaign/Loop 2 plus six deep-loop anomaly modifiers from Loop 3 onward
+- [x] Fifteen deterministic surreal run events with two choices each
 - [x] Events trigger after the first fight of each world, persist across reload and block progression until resolved
 - [x] Event choices consume/award the real run currency and can grant real backpack items
+- [x] Eight alternate non-boss corrupted enemy families from Loop 3 onward without increasing encounter count
 - [x] Twenty-four prototype fusion recipes with deterministic ingredient/result handling
 - [x] Fusion unlocks after Boss 1 and respects currently locked backpack cells
 - [ ] Runtime pacing validation: first boss 3–5 min, base campaign 20–25 min, strong session 30–50 min, deep session 60+ min. Seeded target-model regression coverage plus run-start-anchored p50/p90 first-boss/base-campaign telemetry are implemented; real play traffic remains required.
@@ -78,9 +79,10 @@
 - [x] Expanded tag/synergy-family foundation: 10 spatial contact rules across core + food/antenna/slime cross-links
 - [x] 4 prototype heroes with persisted per-run choice and real economy/combat effects
 - [x] 6 boss families + modifiers (TV Tyrant + Deadline Snail + Closet Monster + Baby Moon + Copycat Auditor + Border Shark)
-- [x] 20–25 perks (**21 prototype perks implemented**)
-- [x] ~15 mutations/events pool (**6 world mutations + 9 run events = 15 combined entries**)
+- [x] 20–25 launch perks (**21 reached launch target; Wave 5 expands the pool to 27**)
+- [x] ~15 launch mutation/event pool (**6 world mutations + 9 run events = 15 originally reached the target**)
 - [x] Late-run second-stage evolution pool: **4 fusion-only transformations** with no extra save gating
+- [x] User-directed Wave 5 deep-content expansion (**+6 perks, +6 run events, +6 Loop 3+ anomaly modifiers, +8 alternate non-boss corrupted enemy families; item/recipe atlas stays 60/24**)
 
 ## P5 — Retention/meta [DONE]
 - [x] Itemdex + Recipe Book UI (**Junk Archive: 60 item slots + 24 recipe slots, hidden unknown payloads, pagination and collection progress**)
@@ -147,7 +149,8 @@
 - [x] Repository-built portal candidate pipeline (**production build → readiness/security checks → runtime-only ZIP + separate store art → v2 per-file SHA-256 manifest → integrity verification → CI artifact; strict `release:soft-launch` additionally requires HTTPS analytics endpoint**)
 - [x] Privacy-minimal measurement pipeline (**strict versioned Node receiver → sanitized append-only NDJSON → deterministic JSON/Markdown report; receiver/report contracts and report CLI are CI-tested, raw exports are gitignored**)
 - [x] Soft-launch pacing summary foundation (**session reach + average/median/p90 time-to-hero and first-combat latency; run-start-anchored first-boss and base-campaign reach/duration; per-encounter win rate + average/median/p90 duration, without persistent identity**)
+- [x] User-directed pre-traffic Wave 5 expansion (**deep-run replayability increased without changing campaign length or item atlas**)
 - [ ] release candidate to first portals
 - [ ] measure tutorial/help usage/hero choice/first boss/base-campaign duration/event choice/fusion usage/loop-entry/loop-completion/return behavior on real traffic
 - [ ] tune difficulty/economy/ad pacing
-- [ ] add content only after core retention signals justify it
+- [ ] further content after the current expansion should be driven by core retention signals or another explicit product-direction change
