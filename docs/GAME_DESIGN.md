@@ -1,4 +1,4 @@
-# Junkpack: Boss Rush — Game Design v0.13
+# Junkpack: Boss Rush — Game Design v0.14
 
 ## Elevator pitch
 A compact roguelite inventory autobattler where the player chooses a light rule-bending junk pilot, packs absurd junk into a constrained backpack, discovers spatial synergies and fusion recipes, then fights surreal bosses that directly interfere with build valuation and backpack rules.
@@ -35,9 +35,9 @@ Prototype board: 6×5. Three lower pocket cells start locked; Boss 1, Boss 2 and
 Shapes, rotations, blocked cells, placement legality, physical side-contact and fusion placement are deterministic domain rules. UI coordinates never decide gameplay legality.
 
 ## Items
-Launch target: 35–45 base/shop items. Current prototype: **36 base/shop items + 24 fusion-only results = 60 total item definitions**. The lower launch target for base items is reached.
+Launch target: 35–45 base/shop items. Current prototype: **36 base/shop items + 24 fusion-only results = 60 total item definitions**. The launch-range target is reached.
 
-Wave 4 adds 12 bridge items:
+The latest 12 bridge items deliberately combine existing tags instead of introducing isolated mechanics:
 - Fermented Gamepad — Device / Food / Chaos;
 - Magnet Croissant — Food / Magnet / Metal;
 - Slime Pager — Device / Slime / Antenna;
@@ -51,10 +51,8 @@ Wave 4 adds 12 bridge items:
 - Slime Magnet — Slime / Magnet / Metal / Poison;
 - Feral Roomba — Pet / Device / Metal / Chaos.
 
-These deliberately reuse the current stat/tag vocabulary. Their value comes from interacting with multiple existing systems at once rather than from one-off bespoke mechanics.
-
 ## Synergies
-Implemented spatial synergy family uses **orthogonal side contact** between occupied item cells. Diagonal proximity does not count.
+Implemented spatial synergies use **orthogonal side contact** between occupied cells. Diagonal proximity does not count.
 
 Current 10 rules:
 - `CAT → LASER`: Cat fires +1 laser shot.
@@ -73,9 +71,9 @@ One contact can activate several rules in both directions. Example: **Battery Pi
 Physical contact can also matter independently of tag synergy: Closet Monster uses contact for anchoring, while Border Shark values perimeter occupancy.
 
 ## Fusion and discovery
-Launch target: 20–30 recipes. Current prototype: **24 recipes**, so the launch range is reached.
+Launch target: 20–30 recipes. Current prototype: **24 recipes**, so the target is reached.
 
-Twenty first-stage recipes build the normal fusion graph. Four second-stage recipes are late-run discovery payoffs:
+Twenty first-stage recipes form the normal fusion graph. Four second-stage transformations are late-run discovery payoffs:
 
 1. Gravity Toaster + Shock Toaster → **Singularity Toaster**
 2. Orbital Cat + Turbo Router → **Cataclysm Satellite**
@@ -84,27 +82,28 @@ Twenty first-stage recipes build the normal fusion graph. Four second-stage reci
 
 Every second-stage ingredient is itself fusion-only. The real inventory is therefore the prerequisite; no separate save flag, level requirement or second fusion engine exists. A recipe becomes actionable only when both prerequisite branches have actually been assembled and the result can legally fit.
 
-Second-stage recipes stay sparse and memorable. They are long-session discoveries, not a linear upgrade tree.
-
-Fusion unlocks after Boss 1. Ingredients are consumed only if the resulting item has a legal placement in the current backpack. Locked cells still count as blocked. Successful recipes/results are recorded in persistent discovery state.
-
-Fusion also creates boss counterplay: Copycat Auditor fines exact duplicates, so transforming repeated base items into distinct fusion definitions can reduce Duplicate Debt while changing build identity.
+Fusion unlocks after Boss 1. Ingredients are consumed only when the result has a legal placement. Successful recipes/results feed persistent discovery and can also reduce Copycat Auditor exposure by converting exact duplicates into new definitions.
 
 ## Run events
-One deterministic event occurs after the first combat of each world: four in campaign and four more per Corrupted Loop. Events are seeded from run seed + event index, persisted before presentation and cannot be rerolled by reload.
+A deterministic event occurs after the first combat of each world: four during campaign and four more during each Corrupted Loop. Pending events are persisted before presentation and cannot be rerolled by reload. Immediate repeats are suppressed when alternatives exist.
 
-Current pool:
-- Cursed Vending Machine;
-- Cat Courier;
-- Duck Tax Office;
-- Microwave Oracle;
-- Slime Pawnshop;
-- Shrine of the Armed Fish.
+Current **9-event pool**:
+- **Cursed Vending Machine** — mystery purchase or coin gamble;
+- **Cat Courier** — expensive guaranteed Laser Cat or refuse for coins;
+- **Duck Tax Office** — buy a Mutant Duck or file a risky appeal;
+- **Microwave Oracle** — appliance junk or static coins;
+- **Slime Pawnshop** — mystery crate or sell bad advice;
+- **Shrine of the Armed Fish** — Fish Blaster purchase or steal coins;
+- **Feral Roomba Adoption Center** — buy a Feral Roomba or decline for a small payout;
+- **Pigeon Signal Tower** — buy signal-themed junk or gamble on selling location data;
+- **Illegal Brunch Lab** — buy experimental food junk or report the lab for coins.
 
-Choices affect real currency and/or backpack items. Item rewards fail safely if there is no legal space.
+All choices reuse the existing `coins / item / gamble` reward vocabulary. Item rewards resolve to real base/shop definitions and still fail safely when the backpack has no legal placement. No new event-engine state or save migration is required.
+
+Together with six world mutations, the project now has **15 combined mutation/event entries**, reaching the P4 content target.
 
 ## Heroes
-Four prototype heroes are implemented as light rule-benders rather than classes:
+Four prototype heroes are light rule-benders rather than classes:
 - **Scrapster / Scavenger** — +25 starting coins.
 - **Socket / Engineer** — Device junk triggers 12% faster.
 - **Moldwitch / Alchemist** — Poison junk applies +1 poison.
@@ -113,33 +112,24 @@ Four prototype heroes are implemented as light rule-benders rather than classes:
 Build resolution order: spatial synergy → hero bonus → run perks → immutable combat snapshot. A hero must never make off-tag items unusable.
 
 ## Perks
-Launch target: 20–25. Current prototype: **21 perks**, so the lower launch target is reached.
+Launch target: 20–25. Current prototype: **21 perks**, so the target is reached.
 
-Wave 4 adds:
-- **Laser Tax Refund** — Laser items fire +1 bonus laser shot;
-- **Pet Union** — Pets gain 10% trigger speed +1 scrap armor;
-- **Slime Shell** — Slime gains +1 poison +1 scrap armor;
-- **Food Chain Reaction** — Food gains +1 chaos power;
-- **Device Liability** — Devices apply +1 poison.
-
-Perks reinforce build identity while remaining inside the same deterministic `ItemBonuses` vocabulary used by synergies and heroes.
+The latest additions are Laser Tax Refund, Pet Union, Slime Shell, Food Chain Reaction and Device Liability. Perks remain inside the same deterministic `ItemBonuses` vocabulary used by synergies and heroes.
 
 ## Bosses
-Launch target: 6 major boss families plus modifiers. **All six prototype families are implemented.**
+All six planned prototype boss families are implemented.
 
 Base campaign:
-1. **TV Tyrant** — Channel Jam, Slime Signal, Magnet Scramble; attacks spatial reliability.
-2. **Deadline Snail** — Time Tax; delays the next trigger of the fastest meaningful item.
-3. **Closet Monster** — Clutter Crush; damages geometrically loose items that touch nothing.
-4. **Baby Moon** — Tag Eclipse; suppresses the most represented build tag temporarily.
+1. **TV Tyrant** — Channel Jam, Slime Signal, Magnet Scramble.
+2. **Deadline Snail** — Time Tax delays the fastest meaningful item.
+3. **Closet Monster** — Clutter Crush punishes isolated geometry.
+4. **Baby Moon** — Tag Eclipse suppresses the dominant tag family.
 
 Corrupted-loop alternates:
-5. **Copycat Auditor** — Duplicate Debt; fines exact-definition copies beyond the first.
-6. **Border Shark** — Edge Rent; charges pressure per item touching the backpack perimeter.
+5. **Copycat Auditor** — Duplicate Debt fines exact copies beyond the first.
+6. **Border Shark** — Edge Rent charges pressure per perimeter item.
 
 Even Corrupted Loops use TV Tyrant → Copycat Auditor → Border Shark → Baby Moon. Odd loops use TV Tyrant → Deadline Snail → Closet Monster → Baby Moon. This exposes all six families without increasing the 12-encounter cycle.
-
-Every boss must have readable telegraphing and multiple viable counters. Boss damage/disruption must never require one specific item to survive.
 
 ## World mutations
 Current six seeded risk/reward rules:
@@ -150,7 +140,7 @@ Current six seeded risk/reward rules:
 - Bad Reception;
 - Coupon Apocalypse.
 
-Campaign gets one stable mutation per world. Corrupted loops stack 2 mutations in Loop 2, 3 in Loop 3 and up to 4 deeper.
+Campaign gets one stable mutation per world. Corrupted loops stack 2 in Loop 2, 3 in Loop 3 and up to 4 deeper.
 
 ## Campaign and Corrupted Loops
 Campaign = four worlds × three encounters. Bosses end each world and can grant a three-choice perk.
@@ -159,19 +149,32 @@ After encounter 12:
 - **Escape / Cash Out** ends the run and locks score;
 - **Go Deeper** preserves hero, backpack, items and perks for another 12-encounter cycle.
 
-Entering a loop commits the player until the next cycle boundary. Loop depth scales enemy HP/damage/speed and payouts, stacks more mutations, adds four more deterministic events and rotates boss families. Quitting the app does not destroy the run; persistence resumes the committed loop.
+Entering a loop commits the player until the next cycle boundary. Loop depth scales enemy HP/damage/speed and payouts, stacks more mutations, adds more deterministic events and rotates boss families. Persistence resumes a committed loop after quitting.
 
 ## Balance model
-The seeded build/combat QA model uses the same public item/perk/profile pools and boss wrapper as runtime. It now distinguishes fusion tiers:
+The seeded build/combat QA model uses the same public item/perk/profile pools and boss wrapper as runtime. Fusion sampling is progression-aware:
 - campaign checkpoints may sample base + first-stage fusion results;
-- Corrupted Loop checkpoints may sample the complete fusion pool, including the four second-stage transformations.
+- Corrupted Loop checkpoints may sample the complete fusion pool, including all four second-stage transformations.
 
-This keeps campaign reports free of impossible early late-run power while still exercising secret evolutions in deep-run QA.
+This keeps campaign reports free of impossible early late-run power while exercising secret evolutions in deep-run QA.
 
 ## Persistence and discovery
 Current save schema: **v8**. Active run persists run seed, hero ID, economy/shop state, backpack placements/rotations, generated sequence, progression/loop state, claim-once encounter rewards, selected perks and deterministic event state.
 
-Legacy v1–v7 saves migrate forward. Discovery persists item IDs and successful recipe IDs. Boss cadence/targeting and second-stage fusion availability require no new save fields; they derive from current inventory, immutable combat snapshot and stable enemy/loop IDs.
+Legacy v1–v7 saves migrate forward. Discovery persists item IDs and successful recipe IDs. Boss cadence/targeting, expanded event selection and second-stage fusion availability require no new save fields; they derive from current inventory and stable seeded IDs.
+
+## P4 milestone
+The content-efficient-depth milestone is complete at prototype scope:
+- 36 base items;
+- 24 fusion recipes;
+- 10 spatial synergy rules;
+- 4 heroes;
+- 6 boss families;
+- 21 perks;
+- 6 world mutations + 9 run events = 15 combined entries;
+- 4 second-stage transformations.
+
+Further raw content should be driven by playtest/retention evidence rather than added by default.
 
 ## Meta
 Planned/partial meta: Itemdex, Recipe Book, achievements, Daily seeded run, deepest completed Corrupted Loop and score. Permanent power creep should remain limited.
@@ -182,10 +185,8 @@ Original absurd junk-surrealism: laser cats, cursed appliances, mutant ducks, ta
 ## Monetization hooks
 Rewarded: revive, post-boss reward multiplier, reroll, bonus chest/attempt. Interstitials only at natural transitions and subject to portal policy. Never interrupt active combat or backpack manipulation.
 
-For long sessions, preferred ad moments are boss clears, world transitions and voluntary reward moments rather than arbitrary timers.
-
 ## Non-goals for launch
 Real-time PvP, guilds/chat, open world, large story campaign, server-heavy economy, battle pass, dozens of heroes or hundreds of handmade stages.
 
 ## Success criterion for MVP
-A player can choose a hero without class lock-in, complete materially different runs from a compact content pool, understand why a build works, discover multiple second-stage fusions, experience six mechanically distinct boss families, reach the first boss quickly, keep modifying the build after 15–20 minutes and have a credible reason to risk the same successful build for a 30–60+ minute Corrupted Loop session.
+A player can choose a hero without class lock-in, complete materially different runs from a compact content pool, understand why a build works, discover multiple second-stage fusions, experience six mechanically distinct boss families, encounter varied short event decisions, reach the first boss quickly, keep modifying the build after 15–20 minutes and have a credible reason to risk the same successful build for a 30–60+ minute Corrupted Loop session.

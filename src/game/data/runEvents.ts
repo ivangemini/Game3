@@ -1,4 +1,5 @@
 import type { RunEventDefinition } from '../domain/runEvents';
+import { WAVE4_RUN_EVENTS } from './runEvents.wave4';
 
 export const PROTOTYPE_RUN_EVENTS: readonly RunEventDefinition[] = [
   {
@@ -130,6 +131,7 @@ export const PROTOTYPE_RUN_EVENTS: readonly RunEventDefinition[] = [
       },
     ],
   },
+  ...WAVE4_RUN_EVENTS,
 ];
 
 export const PROTOTYPE_RUN_EVENT_MAP = new Map(

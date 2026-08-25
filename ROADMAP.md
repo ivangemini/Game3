@@ -65,21 +65,21 @@
 - [x] Safe cash-out only at cycle boundaries; entering a loop commits the player to the full cycle
 - [x] Deepest completed corrupted loop persisted in meta save
 - [x] Seeded world mutation system with six prototype risk/reward rules that modify real encounter stats and payouts
-- [x] Six deterministic surreal run events with two choices each
+- [x] Nine deterministic surreal run events with two choices each
 - [x] Events trigger after the first fight of each world, persist across reload and block progression until resolved
 - [x] Event choices consume/award the real run currency and can grant real backpack items
 - [x] Twenty-four prototype fusion recipes with deterministic ingredient/result handling
 - [x] Fusion unlocks after Boss 1 and respects currently locked backpack cells
 - [ ] Runtime pacing validation: first boss 3–5 min, base campaign 20–25 min, strong session 30–50 min, deep session 60+ min. Seeded target-model regression coverage is implemented; real play telemetry remains required.
 
-## P4 — Content-efficient depth [IN PROGRESS]
+## P4 — Content-efficient depth [DONE]
 - [x] 35–45 launch base items (**36 prototype base items implemented**)
 - [x] 20–30 launch fusion recipes (**24 prototype recipes implemented**)
 - [x] Expanded tag/synergy-family foundation: 10 spatial contact rules across core + food/antenna/slime cross-links
 - [x] 4 prototype heroes with persisted per-run choice and real economy/combat effects
 - [x] 6 boss families + modifiers (TV Tyrant + Deadline Snail + Closet Monster + Baby Moon + Copycat Auditor + Border Shark)
 - [x] 20–25 perks (**21 prototype perks implemented**)
-- [ ] ~15 mutations/events pool (12 combined prototype rules/events currently)
+- [x] ~15 mutations/events pool (**6 world mutations + 9 run events = 15 combined entries**)
 - [x] Late-run second-stage evolution pool: **4 fusion-only transformations** with no extra save gating
 
 ## P5 — Retention/meta
