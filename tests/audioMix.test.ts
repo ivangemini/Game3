@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AudioCue } from '../src/game/audio/audioCues';
-import { AudioMixGate, audioCooldownKey } from '../src/game/audio/audioMix';
+import { AudioMixGate, audioCooldownKey, musicDuckForCue } from '../src/game/audio/audioMix';
 
 function cue(overrides: Partial<AudioCue> = {}): AudioCue {
   return {
@@ -52,5 +52,23 @@ describe('audio mix gate', () => {
     }), 1002, 260);
     expect(boss).toMatchObject({ accepted: true, evictToken: lowA.token });
     expect(gate.activeVoiceCount(1002)).toBe(2);
+  });
+});
+
+describe('music ducking policy', () => {
+  it('keeps routine item noise from pumping the music', () => {
+    expect(musicDuckForCue(cue())).toBeNull();
+  });
+
+  it('ducks softly for readable priority-three boss telegraphs and player hits', () => {
+    expect(musicDuckForCue(cue({ id: 'boss.jam.telegraph', priority: 3, group: 'boss' })))
+      .toEqual({ target: 0.58, attackMs: 24, holdMs: 120, releaseMs: 300 });
+    expect(musicDuckForCue(cue({ id: 'player.hit', priority: 3, group: 'impact' })))
+      .toEqual({ target: 0.58, attackMs: 24, holdMs: 120, releaseMs: 300 });
+  });
+
+  it('ducks harder for must-read outcomes and boss impacts', () => {
+    expect(musicDuckForCue(cue({ id: 'combat.victory', priority: 4, group: 'outcome' })))
+      .toEqual({ target: 0.34, attackMs: 28, holdMs: 210, releaseMs: 420 });
   });
 });
