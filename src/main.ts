@@ -117,12 +117,6 @@ async function bootstrap(): Promise<void> {
     },
   };
   game = new Phaser.Game(runtimeConfig);
-
-  try {
-    await activePlatform.ready();
-  } catch (error) {
-    console.warn(`[platform] ${activePlatform.id} ready signal failed.`, error);
-  }
 }
 
 void bootstrap();
