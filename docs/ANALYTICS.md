@@ -94,6 +94,17 @@ npm run analytics:report -- telemetry.ndjson \
 
 The command uses the repository's actual `src/analytics/TelemetrySummary.ts` implementation rather than maintaining a second set of formulas. CI runs the command against `scripts/fixtures/telemetry-smoke.json`, so changes to the summary contract must remain executable through the reporting workflow.
 
+## Pacing measurement anchors
+
+Start-of-session UX and run pacing intentionally use different clocks:
+
+- time-to-hero and time-to-first-combat start at `session_start`, because they measure launch friction;
+- time-to-first-boss starts at `run_started` and reaches the first `w1-tv-tyrant` `combat_started` event;
+- base-campaign duration starts at `run_started` and ends at a victorious `w4-baby-moon` `combat_finished` event;
+- legacy exports without `run_started` fall back to `session_start` for the boss/campaign metrics.
+
+This avoids counting time spent on a portal page before a new run begins as campaign pacing. The report prints the current first-boss p50 target of **3–5 minutes** and base-campaign p50 target of **20–25 minutes** beside the measured distributions.
+
 For the first balance pass, treat median as the central pacing signal and p90 as the long-tail regression signal. Do not tune from a single encounter with only a handful of attempts; compare reach, attempt count, win rate and duration together. A high p90 with a healthy median usually indicates a long-tail problem rather than a globally slow encounter.
 
 ## Primary soft-launch questions
@@ -108,7 +119,7 @@ For the first balance pass, treat median as the central pacing signal and p90 as
 8. Is rewarded reroll completion healthy without becoming required for progression?
 9. Do returning sessions improve after balance/content changes?
 
-`src/analytics/TelemetrySummary.ts` provides a deterministic first-pass aggregator. In addition to rates/counts it reports average, median and p90 time-to-hero, time-to-first-combat and per-encounter combat duration. Median is the default central pacing signal; p90 is the long-tail regression signal; averages remain useful for continuity with earlier reports but should not be tuned in isolation.
+`src/analytics/TelemetrySummary.ts` provides a deterministic first-pass aggregator. In addition to rates/counts it reports average, median and p90 time-to-hero, time-to-first-combat, time-to-first-boss, base-campaign duration and per-encounter combat duration. Median is the default central pacing signal; p90 is the long-tail regression signal; averages remain useful for continuity with earlier reports but should not be tuned in isolation.
 
 ## Guardrails
 
