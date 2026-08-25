@@ -7,6 +7,8 @@ export interface CombatMetric {
   readonly defeats: number;
   readonly winRate: number;
   readonly averageDurationMs: number;
+  readonly medianDurationMs: number;
+  readonly p90DurationMs: number;
 }
 
 export interface SoftLaunchSummary {
@@ -16,9 +18,13 @@ export interface SoftLaunchSummary {
   readonly sessionsWithHeroSelection: number;
   readonly heroSelectionSessionRate: number;
   readonly averageTimeToHeroMs: number;
+  readonly medianTimeToHeroMs: number;
+  readonly p90TimeToHeroMs: number;
   readonly sessionsWithFirstCombat: number;
   readonly firstCombatSessionRate: number;
   readonly averageTimeToFirstCombatMs: number;
+  readonly medianTimeToFirstCombatMs: number;
+  readonly p90TimeToFirstCombatMs: number;
   readonly standardRunsStarted: number;
   readonly dailyRunsStarted: number;
   readonly tutorialOpened: number;
@@ -40,6 +46,14 @@ export interface SoftLaunchSummary {
   readonly combats: readonly CombatMetric[];
 }
 
+interface CombatAccumulator {
+  attempts: number;
+  victories: number;
+  defeats: number;
+  durationTotal: number;
+  durations: number[];
+}
+
 export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLaunchSummary {
   let sessions = 0;
   let returningSessions = 0;
@@ -59,7 +73,7 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
   let cashoutScoreTotal = 0;
   const heroSelections: Record<string, number> = {};
   const loopEntries: Record<string, number> = {};
-  const combats = new Map<string, { attempts: number; victories: number; defeats: number; durationTotal: number }>();
+  const combats = new Map<string, CombatAccumulator>();
   const sessionStartedAt = new Map<string, number>();
   const firstHeroAt = new Map<string, number>();
   const firstCombatAt = new Map<string, number>();
@@ -122,11 +136,19 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
       }
       case 'combat_finished': {
         const payload = event.payload as { encounterId: string; outcome: 'victory' | 'defeat'; durationMs: number };
-        const metric = combats.get(payload.encounterId) ?? { attempts: 0, victories: 0, defeats: 0, durationTotal: 0 };
+        const duration = finiteNonNegative(payload.durationMs);
+        const metric = combats.get(payload.encounterId) ?? {
+          attempts: 0,
+          victories: 0,
+          defeats: 0,
+          durationTotal: 0,
+          durations: [],
+        };
         metric.attempts += 1;
         if (payload.outcome === 'victory') metric.victories += 1;
         else metric.defeats += 1;
-        metric.durationTotal += finiteNonNegative(payload.durationMs);
+        metric.durationTotal += duration;
+        metric.durations.push(duration);
         combats.set(payload.encounterId, metric);
         break;
       }
@@ -144,9 +166,13 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
     sessionsWithHeroSelection: timeToHero.length,
     heroSelectionSessionRate: ratio(timeToHero.length, sessions),
     averageTimeToHeroMs: average(timeToHero),
+    medianTimeToHeroMs: percentile(timeToHero, 0.5),
+    p90TimeToHeroMs: percentile(timeToHero, 0.9),
     sessionsWithFirstCombat: timeToFirstCombat.length,
     firstCombatSessionRate: ratio(timeToFirstCombat.length, sessions),
     averageTimeToFirstCombatMs: average(timeToFirstCombat),
+    medianTimeToFirstCombatMs: percentile(timeToFirstCombat, 0.5),
+    p90TimeToFirstCombatMs: percentile(timeToFirstCombat, 0.9),
     standardRunsStarted,
     dailyRunsStarted,
     tutorialOpened,
@@ -173,6 +199,8 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
         defeats: metric.defeats,
         winRate: ratio(metric.victories, metric.attempts),
         averageDurationMs: metric.attempts > 0 ? metric.durationTotal / metric.attempts : 0,
+        medianDurationMs: percentile(metric.durations, 0.5),
+        p90DurationMs: percentile(metric.durations, 0.9),
       }))
       .sort((a, b) => a.encounterId.localeCompare(b.encounterId)),
   };
@@ -196,6 +224,14 @@ function sessionLatencies(starts: ReadonlyMap<string, number>, milestones: Reado
 
 function average(values: readonly number[]): number {
   return values.length > 0 ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+}
+
+function percentile(values: readonly number[], quantile: number): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const clamped = Math.max(0, Math.min(1, Number.isFinite(quantile) ? quantile : 0));
+  const index = Math.ceil(clamped * sorted.length) - 1;
+  return sorted[Math.max(0, Math.min(sorted.length - 1, index))] ?? 0;
 }
 
 function ratio(numerator: number, denominator: number): number {
