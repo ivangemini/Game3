@@ -121,6 +121,7 @@ async function bootstrap(): Promise<void> {
     platform: activePlatform.id,
     viewportMode: viewport.mode,
   });
+  telemetry.track('session_age', { bucket: session.returnAgeBucket });
 
   const runtimeConfig: Phaser.Types.Core.GameConfig = {
     ...gameConfig,
