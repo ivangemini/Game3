@@ -95,7 +95,7 @@ export function enterCorruptedLoop(state: RunProgressState): RunProgressState {
 }
 
 export function cashOutRun(state: RunProgressState): RunProgressState {
-  if (state.mode !== 'deep-choice' && state.mode !== 'loop') return state;
+  if (state.mode !== 'deep-choice') return state;
   return { ...state, mode: 'complete' };
 }
 
