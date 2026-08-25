@@ -1,4 +1,4 @@
-# Junkpack: Boss Rush — Game Design v0.8
+# Junkpack: Boss Rush — Game Design v0.9
 
 ## Elevator pitch
 A compact roguelite inventory autobattler where the player picks a light rule-bending junk pilot, packs absurd junk into a constrained backpack, discovers synergies and fusion recipes, then fights surreal bosses that directly interfere with the backpack's rules.
@@ -32,7 +32,7 @@ Web-first: Yandex Games, CrazyGames and compatible HTML5 portals. Short onboardi
 The first boss is a checkpoint, not the end of the run. A player should understand the fantasy quickly, then spend the rest of the session making the backpack increasingly powerful and increasingly strange.
 
 ## Core differentiator
-Bosses attack the inventory rules, not only player HP. Examples: magnetizing metal items, sliming cells, scrambling a row after a telegraph, freezing slots, duplicating junk, or temporarily corrupting a tag.
+Bosses attack the inventory rules, not only player HP. Examples: magnetizing metal items, sliming cells, scrambling a row after a telegraph, delaying a hyper-fast carry, freezing slots, duplicating junk, or temporarily corrupting a tag.
 
 ## Launch systems
 ### Backpack
@@ -119,9 +119,12 @@ A hero must never make non-matching items unusable. The player should still be a
 ### Bosses
 Launch target: 6 major boss families plus modifiers. Each boss changes backpack valuation/positioning and has clear telegraphs and counterplay.
 
-Two boss families are now mechanically distinct:
+Three boss families are now mechanically distinct:
 - **TV Tyrant** attacks spatial reliability with Channel Jam, Slime Signal and Magnet Scramble. Later TV variants layer those three readable interference primitives more aggressively.
+- **Deadline Snail** attacks tempo concentration with **Time Tax**. It deterministically targets the fastest meaningful combat item, telegraphs its backpack footprint, then shifts only that item's next queued trigger by +1.2s. The rest of the build continues normally.
 - **Baby Moon** attacks build concentration with **Tag Eclipse**. It counts tags in the immutable combat-start build, telegraphs the most represented family and temporarily suppresses triggers from every matching item. Other tag families remain active, so diversified builds retain a live secondary engine.
+
+Deadline Snail replaces the repeated World 2 TV remix. Its counterplay is to spread trigger-speed investment across several useful items, maintain a slower secondary engine, or accept the tax because the carry remains efficient enough. Time Tax is a one-shot delay rather than a silence window, so its feel stays distinct from TV Tyrant and Baby Moon. Corrupted Deadline Snail shortens tax cadence while preserving the +1.2s delay.
 
 Tag Eclipse uses stable tie-breaking and shows the affected item count before impact. Its counterplay is to diversify damage/poison/shield families or pivot tags through shop/fusion choices before World 4. Corrupted Baby Moon shortens Eclipse cadence rather than inheriting TV Tyrant attacks, preserving boss-family identity.
 
