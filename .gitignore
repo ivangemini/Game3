@@ -2,6 +2,7 @@ node_modules/
 dist/
 .vite/
 coverage/
+public/assets/atlas/
 .DS_Store
 *.log
 .env
