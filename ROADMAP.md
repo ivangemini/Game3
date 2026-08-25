@@ -102,7 +102,8 @@
 - [x] Authored boss art wave 2 (**all 6 boss-family SVG portraits + corrupted-ID mapping + family-specific idle/telegraph/impact motion with Reduced Motion fallback**)
 - [x] Authored item art wave 2 (**20 additional item SVGs: remaining original shop/base set + 8 high-salience first-stage fusion results; total item-art coverage reached 32/60**)
 - [x] Complete authored item catalog (**60/60 items: 36/36 shop/base + 24/24 fusion, including all 4 second-stage evolutions; exact catalog parity enforced by CI**)
-- [ ] Packed production item/boss/UI atlases (**authored item and boss catalogs are complete; UI art, review refinements, packing/compression and browser/mobile acceptance remain**)
+- [x] Packed production item + portrait atlases (**deterministic build creates 60-frame 1280×1280 `junk-items` + 10-frame 1280×720 `junk-portraits`; 70 standalone sources collapse to 2 runtime atlas requests**)
+- [ ] Final UI atlas / art review refinements (**UI chrome/material atlas, final visual review and browser/mobile acceptance remain**)
 - [x] Combat semantic feedback foundation (**30-object particle pool, item/status rings, hit bursts, boss-frame pulses, outcome flashes, restrained shake, reduced-motion fallback**)
 - [x] Non-combat run feedback foundation (**shop purchase/reward/reroll/error SFX hooks, fusion reveal, event-drop toast, pocket-unlock feedback**)
 - [ ] Final animation/VFX pass across backpack drag/drop, reward staging and final art assets
@@ -126,9 +127,10 @@
 - [x] Seeded pacing target simulation with percentile bands and target hit rates
 - [x] Seeded combat/build simulation reports across weak/typical/strong power bands and boss checkpoints, including boss-rule wrappers
 - [x] Campaign balance sampling excludes second-stage fusion results; loop checkpoints may sample them
+- [x] Static asset + bundle budget gates (**86.2 KiB generated art payload, 9.77 MiB estimated atlas texture memory, 57.1 KiB game/app JS gzip, 404.8 KiB total JS gzip; CI ceilings enforced**)
 - [ ] mobile/browser matrix
 - [ ] save migrations/recovery UX
-- [ ] performance profiling and asset budgets
+- [ ] real-device performance profiling (**frame time, peak WebGL memory, portal network waterfall, low-memory lifecycle**)
 - [ ] portal-specific compliance checks
 
 ## P9 — Soft launch & iteration
