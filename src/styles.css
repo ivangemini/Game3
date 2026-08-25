@@ -53,6 +53,55 @@ canvas {
   -webkit-tap-highlight-color: transparent;
 }
 
+#save-notice {
+  position: fixed;
+  z-index: 11000;
+  left: 50%;
+  top: max(14px, env(safe-area-inset-top));
+  width: min(540px, calc(100vw - 28px));
+  padding: 13px 16px 14px;
+  transform: translate(-50%, -14px) scale(0.985);
+  opacity: 0;
+  border: 2px solid rgba(124, 242, 255, 0.7);
+  border-radius: 14px;
+  background: rgba(17, 20, 29, 0.97);
+  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.46);
+  pointer-events: none;
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+#save-notice.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0) scale(1);
+}
+
+#save-notice strong,
+#save-notice span {
+  display: block;
+}
+
+#save-notice strong {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: #7cf2ff;
+}
+
+#save-notice span {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #d6d2dc;
+}
+
+#save-notice[data-kind="write-failed"] {
+  border-color: rgba(255, 189, 114, 0.78);
+}
+
+#save-notice[data-kind="write-failed"] strong,
+#save-notice[data-kind="reset-corrupt"] strong {
+  color: #ffbd72;
+}
+
 #orientation-gate {
   position: fixed;
   z-index: 10000;
@@ -117,5 +166,8 @@ html[data-viewport-mode="portrait"] #app canvas {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
 }
