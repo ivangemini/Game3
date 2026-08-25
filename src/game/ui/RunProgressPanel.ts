@@ -3,7 +3,15 @@ import { telemetry } from '../../analytics/Telemetry';
 import { AdBreakPolicy } from '../../platform/AdBreakPolicy';
 import type { PlatformAdapter } from '../../platform/PlatformAdapter';
 import { campaignLabel, loopLabel, type RunEncounterDefinition } from '../data/runEncounters';
-import { CAMPAIGN_WORLDS, LOOP_WORLDS, loopRewardMultiplier, type RunProgressState } from '../domain/runProgression';
+import {
+  CAMPAIGN_ENCOUNTER_COUNT,
+  CAMPAIGN_WORLDS,
+  LOOP_ENCOUNTER_COUNT,
+  LOOP_WORLDS,
+  completedCampaignWorldCount,
+  loopRewardMultiplier,
+  type RunProgressState,
+} from '../domain/runProgression';
 import { REQUEST_NEW_RUN_EVENT } from './runUiEvents';
 import { PANEL_VISUALS } from './visualTokens';
 
@@ -20,12 +28,15 @@ export interface RunProgressPanelOptions {
 export class RunProgressPanel {
   private readonly titleText: Phaser.GameObjects.Text;
   private readonly stageText: Phaser.GameObjects.Text;
+  private readonly cycleCountText: Phaser.GameObjects.Text;
   private readonly encounterText: Phaser.GameObjects.Text;
   private readonly subtitleText: Phaser.GameObjects.Text;
   private readonly rewardText: Phaser.GameObjects.Text;
   private readonly scoreText: Phaser.GameObjects.Text;
   private readonly mutationText: Phaser.GameObjects.Text;
   private readonly statusText: Phaser.GameObjects.Text;
+  private readonly campaignRailSegments: Phaser.GameObjects.Rectangle[] = [];
+  private readonly campaignRailLabels: Phaser.GameObjects.Text[] = [];
   private readonly actionObjects: Phaser.GameObjects.GameObject[] = [];
   private readonly adBreakPolicy: AdBreakPolicy;
   private gameplayMarkedActive = false;
@@ -44,13 +55,30 @@ export class RunProgressPanel {
       fontStyle: 'bold', stroke: '#10120e', strokeThickness: 5,
     });
     this.stageText = scene.add.text(left + 14, top + 50, '', {
-      fontSize: '14px', color: '#ffcf69', fontStyle: 'bold', stroke: '#141218', strokeThickness: 3,
+      fontSize: '12px', color: '#ffcf69', fontStyle: 'bold', stroke: '#141218', strokeThickness: 3,
+      wordWrap: { width: 132 },
     });
-    this.encounterText = scene.add.text(left + 14, top + 82, '', {
+    this.cycleCountText = scene.add.text(left + 184, top + 52, '', {
+      fontSize: '10px', color: '#d9b8ff', fontStyle: 'bold', stroke: '#141218', strokeThickness: 2,
+    }).setOrigin(1, 0);
+    for (let index = 0; index < CAMPAIGN_WORLDS; index += 1) {
+      const segmentLeft = left + 14 + index * 28;
+      this.campaignRailSegments.push(
+        scene.add.rectangle(segmentLeft, top + 82, 23, 5, 0x353946, 1)
+          .setOrigin(0, 0.5)
+          .setStrokeStyle(1, 0x565d6d, 1),
+      );
+      this.campaignRailLabels.push(
+        scene.add.text(segmentLeft + 11.5, top + 68, String(index + 1), {
+          fontSize: '8px', color: '#858c9a', fontStyle: 'bold',
+        }).setOrigin(0.5, 0),
+      );
+    }
+    this.encounterText = scene.add.text(left + 14, top + 91, '', {
       fontSize: '16px', color: '#f7f2e8', fontStyle: 'bold', stroke: '#121119', strokeThickness: 3,
       wordWrap: { width: 172 },
     });
-    this.subtitleText = scene.add.text(left + 14, top + 127, '', {
+    this.subtitleText = scene.add.text(left + 14, top + 132, '', {
       fontSize: '12px', color: '#c0b9c7', lineSpacing: 3, wordWrap: { width: 172 },
     });
     this.rewardText = scene.add.text(left + 14, top + 193, '', {
@@ -76,17 +104,20 @@ export class RunProgressPanel {
 
     const progress = this.options.getProgress();
     this.scoreText.setText(`SCORE  ◆ ${progress.score}`);
-    this.statusText.setText((message ?? 'Repack and shop between encounters.').toUpperCase());
+    const milestoneStatus = this.campaignMilestoneStatus(progress);
+    this.statusText.setText((milestoneStatus ?? message ?? 'Repack and shop between encounters.').toUpperCase());
 
     if (progress.mode === 'deep-choice') {
       const nextLoop = progress.loopNumber + 1;
       const mutationCount = Math.min(4, nextLoop);
       this.titleText.setText('REALITY BROKEN').setColor('#f4a0ff');
       this.stageText.setText(progress.loopNumber === 1 ? `${CAMPAIGN_WORLDS} WORLDS COMPLETE` : `LOOP ${progress.loopNumber} COMPLETE`);
+      this.cycleCountText.setText(progress.loopNumber === 1 ? `${CAMPAIGN_ENCOUNTER_COUNT}/${CAMPAIGN_ENCOUNTER_COUNT}` : `${LOOP_ENCOUNTER_COUNT}/${LOOP_ENCOUNTER_COUNT}`);
+      this.updateCampaignRail(progress, null);
       this.encounterText.setText('ESCAPE OR GO DEEPER?');
       this.subtitleText.setText(`Keep this exact build for another ${LOOP_WORLDS} corrupted worlds. Each world stacks ${mutationCount} mutations.`);
       this.rewardText.setText(`NEXT LOOP  ×${loopRewardMultiplier(nextLoop).toFixed(2)} REWARDS`);
-      this.mutationText.setText('GO DEEPER = 12 MORE ENCOUNTERS BEFORE THE NEXT SAFE EXIT.');
+      this.mutationText.setText(`${LOOP_ENCOUNTER_COUNT} MORE ENCOUNTERS BEFORE THE NEXT SAFE EXIT.`);
       this.createActionButton(this.left + 100, this.top + 280, 'GO DEEPER', 0x49305a, 0xd47cff, () => {
         void this.runCycleBoundaryAction(() => this.options.onEnterCorruptedLoop());
       });
@@ -100,6 +131,8 @@ export class RunProgressPanel {
     if (progress.mode === 'complete') {
       this.titleText.setText('RUN COMPLETE');
       this.stageText.setText('SCORE LOCKED');
+      this.cycleCountText.setText('');
+      this.updateCampaignRail(progress, null);
       this.encounterText.setText('REALITY SURVIVED YOU.');
       this.subtitleText.setText('Start a new run for a different backpack, mutation and perk path.');
       this.rewardText.setText('FINAL SCORE SAVED');
@@ -118,6 +151,10 @@ export class RunProgressPanel {
       ? campaignLabel(progress.campaignEncounterIndex)
       : loopLabel(progress.loopNumber, progress.loopEncounterIndex);
     this.stageText.setText(stage);
+    this.cycleCountText.setText(progress.mode === 'campaign'
+      ? `${progress.campaignEncounterIndex + 1}/${CAMPAIGN_ENCOUNTER_COUNT}`
+      : `${progress.loopEncounterIndex + 1}/${LOOP_ENCOUNTER_COUNT}`);
+    this.updateCampaignRail(progress, encounter);
     this.encounterText.setText(encounter.title.toUpperCase());
     this.subtitleText.setText(encounter.subtitle);
     this.rewardText.setText(`BOUNTY  ◈ +${encounter.rewardCoins}`);
@@ -141,6 +178,43 @@ export class RunProgressPanel {
     this.scene.add.rectangle(cx, this.top + 30, 168, 44, 0x303728, 0.72).setStrokeStyle(2, 0x70864c);
     this.scene.add.rectangle(cx, this.top + 181, 172, 2, 0x5e5361, 0.55);
     this.scene.add.rectangle(cx, this.top + 233, 172, 2, 0x5e5361, 0.35);
+  }
+
+  private campaignMilestoneStatus(progress: RunProgressState): string | null {
+    if (progress.mode !== 'campaign' || progress.campaignEncounterIndex <= 0) return null;
+    if (progress.campaignEncounterIndex % 3 !== 0) return null;
+    const completed = completedCampaignWorldCount(progress);
+    if (completed <= 0 || completed >= CAMPAIGN_WORLDS) return null;
+    return `WORLD ${completed} CLEARED • REPACK FOR WORLD ${completed + 1}`;
+  }
+
+  private updateCampaignRail(progress: RunProgressState, encounter: RunEncounterDefinition | null): void {
+    const visible = progress.mode === 'campaign'
+      || (progress.mode === 'deep-choice' && progress.loopNumber === 1)
+      || (progress.mode === 'complete' && progress.loopNumber === 1);
+    const completed = completedCampaignWorldCount(progress);
+    const currentWorld = progress.mode === 'campaign' ? (encounter?.world ?? Math.min(CAMPAIGN_WORLDS, completed + 1)) : CAMPAIGN_WORLDS;
+
+    for (let index = 0; index < CAMPAIGN_WORLDS; index += 1) {
+      const world = index + 1;
+      const segment = this.campaignRailSegments[index];
+      const label = this.campaignRailLabels[index];
+      if (!segment || !label) continue;
+      segment.setVisible(visible);
+      label.setVisible(visible);
+      if (!visible) continue;
+
+      if (world <= completed) {
+        segment.setFillStyle(0xb5ff4d, 1).setStrokeStyle(1, 0xd8ff9e, 1);
+        label.setText(`✓${world}`).setColor('#d8ff9e');
+      } else if (world === currentWorld) {
+        segment.setFillStyle(0xff91e6, 1).setStrokeStyle(1, 0xffcff2, 1);
+        label.setText(`>${world}`).setColor('#ffcff2');
+      } else {
+        segment.setFillStyle(0x353946, 1).setStrokeStyle(1, 0x565d6d, 1);
+        label.setText(String(world)).setColor('#858c9a');
+      }
+    }
   }
 
   private mutationSummary(encounter: RunEncounterDefinition): string {
