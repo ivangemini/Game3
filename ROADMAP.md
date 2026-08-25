@@ -110,6 +110,7 @@
 - [x] Final animation/VFX implementation across backpack and rewards (**drag lift/drop/snap/invalid feedback, reward cards, coin staging, event drops, fusion anticipation/reveal/settle and directional synergy trails; runtime acceptance remains in P8**)
 - [x] Autoplay-safe WebAudio SFX mixer foundation (**semantic cue fan-out, deterministic synth patches, cooldowns, 10-voice priority budget, page visibility suspend/resume, persisted SFX volume**)
 - [x] Procedural adaptive music foundation (**deterministic menu/combat/boss patterns, persisted Music volume and semantic combat-mode switching**)
+- [x] Priority-aware mix ducking (**boss telegraphs/player hits duck moderately; priority-4 boss impacts/outcomes duck strongly with deterministic attack/hold/release; user Music volume remains independent**)
 - [ ] Final audio/music asset pass (**authored samples/music and final mix tuning remain; portal/ad suspend/resume lifecycle is implemented**)
 - [x] First-run onboarding flow (**5-step hero → pack → synergy → fight → fusion tutorial, reduced-motion support and persistent Help entry point**)
 - [x] Final onboarding presentation implementation (**Field Manual layout, five step-specific visual diagrams, progress rail, step accents, transitions and Reduced Motion path**)
@@ -132,12 +133,15 @@
 - [x] Campaign balance sampling excludes second-stage fusion results; loop checkpoints may sample them
 - [x] Static asset + bundle budget gates (**94.7 KiB generated runtime art payload, 10.39 MiB estimated atlas texture memory, 3 atlas groups; JS gzip budgets remain CI-enforced**)
 - [x] Portal adapter contract tests (**platform detection, Yandex/CrazyGames initialization and rewarded lifecycle semantics, natural-break policy**)
-- [x] Automated mobile/browser matrix (**Playwright production smoke across Chromium desktop/compact/mobile/portrait, WebKit mobile landscape and Firefox desktop; first baseline 37 passed + 5 intentional project skips, 0 failures; viewport/overflow/save recovery/console/network/atlas-first checks**)
+- [x] Automated mobile/browser matrix (**Playwright production smoke across Chromium desktop/compact/mobile/portrait, WebKit mobile landscape and Firefox desktop; viewport/overflow/save recovery/console/network/atlas-first checks**)
+- [x] Automated runtime performance regression smoke (**CI-safe RAF responsiveness ceiling, bounded render backing store, compact atlas-first network waterfall; intended to catch catastrophic regressions rather than claim device FPS**)
+- [x] Browser-level portal bootstrap compliance harness (**forced Yandex/CrazyGames adapters with injected SDK doubles validate initialization/loading-ready lifecycle without external SDK fetches**)
 - [x] Save migrations/recovery UX (**v1–v7 → v8 migrations, previous-valid backup slot, corrupt-primary recovery, safe reset fallback and visible web-shell recovery/write warnings**)
-- [ ] real-device performance profiling (**frame time, peak WebGL memory, portal network waterfall, low-memory lifecycle**)
-- [ ] portal-specific compliance checks (**repository integration contract implemented; real Yandex debug panel / CrazyGames SDK tester acceptance still required**)
+- [ ] real-device performance profiling (**frame time, peak WebGL memory, portal network waterfall, low-memory lifecycle; automated regression baseline + capture protocol exist**)
+- [ ] portal-specific compliance checks (**repository/unit/browser harness implemented; real Yandex debug panel / CrazyGames SDK tester acceptance still required**)
 
 ## P9 — Soft launch & iteration
+- [x] Repository-built portal candidate pipeline (**production build → readiness checks → ZIP + store art → v2 SHA-256 manifest → integrity verification → CI artifact; actual portal submission remains below**)
 - [ ] release candidate to first portals
 - [ ] measure tutorial completion/hero choice/first boss/base-campaign duration/event choice/fusion usage/loop-entry/loop-completion/return behavior
 - [ ] tune difficulty/economy/ad pacing
