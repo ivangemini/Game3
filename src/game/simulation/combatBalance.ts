@@ -3,7 +3,8 @@ import { PROTOTYPE_BASE_ITEMS, PROTOTYPE_FUSION_ITEMS, PROTOTYPE_ITEM_MAP } from
 import { PROTOTYPE_PERKS, PROTOTYPE_PERK_MAP } from '../data/perks';
 import { createLoopEncounter, getRunEncounter, type RunEncounterDefinition } from '../data/runEncounters';
 import { BACKPACK_HEIGHT, BACKPACK_WIDTH, blockedCellsForPocketUnlockCount } from '../domain/backpackLayout';
-import { advanceCombat, createCombatState, type CombatOutcome } from '../domain/combat';
+import { advanceCombatWithBossRules } from '../domain/bossCombat';
+import { createCombatState, type CombatOutcome } from '../domain/combat';
 import { createCombatBuild } from '../domain/combatBuild';
 import { validatePlacement, type InventoryState } from '../domain/inventory';
 import { createSeededRng, type SeededRng } from '../domain/rng';
@@ -192,7 +193,7 @@ function simulateBand(
     );
     const setup = { playerMaxHp: 100, items: combatBuild.items, enemy: encounter.enemy };
     const initial = createCombatState(setup);
-    const result = advanceCombat(initial, setup, maxCombatSeconds * 1000);
+    const result = advanceCombatWithBossRules(initial, setup, maxCombatSeconds * 1000);
     const outcome = result.state.outcome;
 
     if (outcome === 'victory') {
