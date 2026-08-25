@@ -7,6 +7,7 @@ Requirements snapshot: 2026-08-25. Re-check the linked portal documentation befo
 A `main` candidate is not considered technically ready unless CI proves all of the following:
 
 - production TypeScript/tests/build and bundle/asset budgets pass;
+- production dependencies pass `npm audit --omit=dev --audit-level=high`;
 - the release archive contains exactly one root `index.html`;
 - runtime archive paths contain no whitespace or non-ASCII characters;
 - uncompressed runtime stays under the 100 MiB Yandex archive ceiling;
@@ -18,8 +19,19 @@ A `main` candidate is not considered technically ready unless CI proves all of t
 - save corruption/recovery, portrait gating and live orientation recovery pass browser smoke tests;
 - Yandex and CrazyGames adapters pass unit callback/lifecycle tests;
 - browser-level SDK doubles prove Yandex init → Game Ready and CrazyGames init → loadingStart → loadingStop;
+- a clean first run persists hero selection after one meaningful click, with the full Field Manual remaining opt-in;
 - the portal ZIP and store art receive a v2 manifest with SHA-256 for the archive and every packaged file;
-- CI unpacks and verifies the portal candidate before publishing the Actions artifact.
+- CI unpacks and verifies the portal candidate before publishing the Actions artifact;
+- the browser job captures deterministic 1440×900 and 1024×576 post-hero gameplay screenshots for portal review/submission.
+
+## CI artifacts
+
+After a fully green `main` run use:
+
+- `junkpack-portal-candidate` — verified runtime ZIP, v2 integrity manifest and generated store art;
+- `junkpack-portal-screenshots` — `portal-screenshot-1440x900.png` and `portal-screenshot-1024x576.png` captured from the production build after first hero selection.
+
+Do not take a ZIP from an older run and screenshots from a newer run. Portal submission assets should come from the same commit/run whenever possible.
 
 ## Yandex Games — real draft acceptance
 
@@ -34,7 +46,7 @@ Before moderation:
 7. Exercise fullscreen and rewarded inventory. Confirm gameplay/audio pause while the overlay is active and that dismissed/failed rewarded ads grant nothing.
 8. Right-click and long-press the game surface on supported devices; no browser/system context menu should interrupt the game.
 9. Reload during a run and confirm local progress survives; also verify the intentional corrupt-save recovery path if practical.
-10. Review icon/cover/hero crops, description, controls, supported platforms, age/category/content declarations and all moderation fields in the current console UI.
+10. Review generated screenshots plus icon/cover/hero crops, description, controls, supported platforms, age/category/content declarations and all moderation fields in the current console UI.
 
 Current references:
 - https://yandex.com/dev/games/doc/en/concepts/requirements
@@ -56,7 +68,7 @@ Before submission or Full Launch review:
 7. Confirm ad overlays suspend game audio/simulation and resume once, without duplicate rewards or stuck pause state.
 8. Validate legibility at devicePixelRatio 1, responsive 16:9 iframe sizes and supported mobile landscape sizes.
 9. Re-check initial download/file-count measurements in the portal; the repository deliberately targets ≤20 MiB even though the general Basic limit is higher.
-10. Fill current description, controls, covers and content/age metadata in Developer Portal.
+10. Review the CI gameplay screenshots, then fill current description, controls, covers and content/age metadata in Developer Portal.
 
 Current references:
 - https://docs.crazygames.com/sdk/intro/
