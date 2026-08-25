@@ -4,7 +4,7 @@ import { atlasTextureKeyForArtKey } from '../assets/atlasContract';
 export interface AuthoredArtAsset {
   readonly key: string;
   readonly url: string;
-  readonly kind: 'item' | 'hero' | 'boss';
+  readonly kind: 'item' | 'hero' | 'boss' | 'ui';
 }
 
 export interface AuthoredTextureRef {
@@ -29,11 +29,15 @@ const HERO_IDS = ['scavenger', 'engineer', 'alchemist', 'beastfriend'] as const;
 const BOSS_IDS = [
   'tv-tyrant', 'deadline-snail', 'closet-monster', 'baby-moon', 'copycat-auditor', 'border-shark',
 ] as const;
+const UI_IDS = [
+  'daily', 'archive', 'trophies', 'help', 'settings', 'reset', 'coin', 'fusion', 'pocket', 'logo-mark',
+] as const;
 
 export const AUTHORED_ART_ASSETS: readonly AuthoredArtAsset[] = [
   ...ITEM_IDS.map((id) => ({ key: `item.${id}`, url: `/assets/art/items/${id}.svg`, kind: 'item' as const })),
   ...HERO_IDS.map((id) => ({ key: `hero.${id}`, url: `/assets/art/heroes/${id}.svg`, kind: 'hero' as const })),
   ...BOSS_IDS.map((id) => ({ key: `boss.${id}`, url: `/assets/art/bosses/${id}.svg`, kind: 'boss' as const })),
+  ...UI_IDS.map((id) => ({ key: `ui.${id}`, url: `/assets/art/ui/${id}.svg`, kind: 'ui' as const })),
 ];
 
 const ASSET_BY_KEY = new Map(AUTHORED_ART_ASSETS.map((asset) => [asset.key, asset]));
@@ -41,6 +45,10 @@ const pending = new Map<string, Promise<HTMLImageElement | null>>();
 
 export function heroArtKey(heroId: string): string {
   return `hero.${heroId}`;
+}
+
+export function uiArtKey(id: string): string {
+  return `ui.${id}`;
 }
 
 export function bossArtKeyForEnemyId(enemyId: string): string | null {
