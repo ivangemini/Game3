@@ -1,7 +1,7 @@
 import type { TelemetryEnvelope } from './Telemetry';
 
 const FIRST_BOSS_ENCOUNTER_ID = 'w1-tv-tyrant';
-const FINAL_CAMPAIGN_BOSS_ENCOUNTER_ID = 'w4-baby-moon';
+const FINAL_CAMPAIGN_BOSS_ENCOUNTER_ID = 'w6-border-shark';
 
 export interface CombatMetric {
   readonly encounterId: string;
@@ -261,14 +261,14 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
   };
 }
 
-function rememberEarliest(target: Map<string, number>, sessionId: string, timestampMs: number): void {
-  if (!Number.isFinite(timestampMs)) return;
-  const existing = target.get(sessionId);
-  if (existing === undefined || timestampMs < existing) target.set(sessionId, timestampMs);
-}
-
 function sessionLatencies(starts: ReadonlyMap<string, number>, milestones: ReadonlyMap<string, number>): number[] {
-  return latencies(starts, milestones);
+  const latencies: number[] = [];
+  for (const [sessionId, startAt] of starts) {
+    const milestoneAt = milestones.get(sessionId);
+    if (milestoneAt === undefined || milestoneAt < startAt) continue;
+    latencies.push(milestoneAt - startAt);
+  }
+  return latencies;
 }
 
 function milestoneLatencies(
@@ -276,45 +276,41 @@ function milestoneLatencies(
   fallbackStarts: ReadonlyMap<string, number>,
   milestones: ReadonlyMap<string, number>,
 ): number[] {
-  const values: number[] = [];
+  const latencies: number[] = [];
   for (const [sessionId, milestoneAt] of milestones) {
     const startAt = preferredStarts.get(sessionId) ?? fallbackStarts.get(sessionId);
     if (startAt === undefined || milestoneAt < startAt) continue;
-    values.push(milestoneAt - startAt);
+    latencies.push(milestoneAt - startAt);
   }
-  return values;
+  return latencies;
 }
 
-function latencies(starts: ReadonlyMap<string, number>, milestones: ReadonlyMap<string, number>): number[] {
-  const values: number[] = [];
-  for (const [sessionId, milestoneAt] of milestones) {
-    const startAt = starts.get(sessionId);
-    if (startAt === undefined || milestoneAt < startAt) continue;
-    values.push(milestoneAt - startAt);
-  }
-  return values;
-}
-
-function average(values: readonly number[]): number {
-  return values.length > 0 ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
-}
-
-function percentile(values: readonly number[], quantile: number): number {
-  if (values.length === 0) return 0;
-  const sorted = [...values].sort((a, b) => a - b);
-  const clamped = Math.max(0, Math.min(1, Number.isFinite(quantile) ? quantile : 0));
-  const index = Math.ceil(clamped * sorted.length) - 1;
-  return sorted[Math.max(0, Math.min(sorted.length - 1, index))] ?? 0;
+function rememberEarliest(target: Map<string, number>, sessionId: string, timestampMs: number): void {
+  if (!Number.isFinite(timestampMs)) return;
+  const existing = target.get(sessionId);
+  if (existing === undefined || timestampMs < existing) target.set(sessionId, timestampMs);
 }
 
 function ratio(numerator: number, denominator: number): number {
   return denominator > 0 ? numerator / denominator : 0;
 }
 
+function average(values: readonly number[]): number {
+  if (values.length === 0) return 0;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function percentile(values: readonly number[], percentileValue: number): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const index = Math.max(0, Math.min(sorted.length - 1, Math.ceil(percentileValue * sorted.length) - 1));
+  return sorted[index] ?? 0;
+}
+
 function finiteNonNegative(value: number): number {
   return Number.isFinite(value) ? Math.max(0, value) : 0;
 }
 
-function sortRecord(values: Record<string, number>): Readonly<Record<string, number>> {
-  return Object.fromEntries(Object.entries(values).sort(([a], [b]) => a.localeCompare(b)));
+function sortRecord(record: Readonly<Record<string, number>>): Readonly<Record<string, number>> {
+  return Object.fromEntries(Object.entries(record).sort(([a], [b]) => a.localeCompare(b)));
 }
