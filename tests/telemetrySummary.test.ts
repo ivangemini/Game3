@@ -57,11 +57,18 @@ describe('summarizeTelemetry', () => {
     expect(summary.loopEntries).toEqual({ '2': 1 });
     expect(summary.averageCashoutScore).toBe(5000);
     expect(summary.combats).toEqual([{
-      encounterId: 'boss-a', attempts: 2, victories: 1, defeats: 1, winRate: 0.5, averageDurationMs: 40000,
+      encounterId: 'boss-a',
+      attempts: 2,
+      victories: 1,
+      defeats: 1,
+      winRate: 0.5,
+      averageDurationMs: 40000,
+      medianDurationMs: 30000,
+      p90DurationMs: 50000,
     }]);
   });
 
-  it('derives time-to-hero and time-to-first-combat from existing per-session timestamps', () => {
+  it('derives time-to-hero and time-to-first-combat distributions from existing per-session timestamps', () => {
     const events: TelemetryEnvelope[] = [
       sessionEvent('a', 1000, 'session_start', { returning: false, platform: 'local', viewportMode: 'standard-landscape' }),
       sessionEvent('a', 4000, 'hero_selected', { heroId: 'engineer' }),
@@ -69,28 +76,58 @@ describe('summarizeTelemetry', () => {
       sessionEvent('a', 12000, 'combat_started', { encounterId: 'w1-2', stage: 'World 1' }),
       sessionEvent('b', 2000, 'session_start', { returning: false, platform: 'local', viewportMode: 'standard-landscape' }),
       sessionEvent('b', 7000, 'hero_selected', { heroId: 'scavenger' }),
+      sessionEvent('b', 15000, 'combat_started', { encounterId: 'w1-1', stage: 'World 1' }),
       sessionEvent('c', 3000, 'session_start', { returning: true, platform: 'yandex', viewportMode: 'compact-landscape' }),
       sessionEvent('c', 2500, 'hero_selected', { heroId: 'engineer' }),
+      sessionEvent('d', 4000, 'session_start', { returning: false, platform: 'crazygames', viewportMode: 'compact-landscape' }),
+      sessionEvent('d', 13000, 'hero_selected', { heroId: 'engineer' }),
+      sessionEvent('d', 24000, 'combat_started', { encounterId: 'w1-1', stage: 'World 1' }),
     ];
 
     const summary = summarizeTelemetry(events);
-    expect(summary.sessions).toBe(3);
-    expect(summary.sessionsWithHeroSelection).toBe(2);
-    expect(summary.heroSelectionSessionRate).toBeCloseTo(2 / 3);
-    expect(summary.averageTimeToHeroMs).toBe(4000);
-    expect(summary.sessionsWithFirstCombat).toBe(1);
-    expect(summary.firstCombatSessionRate).toBeCloseTo(1 / 3);
-    expect(summary.averageTimeToFirstCombatMs).toBe(8000);
+    expect(summary.sessions).toBe(4);
+    expect(summary.sessionsWithHeroSelection).toBe(3);
+    expect(summary.heroSelectionSessionRate).toBeCloseTo(3 / 4);
+    expect(summary.averageTimeToHeroMs).toBeCloseTo((3000 + 5000 + 9000) / 3);
+    expect(summary.medianTimeToHeroMs).toBe(5000);
+    expect(summary.p90TimeToHeroMs).toBe(9000);
+    expect(summary.sessionsWithFirstCombat).toBe(3);
+    expect(summary.firstCombatSessionRate).toBeCloseTo(3 / 4);
+    expect(summary.averageTimeToFirstCombatMs).toBeCloseTo((8000 + 13000 + 20000) / 3);
+    expect(summary.medianTimeToFirstCombatMs).toBe(13000);
+    expect(summary.p90TimeToFirstCombatMs).toBe(20000);
   });
 
-  it('returns stable zero rates for an empty stream', () => {
+  it('uses nearest-rank percentiles for skewed combat durations', () => {
+    const events = [10_000, 12_000, 13_000, 15_000, 80_000].map((durationMs, index) =>
+      event('combat_finished', {
+        encounterId: 'boss-skewed',
+        outcome: index === 4 ? 'defeat' : 'victory',
+        durationMs,
+      }, index + 1));
+
+    const [metric] = summarizeTelemetry(events).combats;
+    expect(metric).toMatchObject({
+      attempts: 5,
+      victories: 4,
+      defeats: 1,
+      medianDurationMs: 13000,
+      p90DurationMs: 80000,
+    });
+  });
+
+  it('returns stable zero rates and percentiles for an empty stream', () => {
     const summary = summarizeTelemetry([]);
     expect(summary.sessions).toBe(0);
     expect(summary.returningRate).toBe(0);
     expect(summary.heroSelectionSessionRate).toBe(0);
     expect(summary.averageTimeToHeroMs).toBe(0);
+    expect(summary.medianTimeToHeroMs).toBe(0);
+    expect(summary.p90TimeToHeroMs).toBe(0);
     expect(summary.firstCombatSessionRate).toBe(0);
     expect(summary.averageTimeToFirstCombatMs).toBe(0);
+    expect(summary.medianTimeToFirstCombatMs).toBe(0);
+    expect(summary.p90TimeToFirstCombatMs).toBe(0);
     expect(summary.tutorialCompletionRate).toBe(0);
     expect(summary.rewardedAdCompletionRate).toBe(0);
     expect(summary.averageCashoutScore).toBe(0);
