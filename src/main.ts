@@ -1,7 +1,11 @@
 import * as Phaser from 'phaser';
 import { gameConfig } from './game/config';
+import { LocalPlatformAdapter, type PlatformAdapter } from './platform/PlatformAdapter';
+import { createPlatformAdapter } from './platform/platformFactory';
 import { applyViewportProfile, classifyViewport } from './platform/viewport';
 import './styles.css';
+
+const PLATFORM_REGISTRY_KEY = 'junkpack.platform-adapter';
 
 const orientationGate = document.createElement('div');
 orientationGate.id = 'orientation-gate';
@@ -24,13 +28,64 @@ syncViewportProfile();
 window.addEventListener('resize', syncViewportProfile, { passive: true });
 window.addEventListener('orientationchange', syncViewportProfile);
 
-const game = new Phaser.Game(gameConfig);
+let game: Phaser.Game | null = null;
+let platform: PlatformAdapter | null = null;
+let disposed = false;
+
+const pauseForPlatform = (): void => {
+  game?.loop.sleep();
+};
+
+const resumeForPlatform = (): void => {
+  if (!disposed) game?.loop.wake();
+};
+
+async function bootstrap(): Promise<void> {
+  const requestedPlatform = createPlatformAdapter({
+    onPauseRequested: pauseForPlatform,
+    onResumeRequested: resumeForPlatform,
+  });
+
+  try {
+    await requestedPlatform.init();
+    platform = requestedPlatform;
+  } catch (error) {
+    console.warn(`[platform] ${requestedPlatform.id} initialization failed; continuing with local adapter.`, error);
+    requestedPlatform.destroy();
+    platform = new LocalPlatformAdapter({
+      onPauseRequested: pauseForPlatform,
+      onResumeRequested: resumeForPlatform,
+    });
+    await platform.init();
+  }
+
+  if (disposed) {
+    platform.destroy();
+    platform = null;
+    return;
+  }
+
+  game = new Phaser.Game(gameConfig);
+  game.registry.set(PLATFORM_REGISTRY_KEY, platform);
+
+  try {
+    await platform.ready();
+  } catch (error) {
+    console.warn(`[platform] ${platform.id} ready signal failed.`, error);
+  }
+}
+
+void bootstrap();
 
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
+    disposed = true;
     window.removeEventListener('resize', syncViewportProfile);
     window.removeEventListener('orientationchange', syncViewportProfile);
     orientationGate.remove();
-    game.destroy(true);
+    platform?.destroy();
+    platform = null;
+    game?.destroy(true);
+    game = null;
   });
 }
