@@ -5,7 +5,8 @@ import { musicStepFor, type MusicMode } from './musicPattern';
 import { synthPatchForCue } from './audioSynthesis';
 
 interface RuntimeVoice {
-  readonly oscillators: readonly OscillatorNode[];
+  readonly sources: readonly AudioScheduledSourceNode[];
+  readonly filters: readonly BiquadFilterNode[];
   readonly gains: readonly GainNode[];
   readonly releaseTimer: number;
 }
@@ -16,6 +17,7 @@ export class GameAudio {
   private sfxGain: GainNode | null = null;
   private musicGain: GainNode | null = null;
   private musicDuckGain: GainNode | null = null;
+  private noiseBuffer: AudioBuffer | null = null;
   private readonly gate = new AudioMixGate(10);
   private readonly voices = new Map<number, RuntimeVoice>();
   private unlocked = false;
@@ -61,7 +63,8 @@ export class GameAudio {
     this.applyMusicDuck(cue, context);
 
     const voiceStart = context.currentTime;
-    const oscillators: OscillatorNode[] = [];
+    const sources: AudioScheduledSourceNode[] = [];
+    const filters: BiquadFilterNode[] = [];
     const gains: GainNode[] = [];
 
     for (const layer of patch.layers) {
@@ -81,13 +84,44 @@ export class GameAudio {
       gain.connect(output);
       oscillator.start(startAt);
       oscillator.stop(endAt + 0.015);
-      oscillators.push(oscillator);
+      sources.push(oscillator);
       gains.push(gain);
+    }
+
+    const noiseBuffer = this.noiseBuffer;
+    if (noiseBuffer) {
+      for (const layer of patch.noiseLayers) {
+        const source = context.createBufferSource();
+        const filter = context.createBiquadFilter();
+        const gain = context.createGain();
+        const startAt = voiceStart + layer.startOffsetMs / 1000;
+        const durationSeconds = layer.durationMs / 1000;
+        const endAt = startAt + durationSeconds;
+        const attackEnd = Math.min(endAt, startAt + 0.006);
+        const maxOffset = Math.max(0, noiseBuffer.duration - durationSeconds - 0.002);
+
+        source.buffer = noiseBuffer;
+        filter.type = layer.filterType;
+        filter.frequency.setValueAtTime(layer.startHz, startAt);
+        filter.frequency.exponentialRampToValueAtTime(Math.max(1, layer.endHz), endAt);
+        filter.Q.setValueAtTime(layer.q, startAt);
+        gain.gain.setValueAtTime(0.0001, startAt);
+        gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, layer.gain), attackEnd);
+        gain.gain.exponentialRampToValueAtTime(0.0001, endAt);
+        source.connect(filter);
+        filter.connect(gain);
+        gain.connect(output);
+        source.start(startAt, noiseOffsetSeconds(`${cue.id}:${cue.sourceId ?? ''}`, maxOffset), durationSeconds);
+        source.stop(endAt + 0.015);
+        sources.push(source);
+        filters.push(filter);
+        gains.push(gain);
+      }
     }
 
     const token = decision.token;
     const releaseTimer = window.setTimeout(() => this.stopVoice(token), patch.durationMs + 80);
-    this.voices.set(token, { oscillators, gains, releaseTimer });
+    this.voices.set(token, { sources, filters, gains, releaseTimer });
     return true;
   }
 
@@ -137,6 +171,7 @@ export class GameAudio {
     this.sfxGain = null;
     this.musicGain = null;
     this.musicDuckGain = null;
+    this.noiseBuffer = null;
     if (context && context.state !== 'closed') void context.close();
   }
 
@@ -157,6 +192,7 @@ export class GameAudio {
     this.sfxGain = sfxGain;
     this.musicGain = musicGain;
     this.musicDuckGain = musicDuckGain;
+    this.noiseBuffer = createDeterministicNoiseBuffer(context);
     this.applyVolumes();
   }
 
@@ -247,10 +283,11 @@ export class GameAudio {
     const voice = this.voices.get(token);
     if (voice) {
       window.clearTimeout(voice.releaseTimer);
-      for (const oscillator of voice.oscillators) {
-        try { oscillator.stop(); } catch { /* already ended */ }
-        oscillator.disconnect();
+      for (const source of voice.sources) {
+        try { source.stop(); } catch { /* already ended */ }
+        source.disconnect();
       }
+      for (const filter of voice.filters) filter.disconnect();
       for (const gain of voice.gains) gain.disconnect();
       this.voices.delete(token);
     }
@@ -266,6 +303,30 @@ export class GameAudio {
     }
     if (!this.externallySuspended && this.unlocked && context.state === 'suspended') void context.resume();
   };
+}
+
+function createDeterministicNoiseBuffer(context: AudioContext): AudioBuffer {
+  const frameCount = Math.max(1, Math.floor(context.sampleRate));
+  const buffer = context.createBuffer(1, frameCount, context.sampleRate);
+  const channel = buffer.getChannelData(0);
+  let state = 0x6d2b79f5;
+  for (let index = 0; index < channel.length; index += 1) {
+    state = Math.imul(state ^ (state >>> 15), state | 1);
+    state ^= state + Math.imul(state ^ (state >>> 7), state | 61);
+    const value = ((state ^ (state >>> 14)) >>> 0) / 4294967295;
+    channel[index] = value * 2 - 1;
+  }
+  return buffer;
+}
+
+function noiseOffsetSeconds(key: string, maxOffset: number): number {
+  if (maxOffset <= 0) return 0;
+  let hash = 2166136261;
+  for (let index = 0; index < key.length; index += 1) {
+    hash ^= key.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return ((hash >>> 0) / 4294967295) * maxOffset;
 }
 
 function volumeCurve(value: number): number {
