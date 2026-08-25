@@ -46,6 +46,23 @@ test('applies the correct viewport profile and orientation gate', async ({ page 
   }
 });
 
+test('updates orientation gating live after viewport rotation', async ({ page }) => {
+  const gate = page.locator('#orientation-gate');
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect(page.locator('html')).toHaveAttribute('data-viewport-mode', 'compact-landscape');
+  await expect(gate).toBeHidden();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator('html')).toHaveAttribute('data-viewport-mode', 'portrait');
+  await expect(gate).toBeVisible();
+  expect(await page.locator('canvas').evaluate((element) => getComputedStyle(element).pointerEvents)).toBe('none');
+
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect(page.locator('html')).toHaveAttribute('data-viewport-mode', 'compact-landscape');
+  await expect(gate).toBeHidden();
+  expect(await page.locator('canvas').evaluate((element) => getComputedStyle(element).pointerEvents)).not.toBe('none');
+});
+
 test('keeps save recovery shell and application root available', async ({ page }) => {
   await expect(page.locator('#app')).toBeVisible();
   await expect(page.locator('#save-notice')).toBeAttached();
