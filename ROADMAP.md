@@ -70,7 +70,7 @@
 - [x] Event choices consume/award the real run currency and can grant real backpack items
 - [x] Twenty-four prototype fusion recipes with deterministic ingredient/result handling
 - [x] Fusion unlocks after Boss 1 and respects currently locked backpack cells
-- [ ] Runtime pacing validation: first boss 3–5 min, base campaign 20–25 min, strong session 30–50 min, deep session 60+ min. Seeded target-model regression coverage is implemented; real play telemetry remains required.
+- [ ] Runtime pacing validation: first boss 3–5 min, base campaign 20–25 min, strong session 30–50 min, deep session 60+ min. Seeded target-model regression coverage plus run-start-anchored p50/p90 first-boss/base-campaign telemetry are implemented; real play traffic remains required.
 
 ## P4 — Content-efficient depth [DONE]
 - [x] 35–45 launch base items (**36 prototype base items implemented**)
@@ -145,8 +145,9 @@
 
 ## P9 — Soft launch & iteration
 - [x] Repository-built portal candidate pipeline (**production build → readiness/security checks → runtime-only ZIP + separate store art → v2 per-file SHA-256 manifest → integrity verification → CI artifact; strict `release:soft-launch` additionally requires HTTPS analytics endpoint**)
-- [x] Soft-launch pacing summary foundation (**session reach + average/median/p90 time-to-hero and first-combat latency; per-encounter win rate + average/median/p90 duration, without persistent identity**)
+- [x] Privacy-minimal measurement pipeline (**strict versioned Node receiver → sanitized append-only NDJSON → deterministic JSON/Markdown report; receiver/report contracts and report CLI are CI-tested, raw exports are gitignored**)
+- [x] Soft-launch pacing summary foundation (**session reach + average/median/p90 time-to-hero and first-combat latency; run-start-anchored first-boss and base-campaign reach/duration; per-encounter win rate + average/median/p90 duration, without persistent identity**)
 - [ ] release candidate to first portals
-- [ ] measure tutorial/help usage/hero choice/first boss/base-campaign duration/event choice/fusion usage/loop-entry/loop-completion/return behavior
+- [ ] measure tutorial/help usage/hero choice/first boss/base-campaign duration/event choice/fusion usage/loop-entry/loop-completion/return behavior on real traffic
 - [ ] tune difficulty/economy/ad pacing
 - [ ] add content only after core retention signals justify it
