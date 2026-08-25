@@ -57,8 +57,10 @@ for (const archivedPath of archivedPaths) {
   if (/\s/u.test(archivedPath)) failures.push(`archive path contains whitespace: ${archivedPath}`);
   if (/[^\x20-\x7E]/u.test(archivedPath)) failures.push(`archive path contains non-ASCII characters: ${archivedPath}`);
   if (archivedPath.endsWith('.map')) failures.push(`source map must not ship in portal archive: ${archivedPath}`);
+  if (archivedPath === 'assets/atlas/asset-report.json') failures.push(`build-only atlas report must not ship in portal archive: ${archivedPath}`);
   if (archivedPath.startsWith('assets/art/')) failures.push(`authored source art must not ship in portal archive: ${archivedPath}`);
   if (archivedPath.startsWith('assets/store/')) failures.push(`store metadata art must remain outside runtime archive: ${archivedPath}`);
+  if (archivedPath.startsWith('assets/store-src/')) failures.push(`editable store source art must not ship in portal archive: ${archivedPath}`);
 }
 
 for (const entry of manifest.files ?? []) {
