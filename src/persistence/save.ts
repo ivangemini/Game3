@@ -84,7 +84,7 @@ export interface SaveV5 {
   readonly activeRun: ActiveRunSaveV5 | null;
 }
 
-export interface ActiveRunSave extends ActiveRunSaveV4 {
+export interface ActiveRunSaveV6 extends ActiveRunSaveV4 {
   readonly progress: RunProgressState;
 }
 
@@ -95,13 +95,29 @@ export interface SaveV6 {
   readonly bestEndlessWave: number;
   readonly bestCorruptedLoop: number;
   readonly settings: SaveSettings;
+  readonly activeRun: ActiveRunSaveV6 | null;
+}
+
+export interface ActiveRunSave extends ActiveRunSaveV6 {
+  readonly eventIndex: number;
+  readonly pendingEventId: string | null;
+  readonly resolvedEventIds: readonly string[];
+}
+
+export interface SaveV7 {
+  readonly version: 7;
+  readonly discoveredItemIds: readonly string[];
+  readonly discoveredRecipeIds: readonly string[];
+  readonly bestEndlessWave: number;
+  readonly bestCorruptedLoop: number;
+  readonly settings: SaveSettings;
   readonly activeRun: ActiveRunSave | null;
 }
 
-export type GameSave = SaveV6;
+export type GameSave = SaveV7;
 
-export const DEFAULT_SAVE: SaveV6 = {
-  version: 6,
+export const DEFAULT_SAVE: SaveV7 = {
+  version: 7,
   discoveredItemIds: [],
   discoveredRecipeIds: [],
   bestEndlessWave: 0,
@@ -114,18 +130,19 @@ export const DEFAULT_SAVE: SaveV6 = {
   activeRun: null,
 };
 
-export function loadSave(storage: Storage = localStorage): SaveV6 {
+export function loadSave(storage: Storage = localStorage): SaveV7 {
   const raw = storage.getItem(SAVE_KEY);
   if (!raw) return DEFAULT_SAVE;
 
   try {
     const parsed: unknown = JSON.parse(raw);
-    if (isSaveV6(parsed)) return parsed;
-    if (isSaveV5(parsed)) return migrateV5ToV6(parsed);
-    if (isSaveV4(parsed)) return migrateV5ToV6(migrateV4ToV5(parsed));
-    if (isSaveV3(parsed)) return migrateV5ToV6(migrateV4ToV5(migrateV3ToV4(parsed)));
-    if (isSaveV2(parsed)) return migrateV5ToV6(migrateV4ToV5(migrateV3ToV4(migrateV2ToV3(parsed))));
-    if (isSaveV1(parsed)) return migrateV5ToV6(migrateV4ToV5(migrateV3ToV4(migrateV2ToV3(migrateV1ToV2(parsed)))));
+    if (isSaveV7(parsed)) return parsed;
+    if (isSaveV6(parsed)) return migrateV6ToV7(parsed);
+    if (isSaveV5(parsed)) return migrateV6ToV7(migrateV5ToV6(parsed));
+    if (isSaveV4(parsed)) return migrateV6ToV7(migrateV5ToV6(migrateV4ToV5(parsed)));
+    if (isSaveV3(parsed)) return migrateV6ToV7(migrateV5ToV6(migrateV4ToV5(migrateV3ToV4(parsed))));
+    if (isSaveV2(parsed)) return migrateV6ToV7(migrateV5ToV6(migrateV4ToV5(migrateV3ToV4(migrateV2ToV3(parsed)))));
+    if (isSaveV1(parsed)) return migrateV6ToV7(migrateV5ToV6(migrateV4ToV5(migrateV3ToV4(migrateV2ToV3(migrateV1ToV2(parsed))))));
   } catch {
     // Corrupted local data falls back safely; recovery UI can be added later.
   }
@@ -133,11 +150,11 @@ export function loadSave(storage: Storage = localStorage): SaveV6 {
   return DEFAULT_SAVE;
 }
 
-export function writeSave(save: SaveV6, storage: Storage = localStorage): void {
+export function writeSave(save: SaveV7, storage: Storage = localStorage): void {
   storage.setItem(SAVE_KEY, JSON.stringify(save));
 }
 
-export function clearActiveRun(save: SaveV6): SaveV6 {
+export function clearActiveRun(save: SaveV7): SaveV7 {
   return { ...save, activeRun: null };
 }
 
@@ -210,6 +227,25 @@ function migrateV5ToV6(save: SaveV5): SaveV6 {
     settings: save.settings,
     activeRun: save.activeRun
       ? { ...save.activeRun, progress: migrateLegacyProgress(save.activeRun.progress) }
+      : null,
+  };
+}
+
+function migrateV6ToV7(save: SaveV6): SaveV7 {
+  return {
+    version: 7,
+    discoveredItemIds: save.discoveredItemIds,
+    discoveredRecipeIds: save.discoveredRecipeIds,
+    bestEndlessWave: save.bestEndlessWave,
+    bestCorruptedLoop: save.bestCorruptedLoop,
+    settings: save.settings,
+    activeRun: save.activeRun
+      ? {
+          ...save.activeRun,
+          eventIndex: 0,
+          pendingEventId: null,
+          resolvedEventIds: [],
+        }
       : null,
   };
 }
@@ -295,6 +331,15 @@ function isSaveV6(value: unknown): value is SaveV6 {
     && (candidate.activeRun === null || isActiveRunV6(candidate.activeRun));
 }
 
+function isSaveV7(value: unknown): value is SaveV7 {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as Partial<SaveV7>;
+  return candidate.version === 7
+    && isMeta(candidate)
+    && isNonNegativeInteger(candidate.bestCorruptedLoop)
+    && (candidate.activeRun === null || isActiveRunV7(candidate.activeRun));
+}
+
 function isMeta(value: {
   discoveredItemIds?: readonly string[];
   discoveredRecipeIds?: readonly string[];
@@ -336,8 +381,16 @@ function isActiveRunV5(value: unknown): value is ActiveRunSaveV5 {
   return isActiveRunV4(value) && isLegacyRunProgressState((value as Partial<ActiveRunSaveV5>).progress);
 }
 
-function isActiveRunV6(value: unknown): value is ActiveRunSave {
-  return isActiveRunV4(value) && isRunProgressState((value as Partial<ActiveRunSave>).progress);
+function isActiveRunV6(value: unknown): value is ActiveRunSaveV6 {
+  return isActiveRunV4(value) && isRunProgressState((value as Partial<ActiveRunSaveV6>).progress);
+}
+
+function isActiveRunV7(value: unknown): value is ActiveRunSave {
+  if (!isActiveRunV6(value)) return false;
+  const candidate = value as Partial<ActiveRunSave>;
+  return isNonNegativeInteger(candidate.eventIndex)
+    && (candidate.pendingEventId === null || typeof candidate.pendingEventId === 'string')
+    && isStringArray(candidate.resolvedEventIds);
 }
 
 function isLegacyRunProgressState(value: unknown): value is LegacyRunProgressStateV5 {
