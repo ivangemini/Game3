@@ -20,11 +20,15 @@ interface ActionVisual {
   readonly icon?: Phaser.GameObjects.Image;
 }
 
+const CONFIRM_WINDOW_MS = 3200;
+
 export class TopHudActions {
   private readonly root: Phaser.GameObjects.Container;
   private readonly visuals = new Map<HudActionId, ActionVisual>();
   private readonly options: TopHudActionsOptions;
   private displayWidthCss: number;
+  private armedAction: HudActionId | null = null;
+  private confirmTimer?: Phaser.Time.TimerEvent;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -43,7 +47,10 @@ export class TopHudActions {
       if (previousMode !== nextMode) this.rebuild();
     };
     scene.scale.on('resize', onResize);
-    scene.events.once('shutdown', () => scene.scale.off('resize', onResize));
+    scene.events.once('shutdown', () => {
+      scene.scale.off('resize', onResize);
+      this.confirmTimer?.destroy();
+    });
   }
 
   private rebuild(): void {
@@ -81,11 +88,15 @@ export class TopHudActions {
         text.setScale(0.97);
         icon?.setScale(0.97 * iconBaseScale(placement));
       });
-      rect.on('pointerup', () => {
+      const restore = (): void => {
         rect.setScale(1);
         text.setScale(1);
         icon?.setScale(iconBaseScale(placement));
-        callbackFor(placement.id, this.options)();
+      };
+      rect.on('pointerupoutside', restore);
+      rect.on('pointerup', () => {
+        restore();
+        this.activate(placement, text);
       });
 
       this.root.add([rect]);
@@ -93,6 +104,37 @@ export class TopHudActions {
       this.root.add(text);
       this.visuals.set(placement.id, { placement, rect, text, icon });
     }
+  }
+
+  private activate(placement: HudActionPlacement, text: Phaser.GameObjects.Text): void {
+    const requiresConfirmation = placement.id === 'reset'
+      || (placement.id === 'daily' && !this.options.dailyActive);
+    if (!requiresConfirmation) {
+      callbackFor(placement.id, this.options)();
+      return;
+    }
+
+    if (this.armedAction === placement.id) {
+      this.clearConfirmation();
+      callbackFor(placement.id, this.options)();
+      return;
+    }
+
+    this.clearConfirmation();
+    this.armedAction = placement.id;
+    text.setText(confirmLabelFor(placement.id, placement.compactLabel));
+    this.confirmTimer = this.scene.time.delayedCall(CONFIRM_WINDOW_MS, () => this.clearConfirmation());
+  }
+
+  private clearConfirmation(): void {
+    const armed = this.armedAction;
+    this.armedAction = null;
+    this.confirmTimer?.destroy();
+    this.confirmTimer = undefined;
+    if (!armed) return;
+    const visual = this.visuals.get(armed);
+    if (!visual) return;
+    visual.text.setText(labelFor(armed, visual.placement.compactLabel, this.options.dailyKey, this.options.dailyActive));
   }
 }
 
@@ -125,6 +167,11 @@ function callbackFor(id: HudActionId, options: TopHudActionsOptions): () => void
   if (id === 'help') return options.onHelp;
   if (id === 'settings') return options.onSettings;
   return options.onReset;
+}
+
+function confirmLabelFor(id: HudActionId, compact: boolean): string {
+  if (id === 'daily') return compact ? 'TAP AGAIN' : 'TAP AGAIN • REPLACE RUN';
+  return compact ? 'CONFIRM?' : 'TAP AGAIN • RESET RUN';
 }
 
 function labelFor(id: HudActionId, compact: boolean, dailyKey: string, dailyActive: boolean): string {
