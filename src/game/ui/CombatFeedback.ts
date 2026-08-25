@@ -2,7 +2,7 @@ import * as Phaser from 'phaser';
 import type { AudioCue } from '../audio/audioCues';
 import { cellsForPlacement } from '../domain/inventory';
 import type { ItemDefinition, PlacedItem } from '../domain/types';
-import { bossArtKeyForEnemyId, requestAuthoredTexture } from './authoredArt';
+import { BossPortraitLayer } from './BossPortraitLayer';
 
 export interface CombatFeedbackOptions {
   readonly getBackpackItems: () => readonly PlacedItem[];
@@ -27,8 +27,7 @@ export class CombatFeedback {
   private readonly backpackGrid: { readonly left: number; readonly top: number; readonly cellSize: number };
   private readonly enemyPoint: { readonly x: number; readonly y: number };
   private readonly playerPoint: { readonly x: number; readonly y: number };
-  private readonly enemyArtObjects: Phaser.GameObjects.GameObject[] = [];
-  private activeEnemyArtKey: string | null = null;
+  private readonly bossPortraits: BossPortraitLayer;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -49,8 +48,7 @@ export class CombatFeedback {
     this.particles = Array.from({ length: 30 }, () => scene.add.circle(0, 0, 5, 0xffffff, 1)
       .setDepth(246)
       .setVisible(false));
-
-    scene.events.once('shutdown', () => this.clearEnemyArt());
+    this.bossPortraits = new BossPortraitLayer(scene, this.enemyPoint.x, this.enemyPoint.y, this.reducedMotion);
   }
 
   play(cue: AudioCue): void {
@@ -58,7 +56,7 @@ export class CombatFeedback {
 
     switch (cue.id) {
       case 'combat.start':
-        this.showEnemyArt(cue.sourceId);
+        this.bossPortraits.show(cue.sourceId);
         this.framePulse(cue.priority >= 3 ? 0xff91e6 : 0xb5ff4d, 0.72);
         return;
       case 'item.trigger':
@@ -97,61 +95,23 @@ export class CombatFeedback {
         this.flash(0xb5ff4d, 0.12, 190);
         this.burst(1140, 445, 0xb5ff4d, 18, 185, cue.id);
         this.framePulse(0xb5ff4d, 1);
-        this.fadeEnemyArt(0.45);
+        this.bossPortraits.fade(0.45);
         return;
       case 'combat.defeat':
         this.flash(0xff536c, 0.13, 230);
         this.framePulse(0xff536c, 0.9);
-        this.fadeEnemyArt(0.7);
+        this.bossPortraits.fade(0.7);
         return;
       default:
         if (cue.id.endsWith('.telegraph')) {
+          this.bossPortraits.telegraph();
           this.framePulse(bossColor(cue.id), 0.7);
           return;
         }
+        this.bossPortraits.impact();
         this.flash(bossColor(cue.id), 0.12, 120);
         this.framePulse(bossColor(cue.id), 1);
         if (!this.reducedMotion) this.scene.cameras.main.shake(100, 0.0031);
-    }
-  }
-
-  private showEnemyArt(enemyId: string | undefined): void {
-    this.clearEnemyArt();
-    if (!enemyId) return;
-    const key = bossArtKeyForEnemyId(enemyId);
-    if (!key) return;
-    this.activeEnemyArtKey = key;
-
-    const render = (): void => {
-      if (this.activeEnemyArtKey !== key || !this.scene.sys?.isActive() || !this.scene.textures.exists(key)) return;
-      for (const object of this.enemyArtObjects) object.destroy();
-      this.enemyArtObjects.length = 0;
-      const backing = this.scene.add.rectangle(this.enemyPoint.x, this.enemyPoint.y, 276, 208, 0x17131d, 1)
-        .setStrokeStyle(4, 0xa85ad1)
-        .setDepth(32);
-      const image = this.scene.add.image(this.enemyPoint.x, this.enemyPoint.y, key)
-        .setDisplaySize(268, 201)
-        .setDepth(33);
-      this.enemyArtObjects.push(backing, image);
-      if (!this.reducedMotion) {
-        image.setScale(0.92);
-        this.scene.tweens.add({ targets: image, scaleX: 1, scaleY: 1, duration: 180, ease: 'Back.Out' });
-      }
-    };
-
-    if (this.scene.textures.exists(key)) render();
-    else requestAuthoredTexture(this.scene, key, render);
-  }
-
-  private clearEnemyArt(): void {
-    this.activeEnemyArtKey = null;
-    for (const object of this.enemyArtObjects) object.destroy();
-    this.enemyArtObjects.length = 0;
-  }
-
-  private fadeEnemyArt(alpha: number): void {
-    for (const object of this.enemyArtObjects) {
-      if ('setAlpha' in object && typeof object.setAlpha === 'function') object.setAlpha(alpha);
     }
   }
 
