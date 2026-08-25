@@ -10,6 +10,7 @@ import './styles.css';
 
 const PLATFORM_REGISTRY_KEY = 'junkpack.platform-adapter';
 const AUDIO_REGISTRY_KEY = 'junkpack.game-audio';
+const appRoot = document.getElementById('app');
 
 const orientationGate = document.createElement('div');
 orientationGate.id = 'orientation-gate';
@@ -55,6 +56,12 @@ const handleSaveNotice = (event: Event): void => {
   if (detail?.kind) showSaveNotice(detail.kind);
 };
 window.addEventListener(SAVE_NOTICE_EVENT, handleSaveNotice);
+
+const handleGameContextMenu = (event: MouseEvent): void => {
+  const target = event.target;
+  if (appRoot && target instanceof Node && appRoot.contains(target)) event.preventDefault();
+};
+document.addEventListener('contextmenu', handleGameContextMenu);
 
 const syncViewportProfile = (): void => {
   applyViewportProfile(document.documentElement, classifyViewport(window.innerWidth, window.innerHeight));
@@ -136,6 +143,7 @@ if (import.meta.hot) {
     window.removeEventListener('resize', syncViewportProfile);
     window.removeEventListener('orientationchange', syncViewportProfile);
     window.removeEventListener(SAVE_NOTICE_EVENT, handleSaveNotice);
+    document.removeEventListener('contextmenu', handleGameContextMenu);
     if (saveNoticeTimer !== null) window.clearTimeout(saveNoticeTimer);
     saveNotice.remove();
     orientationGate.remove();
