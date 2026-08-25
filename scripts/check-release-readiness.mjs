@@ -2,6 +2,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
 const root = process.cwd();
+const requireAnalytics = process.argv.includes('--require-analytics');
 const requiredFiles = [
   'dist/index.html',
   'public/assets/store/icon-512.png',
@@ -15,6 +16,7 @@ const requiredFiles = [
   'public/assets/atlas/junk-ui.json',
   'docs/PLATFORM_INTEGRATION.md',
   'docs/ANALYTICS.md',
+  'docs/PORTAL_SUBMISSION.md',
 ];
 
 const failures = [];
@@ -46,16 +48,18 @@ if (endpoint) {
   } catch {
     failures.push('VITE_ANALYTICS_ENDPOINT is not a valid absolute URL');
   }
+} else if (requireAnalytics) {
+  failures.push('soft-launch release requires VITE_ANALYTICS_ENDPOINT');
 } else {
-  console.warn('[release] analytics endpoint is empty; repository checks can pass, but soft-launch measurement will be disabled');
+  console.warn('[release] analytics endpoint is empty; QA candidate can pass, but soft-launch measurement will be disabled');
 }
 
 if (failures.length > 0) {
-  console.error('[release] readiness FAIL');
+  console.error(`[release] ${requireAnalytics ? 'soft-launch ' : ''}readiness FAIL`);
   for (const failure of failures) console.error(`  - ${failure}`);
   process.exitCode = 1;
 } else {
-  console.log('[release] readiness PASS');
+  console.log(`[release] ${requireAnalytics ? 'soft-launch ' : ''}readiness PASS`);
   console.log(`  analytics: ${endpoint ? 'configured' : 'not configured'}`);
   console.log(`  required files: ${requiredFiles.length}`);
 }
