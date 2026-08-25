@@ -6,13 +6,19 @@ import {
   bossArtKeyForEnemyId,
   hasAuthoredArt,
   heroArtKey,
+  uiArtKey,
 } from '../src/game/ui/authoredArt';
 
+const REQUIRED_UI_IDS = [
+  'daily', 'archive', 'trophies', 'help', 'settings', 'reset', 'coin', 'fusion', 'pocket', 'logo-mark',
+] as const;
+
 describe('authored art contract', () => {
-  it('ships authored art for all 60 items, four heroes and all six boss families', () => {
+  it('ships authored art for all items, heroes, bosses and the core UI icon set', () => {
     expect(AUTHORED_ART_ASSETS.filter((asset) => asset.kind === 'item')).toHaveLength(60);
     expect(AUTHORED_ART_ASSETS.filter((asset) => asset.kind === 'hero')).toHaveLength(4);
     expect(AUTHORED_ART_ASSETS.filter((asset) => asset.kind === 'boss')).toHaveLength(6);
+    expect(AUTHORED_ART_ASSETS.filter((asset) => asset.kind === 'ui')).toHaveLength(10);
     expect(new Set(AUTHORED_ART_ASSETS.map((asset) => asset.key)).size).toBe(AUTHORED_ART_ASSETS.length);
     expect(new Set(AUTHORED_ART_ASSETS.map((asset) => asset.url)).size).toBe(AUTHORED_ART_ASSETS.length);
   });
@@ -66,5 +72,15 @@ describe('authored art contract', () => {
       expect(hasAuthoredArt(`boss.${boss}`)).toBe(true);
     }
     expect(bossArtKeyForEnemyId('static-rats')).toBeNull();
+  });
+
+  it('keeps all core UI art on stable ui.* keys with standalone fallback sources', () => {
+    for (const id of REQUIRED_UI_IDS) {
+      const key = uiArtKey(id);
+      expect(key).toBe(`ui.${id}`);
+      expect(hasAuthoredArt(key), `${key} should have authored UI art`).toBe(true);
+      const asset = AUTHORED_ART_ASSETS.find((entry) => entry.key === key);
+      expect(asset?.url).toBe(`/assets/art/ui/${id}.svg`);
+    }
   });
 });
