@@ -23,7 +23,8 @@ describe('responsive top HUD layout', () => {
   it('keeps every action inside the logical game width in both modes', () => {
     for (const width of [390, 768, 1049, 1050, 1440, 1920]) {
       const layout = createHudActionLayout(width);
-      expect(layout.actions).toHaveLength(5);
+      expect(layout.actions).toHaveLength(6);
+      expect(layout.actions.map((action) => action.id)).toContain('settings');
       for (const placement of layout.actions) {
         expect(isHudActionInsideLogicalWidth(placement), `${layout.mode}:${placement.id}`).toBe(true);
         expect(placement.height).toBeGreaterThanOrEqual(34);

@@ -1,6 +1,7 @@
 import type { SaveSettings } from '../../persistence/save';
 import type { AudioCue } from './audioCues';
 import { AudioMixGate } from './audioMix';
+import { musicStepFor, type MusicMode } from './musicPattern';
 import { synthPatchForCue } from './audioSynthesis';
 
 interface RuntimeVoice {
@@ -9,13 +10,6 @@ interface RuntimeVoice {
   readonly releaseTimer: number;
 }
 
-/**
- * Browser WebAudio renderer for semantic game cues.
- *
- * It deliberately owns no gameplay timing. Combat emits semantic AudioCue
- * records; this class may drop/limit them for mix readability without changing
- * combat state. The context is created/resumed only after a user gesture.
- */
 export class GameAudio {
   private context: AudioContext | null = null;
   private masterGain: GainNode | null = null;
@@ -27,6 +21,9 @@ export class GameAudio {
   private disposed = false;
   private sfxVolume = 0.9;
   private musicVolume = 0.8;
+  private musicMode: MusicMode = 'menu';
+  private musicStepIndex = 0;
+  private musicTimer: number | null = null;
 
   constructor(settings?: Pick<SaveSettings, 'sfxVolume' | 'musicVolume'>) {
     if (settings) this.setVolumes(settings);
@@ -43,6 +40,7 @@ export class GameAudio {
     try {
       if (this.context.state !== 'running') await this.context.resume();
       this.unlocked = this.context.state === 'running';
+      if (this.unlocked) this.ensureMusicScheduled();
       return this.unlocked;
     } catch {
       return false;
@@ -50,6 +48,7 @@ export class GameAudio {
   }
 
   playCue(cue: AudioCue): boolean {
+    this.updateMusicModeFromCue(cue);
     const context = this.context;
     const output = this.sfxGain;
     if (this.disposed || !this.unlocked || !context || !output || context.state !== 'running') return false;
@@ -99,6 +98,12 @@ export class GameAudio {
     this.applyVolumes();
   }
 
+  setMusicMode(mode: MusicMode): void {
+    if (this.musicMode === mode) return;
+    this.musicMode = mode;
+    this.musicStepIndex = 0;
+  }
+
   isUnlocked(): boolean {
     return this.unlocked && this.context?.state === 'running';
   }
@@ -109,6 +114,8 @@ export class GameAudio {
     if (typeof document !== 'undefined') {
       document.removeEventListener('visibilitychange', this.handleVisibilityChange);
     }
+    if (this.musicTimer !== null && typeof window !== 'undefined') window.clearTimeout(this.musicTimer);
+    this.musicTimer = null;
     for (const token of [...this.voices.keys()]) this.stopVoice(token);
     this.gate.reset();
     this.unlocked = false;
@@ -143,6 +150,66 @@ export class GameAudio {
     if (this.musicGain) this.musicGain.gain.value = volumeCurve(this.musicVolume);
   }
 
+  private updateMusicModeFromCue(cue: AudioCue): void {
+    if (cue.id === 'combat.start') {
+      this.setMusicMode(cue.priority >= 3 ? 'boss' : 'combat');
+      return;
+    }
+    if (cue.id === 'combat.victory' || cue.id === 'combat.defeat') this.setMusicMode('menu');
+  }
+
+  private ensureMusicScheduled(): void {
+    if (this.musicTimer !== null || this.disposed || typeof window === 'undefined') return;
+    this.scheduleMusicStep(40);
+  }
+
+  private scheduleMusicStep(delayMs: number): void {
+    if (this.disposed || typeof window === 'undefined') return;
+    this.musicTimer = window.setTimeout(() => {
+      this.musicTimer = null;
+      const interval = this.emitMusicStep();
+      this.scheduleMusicStep(interval);
+    }, Math.max(20, Math.floor(delayMs)));
+  }
+
+  private emitMusicStep(): number {
+    const step = musicStepFor(this.musicMode, this.musicStepIndex);
+    this.musicStepIndex += 1;
+    const context = this.context;
+    const output = this.musicGain;
+    if (!this.unlocked || !context || !output || context.state !== 'running' || this.musicVolume <= 0) return step.intervalMs;
+
+    this.scheduleMusicTone(context, output, 'triangle', step.rootHz, step.durationMs, step.gain);
+    if (step.accentHz !== null) {
+      this.scheduleMusicTone(context, output, 'sine', step.accentHz, Math.round(step.durationMs * 0.72), step.gain * 0.55);
+    }
+    return step.intervalMs;
+  }
+
+  private scheduleMusicTone(
+    context: AudioContext,
+    output: GainNode,
+    wave: OscillatorType,
+    frequency: number,
+    durationMs: number,
+    level: number,
+  ): void {
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    const startAt = context.currentTime;
+    const endAt = startAt + Math.max(30, durationMs) / 1000;
+    oscillator.type = wave;
+    oscillator.frequency.setValueAtTime(Math.max(1, frequency), startAt);
+    gain.gain.setValueAtTime(0.0001, startAt);
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, level), startAt + 0.025);
+    gain.gain.exponentialRampToValueAtTime(0.0001, endAt);
+    oscillator.connect(gain);
+    gain.connect(output);
+    oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
+    oscillator.start(startAt);
+    oscillator.stop(endAt + 0.01);
+  }
+
   private stopVoice(token: number): void {
     const voice = this.voices.get(token);
     if (voice) {
@@ -164,8 +231,6 @@ export class GameAudio {
       if (context.state === 'running') void context.suspend();
       return;
     }
-    // Do not bypass autoplay policy. Resume only after this runtime has already
-    // been successfully unlocked by a real interaction.
     if (this.unlocked && context.state === 'suspended') void context.resume();
   };
 }

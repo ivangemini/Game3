@@ -1,5 +1,5 @@
 export type HudLayoutMode = 'wide' | 'compact';
-export type HudActionId = 'daily' | 'archive' | 'trophies' | 'help' | 'reset';
+export type HudActionId = 'daily' | 'archive' | 'trophies' | 'help' | 'settings' | 'reset';
 
 export interface HudActionPlacement {
   readonly id: HudActionId;
@@ -25,17 +25,19 @@ export function createHudActionLayout(displayWidthCss: number): HudActionLayout 
   const actions: readonly HudActionPlacement[] = mode === 'wide'
     ? [
         action('daily', 330, 104, 260, false),
-        action('help', 1034, 104, 118, false),
-        action('archive', 1180, 104, 160, false),
-        action('trophies', 1350, 104, 160, false),
-        action('reset', 1510, 104, 136, true),
+        action('help', 930, 104, 110, false),
+        action('settings', 1055, 104, 110, false),
+        action('archive', 1200, 104, 150, false),
+        action('trophies', 1360, 104, 150, false),
+        action('reset', 1515, 104, 130, true),
       ]
     : [
         action('daily', 278, 104, 228, true),
-        action('help', 1138, 90, 124, true),
-        action('archive', 1283, 90, 154, true),
-        action('reset', 1459, 90, 170, true),
-        action('trophies', 1371, 132, 330, true),
+        action('help', 1055, 90, 110, true),
+        action('settings', 1180, 90, 120, true),
+        action('archive', 1325, 90, 150, true),
+        action('reset', 1500, 90, 160, true),
+        action('trophies', 1370, 132, 330, true),
       ];
 
   return { mode, actions };

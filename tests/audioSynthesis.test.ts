@@ -25,10 +25,19 @@ const REPRESENTATIVE_IDS: readonly AudioCueId[] = [
   'boss.edge-rent.telegraph',
   'combat.victory',
   'combat.defeat',
+  'ui.purchase',
+  'ui.reroll',
+  'ui.fusion',
+  'ui.reward',
+  'ui.error',
+  'ui.confirm',
+  'ui.pocket',
 ];
 
 function cue(id: AudioCueId, sourceId = 'stable-source'): AudioCue {
-  return { id, atMs: 0, priority: id.includes('boss.') ? 4 : 2, group: id.includes('boss.') ? 'boss' : 'combat', cooldownMs: 0, sourceId };
+  const boss = id.includes('boss.');
+  const ui = id.startsWith('ui.');
+  return { id, atMs: 0, priority: boss ? 4 : 2, group: boss ? 'boss' : ui ? 'ui' : 'combat', cooldownMs: 0, sourceId };
 }
 
 describe('audio synthesis patches', () => {
@@ -65,5 +74,10 @@ describe('audio synthesis patches', () => {
     const impact = synthPatchForCue(cue('boss.eclipse.impact'));
     const maxGain = (layers: typeof telegraph.layers): number => Math.max(...layers.map((layer) => layer.gain));
     expect(maxGain(impact.layers)).toBeGreaterThan(maxGain(telegraph.layers));
+  });
+
+  it('gives fusion a longer staged cue than ordinary purchase feedback', () => {
+    expect(synthPatchForCue(cue('ui.fusion')).durationMs)
+      .toBeGreaterThan(synthPatchForCue(cue('ui.purchase')).durationMs);
   });
 });

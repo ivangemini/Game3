@@ -8,6 +8,7 @@ export interface TopHudActionsOptions {
   readonly onArchive: () => void;
   readonly onTrophies: () => void;
   readonly onHelp: () => void;
+  readonly onSettings: () => void;
   readonly onReset: () => void;
 }
 
@@ -94,17 +95,19 @@ function callbackFor(id: HudActionId, options: TopHudActionsOptions): () => void
   if (id === 'archive') return options.onArchive;
   if (id === 'trophies') return options.onTrophies;
   if (id === 'help') return options.onHelp;
+  if (id === 'settings') return options.onSettings;
   return options.onReset;
 }
 
 function labelFor(id: HudActionId, compact: boolean, dailyKey: string, dailyActive: boolean): string {
   if (id === 'daily') {
-    if (compact) return dailyActive ? `DAILY • ACTIVE` : `DAILY • ${dailyKey.slice(5)}`;
+    if (compact) return dailyActive ? 'DAILY • ACTIVE' : `DAILY • ${dailyKey.slice(5)}`;
     return dailyActive ? `DAILY ${dailyKey} • ACTIVE` : `DAILY RUN • ${dailyKey}`;
   }
   if (id === 'archive') return compact ? 'ARCHIVE ◆' : 'JUNK ARCHIVE ◆';
   if (id === 'trophies') return compact ? 'TROPHIES ✦' : 'TROPHY SHELF ✦';
   if (id === 'help') return compact ? '? HELP' : '? HOW TO PLAY';
+  if (id === 'settings') return compact ? '⚙ SET' : '⚙ SETTINGS';
   return compact ? 'RESET' : 'NEW RUN / RESET';
 }
 
@@ -120,5 +123,6 @@ function paletteFor(id: HudActionId, activeDaily: boolean): Readonly<{
   if (id === 'archive') return { fill: 0x33243f, hover: 0x493258, stroke: 0xb26bd0, text: '#f4dfff' };
   if (id === 'trophies') return { fill: 0x2a2233, hover: 0x3b2e48, stroke: 0x8b6aa2, text: '#e7c8f5' };
   if (id === 'help') return { fill: 0x202c34, hover: 0x2e3d48, stroke: 0x6b93a6, text: '#d1edf7' };
+  if (id === 'settings') return { fill: 0x252b34, hover: 0x343d49, stroke: 0x7b8fa6, text: '#d7e7f6' };
   return { fill: 0x252631, hover: 0x363843, stroke: 0x777381, text: '#d2ced7' };
 }

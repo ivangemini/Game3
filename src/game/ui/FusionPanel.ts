@@ -2,10 +2,16 @@ import * as Phaser from 'phaser';
 import { findAvailableFusions, type FusionCandidate, type FusionRecipe } from '../domain/fusions';
 import type { ItemDefinition, PlacedItem } from '../domain/types';
 
+export type FusionFeedbackEvent =
+  | { readonly kind: 'cycle' }
+  | { readonly kind: 'success'; readonly recipe: FusionRecipe }
+  | { readonly kind: 'error' };
+
 export interface FusionPanelOptions {
   readonly getItems: () => readonly PlacedItem[];
   readonly isUnlocked: () => boolean;
   readonly onFuse: (recipe: FusionRecipe) => boolean;
+  readonly onFeedback?: (event: FusionFeedbackEvent) => void;
 }
 
 export class FusionPanel {
@@ -30,30 +36,20 @@ export class FusionPanel {
     private readonly options: FusionPanelOptions,
   ) {
     scene.add.rectangle(left + 100, top + 58, 200, 116, 0x171522, 1).setStrokeStyle(3, 0x7f50a8);
-    scene.add.text(left + 12, top + 8, 'FUSION LAB', {
-      fontSize: '17px', color: '#f1bdff', fontStyle: 'bold',
-    });
+    scene.add.text(left + 12, top + 8, 'FUSION LAB', { fontSize: '17px', color: '#f1bdff', fontStyle: 'bold' });
     this.recipeText = scene.add.text(left + 12, top + 34, '', {
       fontSize: '12px', color: '#f7f2e8', fontStyle: 'bold', wordWrap: { width: 176 },
     });
-    this.hintText = scene.add.text(left + 12, top + 52, '', {
-      fontSize: '9px', color: '#aaa5b2', wordWrap: { width: 176 },
-    });
+    this.hintText = scene.add.text(left + 12, top + 52, '', { fontSize: '9px', color: '#aaa5b2', wordWrap: { width: 176 } });
     this.countText = scene.add.text(left + 12, top + 69, '', { fontSize: '9px', color: '#ffd56e' });
-    this.statusText = scene.add.text(left + 12, top + 88, '', {
-      fontSize: '8px', color: '#817b89', wordWrap: { width: 176 },
-    });
+    this.statusText = scene.add.text(left + 12, top + 88, '', { fontSize: '8px', color: '#817b89', wordWrap: { width: 176 } });
 
     this.fuseButton = scene.add.rectangle(left + 69, top + 105, 112, 24, 0x4a2e56, 1)
       .setStrokeStyle(2, 0xe18aff).setInteractive({ useHandCursor: true });
-    this.fuseLabel = scene.add.text(left + 69, top + 105, 'FUSE', {
-      fontSize: '10px', color: '#ffe7ff', fontStyle: 'bold',
-    }).setOrigin(0.5);
+    this.fuseLabel = scene.add.text(left + 69, top + 105, 'FUSE', { fontSize: '10px', color: '#ffe7ff', fontStyle: 'bold' }).setOrigin(0.5);
     this.nextButton = scene.add.rectangle(left + 157, top + 105, 52, 24, 0x292735, 1)
       .setStrokeStyle(2, 0x777381).setInteractive({ useHandCursor: true });
-    this.nextLabel = scene.add.text(left + 157, top + 105, 'NEXT', {
-      fontSize: '9px', color: '#d9d4df', fontStyle: 'bold',
-    }).setOrigin(0.5);
+    this.nextLabel = scene.add.text(left + 157, top + 105, 'NEXT', { fontSize: '9px', color: '#d9d4df', fontStyle: 'bold' }).setOrigin(0.5);
 
     this.fuseButton.on('pointerover', () => this.fuseButton.setAlpha(0.82));
     this.fuseButton.on('pointerout', () => this.fuseButton.setAlpha(1));
@@ -63,6 +59,7 @@ export class FusionPanel {
     this.nextButton.on('pointerup', () => {
       if (this.available.length <= 1) return;
       this.selectedIndex = (this.selectedIndex + 1) % this.available.length;
+      this.options.onFeedback?.({ kind: 'cycle' });
       this.render();
     });
 
@@ -116,9 +113,11 @@ export class FusionPanel {
     if (!candidate || !this.options.isUnlocked()) return;
     const fused = this.options.onFuse(candidate.recipe);
     if (!fused) {
+      this.options.onFeedback?.({ kind: 'error' });
       this.statusText.setText('Fusion failed: result needs legal backpack space.').setColor('#ff9aab');
       return;
     }
+    this.options.onFeedback?.({ kind: 'success', recipe: candidate.recipe });
     this.statusText.setText('FUSION COMPLETE').setColor('#c9ff72');
     this.refresh(true);
   }

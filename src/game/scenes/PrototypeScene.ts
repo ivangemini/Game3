@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { uiAudioCue } from '../audio/audioCues';
 import { GameAudio } from '../audio/GameAudio';
 import { PROTOTYPE_FUSION_RECIPES, SECOND_STAGE_FUSION_RECIPE_IDS } from '../data/fusionRecipes';
 import { PROTOTYPE_HEROES, PROTOTYPE_HERO_MAP } from '../data/heroes';
@@ -30,7 +31,9 @@ import { HeroChoiceOverlay } from '../ui/HeroChoiceOverlay';
 import { MetaProgressOverlay } from '../ui/MetaProgressOverlay';
 import { PerkChoiceOverlay } from '../ui/PerkChoiceOverlay';
 import { RunEventOverlay } from '../ui/RunEventOverlay';
+import { RunFeedback } from '../ui/RunFeedback';
 import { RunProgressPanel } from '../ui/RunProgressPanel';
+import { SettingsOverlay } from '../ui/SettingsOverlay';
 import { ShopPanel } from '../ui/ShopPanel';
 import { TopHudActions } from '../ui/TopHudActions';
 import { TutorialOverlay } from '../ui/TutorialOverlay';
@@ -44,7 +47,7 @@ import {
 
 const PROTOTYPE_RUN_SEED = 'prototype-run-001';
 const AUDIO_REGISTRY_KEY = 'junkpack.game-audio';
-const COLORS = { background: 0x0b0d13, text: '#f7f2e8', muted: '#aaa5b2' } as const;
+const COLORS = { background: 0x0d1117, text: '#f7f2e8', muted: '#aaa5b2' } as const;
 
 function createFreshRun(runSeed: string): ActiveRunSave {
   return {
@@ -119,10 +122,7 @@ export class PrototypeScene extends Phaser.Scene {
       PROTOTYPE_ITEMS,
       PROTOTYPE_SHOP_ITEMS,
       PROTOTYPE_FUSION_RECIPES,
-      () => ({
-        discoveredItemIds: save.discoveredItemIds,
-        discoveredRecipeIds: save.discoveredRecipeIds,
-      }),
+      () => ({ discoveredItemIds: save.discoveredItemIds, discoveredRecipeIds: save.discoveredRecipeIds }),
     );
     const metaOverlay = new MetaProgressOverlay(
       this,
@@ -136,6 +136,17 @@ export class PrototypeScene extends Phaser.Scene {
       }),
     );
     const tutorialOverlay = new TutorialOverlay(this, save.settings.reducedMotion);
+    const settingsOverlay = new SettingsOverlay(this, {
+      getSettings: () => save.settings,
+      onApply: (settings) => {
+        const motionChanged = save.settings.reducedMotion !== settings.reducedMotion;
+        save = { ...save, settings };
+        writeSave(save);
+        audio.setVolumes(settings);
+        audio.playCue(uiAudioCue('ui.confirm', 'settings'));
+        if (motionChanged) this.time.delayedCall(0, () => this.scene.restart());
+      },
+    });
 
     const board = new BackpackBoard(this, PROTOTYPE_ITEM_MAP, 90, 225, {
       initialItems: hadActiveRun ? activeRun.backpackItems : undefined,
@@ -158,6 +169,7 @@ export class PrototypeScene extends Phaser.Scene {
       enemyPoint: { x: 1225, y: 403 },
       playerPoint: { x: 845, y: 287 },
     });
+    const runFeedback = new RunFeedback(this, save.settings.reducedMotion);
 
     const shop = new ShopPanel(
       this,
@@ -178,6 +190,23 @@ export class PrototypeScene extends Phaser.Scene {
           activeRun = { ...activeRun, coins: snapshot.coins, shopIndex: snapshot.shopIndex, soldOfferIds: snapshot.soldOfferIds };
           persistRun();
         },
+        onFeedback: (event) => {
+          if (event.kind === 'purchase') {
+            audio.playCue(uiAudioCue('ui.purchase', event.definitionId));
+            runFeedback.purchase(PROTOTYPE_ITEM_MAP.get(event.definitionId)?.name ?? event.definitionId);
+            return;
+          }
+          if (event.kind === 'reroll') {
+            audio.playCue(uiAudioCue('ui.reroll', 'shop'));
+            return;
+          }
+          if (event.kind === 'reward') {
+            audio.playCue(uiAudioCue('ui.reward', 'coins'));
+            runFeedback.rewardCoins(event.amount);
+            return;
+          }
+          audio.playCue(uiAudioCue('ui.error', event.source));
+        },
       },
     );
     const shopSnapshot = shop.getSnapshot();
@@ -193,6 +222,7 @@ export class PrototypeScene extends Phaser.Scene {
         pendingPerkOfferIds: [],
       };
       persistRun();
+      audio.playCue(uiAudioCue('ui.confirm', perkId));
       perkOverlay.hide();
       runPanel.refresh('Perk locked in. Repack, shop, fuse, then continue.');
     });
@@ -201,12 +231,18 @@ export class PrototypeScene extends Phaser.Scene {
       if (activeRun.pendingEventId !== event.id) return { ok: false, message: 'This event is no longer active.' };
       const resolution = resolveRunEventChoice(event, choice.id, activeRun.runSeed, activeRun.eventIndex);
       if (shop.getCoins() < resolution.costCoins) {
+        audio.playCue(uiAudioCue('ui.error', 'event-coins'));
         return { ok: false, message: `Need ${resolution.costCoins - shop.getCoins()} more coins for that choice.` };
       }
       if (resolution.rewardDefinitionId) {
         const added = board.addRewardItem(resolution.rewardDefinitionId);
-        if (!added) return { ok: false, message: 'No legal backpack space for the event reward. Rearrange junk first.' };
+        if (!added) {
+          audio.playCue(uiAudioCue('ui.error', 'event-space'));
+          return { ok: false, message: 'No legal backpack space for the event reward. Rearrange junk first.' };
+        }
         markDiscoveredItem(resolution.rewardDefinitionId);
+        audio.playCue(uiAudioCue('ui.reward', resolution.rewardDefinitionId));
+        runFeedback.eventItem(PROTOTYPE_ITEM_MAP.get(resolution.rewardDefinitionId)?.name ?? resolution.rewardDefinitionId);
       }
       if (!shop.spendCoins(resolution.costCoins, 'Event cost')) return { ok: false, message: 'The event payment failed.' };
       if (resolution.rewardCoins > 0) shop.addCoins(resolution.rewardCoins, 'Event payout');
@@ -226,10 +262,7 @@ export class PrototypeScene extends Phaser.Scene {
       getSelectedPerkIds: () => activeRun.selectedPerkIds,
       getHeroDefinition: () => activeRun.heroId ? PROTOTYPE_HERO_MAP.get(activeRun.heroId) : undefined,
       reducedMotion: save.settings.reducedMotion,
-      onAudioCue: (cue) => {
-        audio.playCue(cue);
-        combatFeedback.play(cue);
-      },
+      onAudioCue: (cue) => { audio.playCue(cue); combatFeedback.play(cue); },
       onVictoryReward: ({ encounterId, coins }) => {
         if (activeRun.claimedEncounterIds.includes(encounterId)) return false;
         activeRun = { ...activeRun, claimedEncounterIds: [...activeRun.claimedEncounterIds, encounterId].sort() };
@@ -271,6 +304,10 @@ export class PrototypeScene extends Phaser.Scene {
           save = { ...save, bestCorruptedLoop: Math.max(save.bestCorruptedLoop, previousProgress.loopNumber) };
         }
         const expanded = nextPocketCount > previousPocketCount ? board.setUnlockedPocketCount(nextPocketCount) : false;
+        if (expanded) {
+          audio.playCue(uiAudioCue('ui.pocket', `pocket-${nextPocketCount}`));
+          runFeedback.pocketUnlock();
+        }
         persistRun();
 
         if (scheduledEventId) {
@@ -293,7 +330,8 @@ export class PrototypeScene extends Phaser.Scene {
 
     const metaBlocked = (): boolean => collectionOverlay.isVisible()
       || metaOverlay.isVisible()
-      || tutorialOverlay.isVisible();
+      || tutorialOverlay.isVisible()
+      || settingsOverlay.isVisible();
 
     runPanel = new RunProgressPanel(this, 570, 225, {
       getProgress: () => activeRun.progress,
@@ -349,8 +387,14 @@ export class PrototypeScene extends Phaser.Scene {
         markDiscoveredRecipe(recipe.id);
         markDiscoveredItem(recipe.resultDefinitionId);
         persistRun();
-        this.time.delayedCall(0, () => this.scene.restart());
+        this.time.delayedCall(save.settings.reducedMotion ? 160 : 460, () => this.scene.restart());
         return true;
+      },
+      onFeedback: (event) => {
+        if (event.kind === 'cycle') { audio.playCue(uiAudioCue('ui.confirm', 'fusion-cycle')); return; }
+        if (event.kind === 'error') { audio.playCue(uiAudioCue('ui.error', 'fusion')); return; }
+        audio.playCue(uiAudioCue('ui.fusion', event.recipe.id));
+        runFeedback.fusion(PROTOTYPE_ITEM_MAP.get(event.recipe.resultDefinitionId)?.name ?? event.recipe.name);
       },
     });
 
@@ -360,6 +404,7 @@ export class PrototypeScene extends Phaser.Scene {
       if (!hero) return;
       activeRun = { ...activeRun, heroId };
       persistRun();
+      audio.playCue(uiAudioCue('ui.confirm', heroId));
       if (hero.startingCoinsBonus > 0) shop.addCoins(hero.startingCoinsBonus, `${hero.name} starting stash`);
       heroOverlay.hide();
       this.time.delayedCall(0, () => this.scene.restart());
@@ -377,21 +422,24 @@ export class PrototypeScene extends Phaser.Scene {
         this.scene.restart();
       },
       onArchive: () => {
-        if (activeRun.heroId === null || combatPanel.isRunning() || eventOverlay.isVisible()
-          || metaOverlay.isVisible() || tutorialOverlay.isVisible()
+        if (activeRun.heroId === null || combatPanel.isRunning() || eventOverlay.isVisible() || metaBlocked()
           || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return;
         collectionOverlay.show();
       },
       onTrophies: () => {
-        if (activeRun.heroId === null || combatPanel.isRunning() || eventOverlay.isVisible()
-          || collectionOverlay.isVisible() || tutorialOverlay.isVisible()
+        if (activeRun.heroId === null || combatPanel.isRunning() || eventOverlay.isVisible() || metaBlocked()
           || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return;
         metaOverlay.show();
       },
       onHelp: () => {
-        if (combatPanel.isRunning() || eventOverlay.isVisible() || collectionOverlay.isVisible() || metaOverlay.isVisible()
+        if (combatPanel.isRunning() || eventOverlay.isVisible() || metaBlocked()
           || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return;
         tutorialOverlay.show();
+      },
+      onSettings: () => {
+        if (activeRun.heroId === null || combatPanel.isRunning() || eventOverlay.isVisible() || metaBlocked()
+          || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return;
+        settingsOverlay.show();
       },
       onReset: () => {
         if (combatPanel.isRunning() || eventOverlay.isVisible() || metaBlocked()

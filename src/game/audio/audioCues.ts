@@ -7,7 +7,10 @@ import type {
 import type { CombatPresentationEvent } from '../domain/combat';
 
 export type AudioCuePriority = 1 | 2 | 3 | 4;
-export type AudioCueGroup = 'combat' | 'item' | 'impact' | 'status' | 'boss' | 'outcome';
+export type AudioCueGroup = 'combat' | 'item' | 'impact' | 'status' | 'boss' | 'outcome' | 'ui';
+
+export type UiAudioCueId =
+  | 'ui.purchase' | 'ui.reroll' | 'ui.fusion' | 'ui.reward' | 'ui.error' | 'ui.confirm' | 'ui.pocket';
 
 export type AudioCueId =
   | 'combat.start' | 'item.trigger' | 'item.jammed' | 'item.slimed' | 'item.scrambled' | 'item.eclipsed'
@@ -17,7 +20,8 @@ export type AudioCueId =
   | 'boss.time-tax.telegraph' | 'boss.time-tax.impact' | 'boss.clutter.telegraph' | 'boss.clutter.impact'
   | 'boss.duplicate-debt.telegraph' | 'boss.duplicate-debt.impact'
   | 'boss.edge-rent.telegraph' | 'boss.edge-rent.impact'
-  | 'combat.victory' | 'combat.defeat';
+  | 'combat.victory' | 'combat.defeat'
+  | UiAudioCueId;
 
 export interface AudioCue {
   readonly id: AudioCueId;
@@ -30,6 +34,20 @@ export interface AudioCue {
 
 export function combatStartAudioCue(enemyId: string, boss: boolean): AudioCue {
   return { id: 'combat.start', atMs: 0, priority: boss ? 3 : 2, group: 'combat', cooldownMs: 0, sourceId: enemyId };
+}
+
+export function uiAudioCue(id: UiAudioCueId, sourceId?: string): AudioCue {
+  const spec: Record<UiAudioCueId, readonly [AudioCuePriority, number]> = {
+    'ui.purchase': [2, 90],
+    'ui.reroll': [1, 120],
+    'ui.fusion': [4, 300],
+    'ui.reward': [2, 120],
+    'ui.error': [2, 160],
+    'ui.confirm': [1, 80],
+    'ui.pocket': [4, 400],
+  };
+  const [priority, cooldownMs] = spec[id];
+  return cue(id, 0, priority, 'ui', cooldownMs, sourceId);
 }
 
 export function audioCueForCombatEvent(event: CombatPresentationEvent): AudioCue {
