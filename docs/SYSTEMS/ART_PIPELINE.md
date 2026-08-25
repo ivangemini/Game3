@@ -3,7 +3,7 @@
 ## Goal
 Replace procedural presentation art with reviewed premium cartoon-surreal assets **without changing gameplay, save IDs, layout code or discovery logic**.
 
-The runtime visual contract is deliberately asset-optional: gameplay remains fully functional with procedural glyphs, while reviewed atlas frames automatically replace those glyphs when present.
+The runtime visual contract remains asset-resilient: reviewed atlas frames are the production path, while standalone authored SVG/procedural fallback keeps development and future content from blocking gameplay.
 
 ## Item atlas contract
 - Phaser texture key: `junk-items`
@@ -12,19 +12,48 @@ The runtime visual contract is deliberately asset-optional: gameplay remains ful
 - Display names may change; stable definition IDs and frame keys must not.
 - No gameplay rules may depend on sprite filename, pixel color, frame dimensions or visual metadata.
 
-`ItemGlyph` checks the atlas at render time. If the frame exists, it uses the reviewed sprite. If it does not, it uses the deterministic tag-based procedural fallback.
+Current catalog coverage is **60/60 authored items**. `ItemGlyph` checks the generated atlas first, so Backpack, Shop and Fusion all use packed production frames in a normal build.
 
-This lets item art arrive incrementally rather than requiring all 60 item definitions to be redrawn before any visual upgrade can ship.
+## Portrait atlas contract
+- Phaser texture key: `junk-portraits`
+- Hero frames: `hero.<heroId>`
+- Boss frames: `boss.<bossId>`
+- Current coverage: 4/4 heroes + 6/6 boss families.
 
-## Source → review → runtime
-1. Create high-resolution source art with transparent background.
-2. Review at full size and at actual gameplay size.
+Corrupted boss IDs resolve back to their stable boss-family frame key before rendering.
+
+## Source → build → runtime
+1. Maintain reviewed SVG sources under `public/assets/art/items|heroes|bosses/`.
+2. Review at full size and actual gameplay size.
 3. Remove logos, copied meme characters, unreadable micro-detail and inconsistent materials.
-4. Export a clean transparent sprite with consistent padding.
-5. Pack approved sprites into `junk-items` atlas using stable frame keys.
-6. Verify backpack, shop, fusion preview and archive contexts before promoting the art as final.
+4. Run `npm run assets:prepare`.
+5. `scripts/build-atlases.mjs` scans sources and generates deterministic SVG atlases + Phaser JSON under `public/assets/atlas/`.
+6. `scripts/check-asset-budget.mjs` rejects oversized/missing output.
+7. `AssetPreloadScene` loads the two atlas pages before gameplay.
+8. Verify backpack, shop, fusion, hero-select and boss contexts before release.
 
-Source files must remain separate from runtime atlas exports.
+Generated atlas files are intentionally git-ignored. Source assets remain separate and reviewable; dev/CI/production reproduce the runtime output.
+
+## Current packed layout
+### `junk-items`
+- 60 frames;
+- cell: 160×160;
+- page: 1280×1280;
+- frame keys: `item.*`.
+
+### `junk-portraits`
+- 10 frames;
+- cell: 320×240;
+- page: 1280×720;
+- frame keys: `hero.*` + `boss.*`.
+
+Measured CI baseline on 2026-08-25:
+- source SVG payload: 48.9 KiB;
+- generated atlas+JSON payload: 86.2 KiB;
+- estimated RGBA texture memory: 9.77 MiB;
+- authored-art request count: 70 standalone source files reduced to 2 atlas requests.
+
+See `docs/SYSTEMS/PERFORMANCE_BUDGETS.md` for executable ceilings.
 
 ## Item art acceptance
 Every item needs:
@@ -39,16 +68,6 @@ Every item needs:
 
 A sprite that looks good only at 512 px but becomes colored noise at gameplay size is rejected.
 
-## Atlas sizing / performance
-Launch target:
-- item sprites designed around a 128–192 px runtime source footprint;
-- prefer 1–2 item atlas pages at 2048×2048 over many small textures;
-- trim transparent padding during packing, while keeping predictable visual center;
-- keep boss art separate from the item atlas so boss loading/effects can evolve independently;
-- UI chrome/material assets belong in a separate UI atlas.
-
-Exact encoded byte budgets are finalized during P8 device profiling; the pipeline must support splitting atlases without changing frame keys.
-
 ## Rarity and UI ownership
 Rarity frames, selection outlines, synergy badges, paper labels and locked states belong to UI rendering, not the item sprite. The same item artwork must work in:
 - backpack;
@@ -59,19 +78,26 @@ Rarity frames, selection outlines, synergy badges, paper labels and locked state
 
 This avoids baking state-specific glow/borders into every asset.
 
-## Current fallback language
-Until reviewed art exists, procedural glyphs derive a dominant silhouette from the item's primary visual tag (`cat`, `duck`, `laser`, `poison`, `slime`, `magnet`, `antenna`, `battery`, etc.) and use deterministic rarity/accent tokens.
+## Fallback behavior
+Production lookup order:
+1. packed atlas frame;
+2. standalone authored SVG texture if the atlas is unavailable during development/recovery;
+3. deterministic tag-based procedural glyph for item rendering.
 
-The fallback is a production-safe visual placeholder, not the final art target.
+Fallback is resilience, not the normal shipping path for the current authored catalog.
 
 ## Boss / hero / store art
-Bosses and heroes should not reuse item atlas rules. They need larger asymmetric silhouettes and staged animation layers. Store/thumbnail art is a separate marketing composition and must not be generated by simply screenshotting the gameplay atlas.
+Bosses and heroes use `junk-portraits`, not the item atlas. Their larger asymmetric silhouettes and staged motion remain separate from item rendering.
 
-## Required verification before final atlas promotion
+UI chrome/material assets still need a dedicated UI atlas. Store/thumbnail art remains a separate marketing composition and must not be generated by simply screenshotting gameplay atlases.
+
+## Required verification before release
 - desktop landscape gameplay-size read;
 - narrow mobile landscape read;
 - bright boss telegraph overlap;
 - grayscale/silhouette sanity check for important items;
 - no atlas frame/key collisions;
-- production build + browser console clean;
-- texture memory verified during P8 profiling.
+- `npm run assets:prepare` PASS;
+- `npm run build` + bundle budget PASS;
+- production browser console/network clean;
+- real-device texture memory verified during P8 profiling.
