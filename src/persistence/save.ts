@@ -1,9 +1,15 @@
 import type { HeroId } from '../game/domain/heroes';
-import { createInitialRunProgress, isRunProgressState, type RunProgressState } from '../game/domain/runProgression';
+import {
+  CAMPAIGN_ENCOUNTER_COUNT,
+  createInitialRunProgress,
+  isRunProgressState,
+  type RunProgressState,
+} from '../game/domain/runProgression';
 import type { PlacedItem } from '../game/domain/types';
 
 const SAVE_KEY = 'junkpack.save';
 const SAVE_BACKUP_KEY = 'junkpack.save.backup';
+const LEGACY_FOUR_WORLD_CAMPAIGN_ENCOUNTER_COUNT = 12;
 export const SAVE_NOTICE_EVENT = 'junkpack:save-notice';
 
 export type SaveNoticeKind = 'recovered-backup' | 'reset-corrupt' | 'write-failed';
@@ -107,11 +113,37 @@ export function clearActiveRun(save: SaveV8): SaveV8 {
 function decodePersistedSave(raw: string): SaveV8 | null {
   try {
     const parsed: unknown = JSON.parse(raw);
-    if (isSaveV8(parsed)) return parsed;
-    return migrateLegacySave(parsed);
+    const decoded = isSaveV8(parsed) ? parsed : migrateLegacySave(parsed);
+    return decoded ? normalizeCurrentSave(decoded) : null;
   } catch {
     return null;
   }
+}
+
+function normalizeCurrentSave(save: SaveV8): SaveV8 {
+  const run = save.activeRun;
+  if (!run) return save;
+  const progress = run.progress;
+  const legacyFinalIndex = LEGACY_FOUR_WORLD_CAMPAIGN_ENCOUNTER_COUNT - 1;
+  const resumeIndex = LEGACY_FOUR_WORLD_CAMPAIGN_ENCOUNTER_COUNT;
+  const isLegacyFourWorldBreakpoint = CAMPAIGN_ENCOUNTER_COUNT > LEGACY_FOUR_WORLD_CAMPAIGN_ENCOUNTER_COUNT
+    && progress.mode === 'deep-choice'
+    && progress.loopNumber === 1
+    && progress.campaignEncounterIndex === legacyFinalIndex;
+  if (!isLegacyFourWorldBreakpoint) return save;
+
+  return {
+    ...save,
+    activeRun: {
+      ...run,
+      progress: {
+        ...progress,
+        mode: 'campaign',
+        campaignEncounterIndex: resumeIndex,
+        loopEncounterIndex: 0,
+      },
+    },
+  };
 }
 
 function emitSaveNotice(kind: SaveNoticeKind): void {
