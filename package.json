@@ -18,6 +18,7 @@
     "release:verify": "node scripts/check-portal-package.mjs",
     "release:package": "npm run build && npm run release:check && npm run release:archive && npm run release:verify",
     "release:soft-launch": "npm run build && npm run release:check:soft-launch && npm run release:archive && npm run release:verify",
+    "analytics:receiver": "node services/telemetry-receiver.mjs",
     "analytics:report": "node scripts/soft-launch-report.mjs",
     "dev": "npm run assets:prepare && vite",
     "build": "npm run assets:prepare && tsc --noEmit && vite build && npm run bundle:check",
