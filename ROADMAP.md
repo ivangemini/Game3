@@ -39,9 +39,11 @@
 - [x] TV Tyrant interference 2: Slime Signal targets an occupied backpack cell, telegraphs it, then suppresses touching item triggers
 - [x] Slime Signal is visualized directly over the backpack grid
 - [x] TV Tyrant interference 3: Magnet Scramble prioritizes metal-heavy rows, telegraphs the row and temporarily suppresses crossing item triggers
-- [x] Magnet Scramble is introduced on Boss 2 rather than overloading the first boss, then escalates on Boss 3 / corrupted variants
+- [x] Magnet Scramble escalates on later TV variants / corrupted variants
 - [x] Baby Moon Tag Eclipse: deterministic dominant-tag telegraph + temporary family-wide trigger suppression
 - [x] Tag Eclipse is visualized over every affected backpack cell and scales cadence in corrupted loops
+- [x] Deadline Snail Time Tax: deterministic fastest-item telegraph + one-shot delay of that item's next queued trigger
+- [x] Time Tax preserves render-chunk invariance, has backpack telegraph/audio hooks and accelerates cadence in corrupted loops
 - [x] Victory rewards feed the real run/shop economy
 - [x] Encounter rewards are claim-once per run and persisted
 - [x] Fused junk has distinct combat profiles and participates in the existing synergy/perk pipeline
@@ -77,7 +79,7 @@
 - [ ] 20–30 launch fusion recipes (12 prototype recipes implemented)
 - [x] Expanded tag/synergy-family foundation: 10 spatial contact rules across core + food/antenna/slime cross-links
 - [x] 4 prototype heroes with persisted per-run choice and real economy/combat effects
-- [ ] 6 boss families + modifiers (2 prototype families implemented: TV Tyrant + Baby Moon)
+- [ ] 6 boss families + modifiers (3 prototype families implemented: TV Tyrant + Deadline Snail + Baby Moon)
 - [ ] 20–25 perks (10 prototype perks implemented)
 - [ ] ~15 mutations/events pool (12 combined prototype rules/events currently)
 - [ ] late-run secret transformations / second-stage evolutions
@@ -109,7 +111,7 @@
 ## P8 — QA, balance & performance
 - [x] Automated deterministic tests for core run/fusion/event/hero/boss domains
 - [x] Seeded pacing target simulation with percentile bands and target hit rates
-- [x] Seeded combat/build simulation reports across weak/typical/strong power bands and boss checkpoints
+- [x] Seeded combat/build simulation reports across weak/typical/strong power bands and boss checkpoints, including boss-rule wrappers
 - [ ] mobile/browser matrix
 - [ ] save migrations/recovery UX
 - [ ] performance profiling and asset budgets
