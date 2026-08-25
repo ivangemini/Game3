@@ -6,19 +6,23 @@
   "scripts": {
     "assets:atlas": "node scripts/build-atlases.mjs",
     "assets:check": "node scripts/check-asset-budget.mjs",
-    "assets:prepare": "npm run assets:atlas && npm run assets:check",
+    "assets:store": "node scripts/build-store-art.mjs && node scripts/check-store-art.mjs",
+    "assets:prepare": "npm run assets:atlas && npm run assets:check && npm run assets:store",
     "bundle:check": "node scripts/check-bundle-budget.mjs",
     "dev": "npm run assets:prepare && vite",
     "build": "npm run assets:prepare && tsc --noEmit && vite build && npm run bundle:check",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
     "preview": "vite preview"
   },
   "dependencies": {
     "phaser": "4.2.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "sharp": "^0.35.3",
     "typescript": "^5.9.2",
     "vite": "^8.0.0",
     "vitest": "^4.0.0"
