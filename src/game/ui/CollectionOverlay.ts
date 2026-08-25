@@ -8,6 +8,7 @@ import {
   type RecipeBookEntry,
 } from '../domain/collection';
 import type { ItemDefinition, Rarity } from '../domain/types';
+import { dismissOverlay, pressPulse, revealOverlay } from './uiMotion';
 
 export type CollectionTab = 'items' | 'recipes';
 
@@ -61,12 +62,13 @@ export class CollectionOverlay {
 
   show(tab: CollectionTab = this.tab): void {
     this.tab = tab;
-    this.root.setVisible(true);
     this.refresh();
+    revealOverlay(this.scene, this.root, this.content);
   }
 
   hide(): void {
-    this.root.setVisible(false);
+    if (!this.root.visible) return;
+    dismissOverlay(this.scene, this.root, this.content);
   }
 
   isVisible(): boolean {
@@ -94,12 +96,14 @@ export class CollectionOverlay {
     this.addTabButton(94, 158, 205, 'ITEMDEX', 'items');
     this.addTabButton(311, 158, 235, 'RECIPE BOOK', 'recipes');
 
-    this.content.add(this.scene.add.text(590, 166,
+    this.content.add(this.scene.add.text(590, 162,
       `ITEMS ${snapshot.itemProgress.discovered}/${snapshot.itemProgress.total} • ${snapshot.itemProgress.percent}%`,
       { fontSize: '15px', color: '#b5ff4d', fontStyle: 'bold' }));
-    this.content.add(this.scene.add.text(850, 166,
+    this.content.add(this.scene.add.text(850, 162,
       `RECIPES ${snapshot.recipeProgress.discovered}/${snapshot.recipeProgress.total} • ${snapshot.recipeProgress.percent}%`,
       { fontSize: '15px', color: '#ff91e6', fontStyle: 'bold' }));
+    this.drawProgressBar(590, 194, 220, snapshot.itemProgress.percent, 0xb5ff4d);
+    this.drawProgressBar(850, 194, 220, snapshot.recipeProgress.percent, 0xff91e6);
 
     const close = this.scene.add.rectangle(1454, 105, 116, 40, 0x2b2e3a, 1)
       .setStrokeStyle(2, 0x7f8496)
@@ -109,6 +113,7 @@ export class CollectionOverlay {
     }).setOrigin(0.5);
     close.on('pointerover', () => close.setFillStyle(0x414655));
     close.on('pointerout', () => close.setFillStyle(0x2b2e3a));
+    close.on('pointerdown', () => pressPulse(this.scene, [close, closeText]));
     close.on('pointerup', () => this.hide());
     this.content.add([close, closeText]);
   }
@@ -123,7 +128,13 @@ export class CollectionOverlay {
     }).setOrigin(0.5);
     rect.on('pointerover', () => { if (!active) rect.setFillStyle(0x303440); });
     rect.on('pointerout', () => { if (!active) rect.setFillStyle(0x20232d); });
+    rect.on('pointerdown', () => {
+      rect.setScale(0.98);
+      text.setScale(0.98);
+    });
     rect.on('pointerup', () => {
+      rect.setScale(1);
+      text.setScale(1);
       if (this.tab === tab) return;
       this.tab = tab;
       this.refresh();
@@ -248,6 +259,16 @@ export class CollectionOverlay {
     this.content.add([card, stage, title, ingredients, arrow, result]);
   }
 
+  private drawProgressBar(x: number, y: number, width: number, percent: number, color: number): void {
+    const safePercent = Math.max(0, Math.min(100, percent));
+    const track = this.scene.add.rectangle(x + width / 2, y, width, 5, 0x0d0f15, 1)
+      .setStrokeStyle(1, 0x323643);
+    this.content.add(track);
+    const fillWidth = width * safePercent / 100;
+    if (fillWidth <= 0) return;
+    this.content.add(this.scene.add.rectangle(x, y, fillWidth, 3, color, 1).setOrigin(0, 0.5));
+  }
+
   private drawPagination(page: number, maxPage: number, onChange: (page: number) => void): void {
     const y = 814;
     this.content.add(this.scene.add.text(800, y, `PAGE ${page + 1} / ${maxPage + 1}`, {
@@ -267,7 +288,15 @@ export class CollectionOverlay {
       rect.setInteractive({ useHandCursor: true });
       rect.on('pointerover', () => rect.setFillStyle(0x3a3f4d));
       rect.on('pointerout', () => rect.setFillStyle(0x2a2e3a));
-      rect.on('pointerup', callback);
+      rect.on('pointerdown', () => {
+        rect.setScale(0.98);
+        text.setScale(0.98);
+      });
+      rect.on('pointerup', () => {
+        rect.setScale(1);
+        text.setScale(1);
+        callback();
+      });
     }
     this.content.add([rect, text]);
   }
