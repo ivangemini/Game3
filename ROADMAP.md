@@ -95,8 +95,10 @@
 - [x] Shared UI motion foundation (**120–180 ms overlay transitions, 3% press feedback, reduced-motion fallback, Archive/Trophy progress bars**)
 - [x] Responsive top action chrome (**wide/compact layouts, collision-tested 6-action hit targets, resize switching, protected reset/daily/settings actions**)
 - [x] Settings UI (**persisted Music/SFX 0–100% controls + Reduced Motion toggle; volume changes apply live, motion refreshes presentation consistently**)
-- [ ] Full in-game HUD reflow / small-text legibility on real mobile landscape
-- [ ] final art pipeline + atlases
+- [x] Tactile core gameplay UI foundation (**leather/scrap backpack shell, explicit locked pockets, silhouette item glyphs, rarity frames, restyled junk shop/fusion lab/run panel and stronger logical typography**)
+- [ ] Full in-game HUD reflow / small-text legibility on real mobile landscape (**logical hierarchy pass implemented; real-device/browser acceptance still required**)
+- [x] Item art replacement pipeline foundation (**stable `junk-items` atlas + `item.<definitionId>` frame contract with automatic procedural fallback**)
+- [ ] Final authored art + packed item/boss/UI atlases
 - [x] Combat semantic feedback foundation (**30-object particle pool, item/status rings, hit bursts, boss-frame pulses, outcome flashes, restrained shake, reduced-motion fallback**)
 - [x] Non-combat run feedback foundation (**shop purchase/reward/reroll/error SFX hooks, fusion reveal, event-drop toast, pocket-unlock feedback**)
 - [ ] Final animation/VFX pass across backpack drag/drop, reward staging and final art assets
