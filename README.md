@@ -66,7 +66,7 @@ Read `AGENTS.md` first. It routes work to specialized files in `skills/` and the
 
 ## Current gameplay/release foundation
 
-- 4-world / 12-encounter campaign plus repeatable Corrupted Loops;
+- 6-world / 18-encounter base campaign using all 6 authored boss families, followed by repeatable 4-world / 12-encounter Corrupted Loops;
 - 36 base items, 24 fusion recipes, 10 spatial synergies, 4 heroes, 27 perks and 6 boss families;
 - 15 deterministic surreal run events;
 - 6 launch world mutations, expanding to a 12-modifier pool from Corrupted Loop 3 onward;
