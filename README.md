@@ -4,7 +4,7 @@ A web-first roguelite inventory autobattler / boss-rush about packing absurd jun
 
 ## Status
 
-Soft-launch candidate hardening. The complete deterministic campaign/Corrupted Loop gameplay stack, authored item/boss UI art pipeline, versioned recovery-safe saves, portal adapters/ads, telemetry foundation and automated quality gates are implemented. Remaining work is concentrated in browser/real-device acceptance, portal tester compliance, final audio/presentation tuning and data-driven iteration. See `ROADMAP.md`.
+Soft-launch candidate hardening. The complete deterministic campaign/Corrupted Loop gameplay stack, authored item/boss UI art pipeline, versioned recovery-safe saves, portal adapters/ads, telemetry foundation and automated quality gates are implemented. Remaining work is concentrated in real-device acceptance, portal tester compliance, final audio/presentation tuning and data-driven iteration. See `ROADMAP.md`.
 
 ## Stack
 
@@ -24,9 +24,18 @@ npm run typecheck
 npm run test
 npm run build
 npm run test:e2e
+npm run release:check
 ```
 
-`npm run build` regenerates and validates runtime atlases, portal store art and bundle budgets. The GitHub Actions browser matrix exercises Chromium, Firefox and WebKit across desktop, compact/mobile landscape and portrait-orientation profiles.
+`npm run build` regenerates and validates runtime atlases, portal store art and bundle budgets. The GitHub Actions browser matrix exercises Chromium, Firefox and WebKit across desktop, compact/mobile landscape and portrait-orientation profiles, including a broad runtime performance regression baseline.
+
+## Portal candidate package
+
+```bash
+npm run release:package
+```
+
+This produces `release/junkpack-boss-rush.zip` from the production `dist` directory plus `release/portal-package.json` containing the archive SHA-256, size and file manifest. Pushes to `main` also upload the same release directory as the `junkpack-portal-candidate` GitHub Actions artifact after quality/readiness checks pass.
 
 ## Portal QA overrides
 
@@ -58,7 +67,8 @@ Read `AGENTS.md` first. It routes work to specialized files in `skills/` and the
 - Junk Archive, achievements, Daily runs and collection/meta progression;
 - Yandex Games, CrazyGames and standalone adapters with loading/gameplay markup;
 - optional rewarded shop reroll and conservative natural-break interstitial policy;
-- autoplay-safe adaptive audio foundation with portal/ad pause-resume lifecycle;
+- autoplay-safe adaptive audio with priority-aware music ducking and portal/ad pause-resume lifecycle;
 - branded loading/store-art pipelines and asset/bundle budgets;
 - privacy-minimal soft-launch telemetry and deterministic summary tooling;
-- unit/domain tests plus multi-browser Playwright release smoke coverage.
+- unit/domain tests plus multi-browser Playwright release/performance smoke coverage;
+- CI-built portal candidate ZIP with integrity manifest.
