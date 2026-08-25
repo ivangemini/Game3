@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { AssetPreloadScene } from './scenes/AssetPreloadScene';
 import { PrototypeScene } from './scenes/PrototypeScene';
 
 export const gameConfig: Phaser.Types.Core.GameConfig = {
@@ -7,7 +8,7 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
   width: 1600,
   height: 900,
   backgroundColor: '#0b0d13',
-  scene: [PrototypeScene],
+  scene: [AssetPreloadScene, PrototypeScene],
   render: {
     antialias: true,
     pixelArt: false,
