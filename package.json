@@ -10,6 +10,7 @@
     "assets:prepare": "npm run assets:atlas && npm run assets:check && npm run assets:store",
     "bundle:check": "node scripts/check-bundle-budget.mjs",
     "release:check": "node scripts/check-release-readiness.mjs",
+    "release:package": "npm run build && npm run release:check && node scripts/build-portal-package.mjs",
     "dev": "npm run assets:prepare && vite",
     "build": "npm run assets:prepare && tsc --noEmit && vite build && npm run bundle:check",
     "typecheck": "tsc --noEmit",
@@ -23,6 +24,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
+    "fflate": "^0.8.2",
     "sharp": "^0.35.3",
     "typescript": "^5.9.2",
     "vite": "^8.0.0",
