@@ -1,5 +1,6 @@
 import type { PerkDefinition } from '../domain/perks';
 import { WAVE4_PERKS } from './perks.wave4';
+import { WAVE5_PERKS } from './perks.wave5';
 
 export const PROTOTYPE_PERKS: readonly PerkDefinition[] = [
   { id: 'overclock', name: 'Overclock', rarity: 'rare', targetTag: 'device', description: 'Devices trigger 20% faster.', bonuses: { triggerSpeedPct: 20 } },
@@ -19,6 +20,7 @@ export const PROTOTYPE_PERKS: readonly PerkDefinition[] = [
   { id: 'antenna-afterlife', name: 'Antenna Afterlife', rarity: 'epic', targetTag: 'antenna', description: 'Antenna junk triggers 12% faster and contributes +1 scrap armor.', bonuses: { triggerSpeedPct: 12, scrapArmor: 1 } },
   { id: 'magnet-school', name: 'Magnet School', rarity: 'rare', targetTag: 'magnet', description: 'Magnet junk contributes +2 scrap armor by attracting every spare screw in reality.', bonuses: { scrapArmor: 2 } },
   ...WAVE4_PERKS,
+  ...WAVE5_PERKS,
 ];
 
 export const PROTOTYPE_PERK_MAP = new Map(PROTOTYPE_PERKS.map((perk) => [perk.id, perk]));
