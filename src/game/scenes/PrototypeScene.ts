@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 import { PROTOTYPE_FUSION_RECIPES } from '../data/fusionRecipes';
-import { PROTOTYPE_ITEM_MAP, PROTOTYPE_SHOP_ITEMS } from '../data/items';
+import { PROTOTYPE_ITEM_MAP, PROTOTYPE_ITEMS, PROTOTYPE_SHOP_ITEMS } from '../data/items';
 import { PROTOTYPE_PERKS, PROTOTYPE_PERK_MAP } from '../data/perks';
 import { getRunEncounter } from '../data/runEncounters';
 import { PROTOTYPE_RUN_EVENT_MAP, PROTOTYPE_RUN_EVENTS } from '../data/runEvents';
@@ -9,6 +9,7 @@ import {
   BACKPACK_WIDTH,
   blockedCellsForPocketUnlockCount,
 } from '../domain/backpackLayout';
+import { buildCollectionSnapshot } from '../domain/collection';
 import { applyFusion, type FusionRecipe } from '../domain/fusions';
 import type { InventoryState } from '../domain/inventory';
 import { generatePerkChoices } from '../domain/perks';
@@ -21,6 +22,7 @@ import {
   registerRunVictory,
 } from '../domain/runProgression';
 import { BackpackBoard } from '../ui/BackpackBoard';
+import { CollectionOverlay } from '../ui/CollectionOverlay';
 import { CombatPanel } from '../ui/CombatPanel';
 import { FusionPanel } from '../ui/FusionPanel';
 import { PerkChoiceOverlay } from '../ui/PerkChoiceOverlay';
@@ -93,11 +95,13 @@ export class PrototypeScene extends Phaser.Scene {
       unlockedPocketCount: backpackUnlockedPocketCount(activeRun.progress),
       onStateChanged: (snapshot) => {
         activeRun = { ...activeRun, backpackItems: snapshot.items, nextLootSequence: snapshot.nextLootSequence };
+        for (const item of snapshot.items) markDiscoveredItem(item.definitionId);
         persistRun();
       },
     });
     const boardSnapshot = board.getSnapshot();
     activeRun = { ...activeRun, backpackItems: boardSnapshot.items, nextLootSequence: boardSnapshot.nextLootSequence };
+    for (const item of boardSnapshot.items) markDiscoveredItem(item.definitionId);
 
     this.drawSynergies();
 
@@ -354,6 +358,24 @@ export class PrototypeScene extends Phaser.Scene {
       },
     });
 
+    const collectionOverlay = new CollectionOverlay(this, {
+      getSnapshot: () => buildCollectionSnapshot(
+        PROTOTYPE_ITEMS,
+        PROTOTYPE_FUSION_RECIPES,
+        save.discoveredItemIds,
+        save.discoveredRecipeIds,
+      ),
+    });
+    this.createCollectionButton(() => {
+      if (
+        combatPanel.isRunning()
+        || activeRun.pendingPerkOfferIds.length > 0
+        || activeRun.pendingEventId !== null
+        || eventOverlay.isVisible()
+      ) return;
+      collectionOverlay.show();
+    });
+
     persistRun();
     this.createNewRunButton();
     if (activeRun.pendingPerkOfferIds.length > 0) perkOverlay.show(activeRun.pendingPerkOfferIds);
@@ -380,8 +402,27 @@ export class PrototypeScene extends Phaser.Scene {
     }).setOrigin(0.5, 0);
     this.add.text(48, 38, 'SCRAPSTER', { fontSize: '25px', color: COLORS.text, fontStyle: 'bold' });
     this.add.text(48, 73, '♥ 96 / 100', { fontSize: '22px', color: '#ff6578' });
-    this.add.text(1190, 48, '4 WORLDS  •  EVENTS  •  FUSIONS  •  CORRUPTED LOOPS', {
-      fontSize: '16px', color: '#ff91e6', fontStyle: 'bold',
+    this.add.text(1160, 48, '4 WORLDS  •  EVENTS  •  FUSIONS  •  CORRUPTED LOOPS', {
+      fontSize: '15px', color: '#ff91e6', fontStyle: 'bold',
+    });
+  }
+
+  private createCollectionButton(onOpen: () => void): void {
+    const x = 1262;
+    const y = 104;
+    const button = this.add.rectangle(x, y, 178, 34, 0x30263c, 1)
+      .setStrokeStyle(2, 0xc27cff)
+      .setInteractive({ useHandCursor: true });
+    const label = this.add.text(x, y, 'ITEMDEX / RECIPES', {
+      fontSize: '11px', color: '#e8d2ff', fontStyle: 'bold',
+    }).setOrigin(0.5);
+    button.on('pointerover', () => button.setFillStyle(0x49345c));
+    button.on('pointerout', () => button.setFillStyle(0x30263c));
+    button.on('pointerdown', () => { button.setScale(0.97); label.setScale(0.97); });
+    button.on('pointerup', () => {
+      button.setScale(1);
+      label.setScale(1);
+      onOpen();
     });
   }
 
