@@ -6,6 +6,11 @@ import { unzipSync } from 'fflate';
 const root = process.cwd();
 const releaseRoot = path.join(root, 'release');
 const manifestPath = path.join(releaseRoot, 'portal-package.json');
+const MIB = 1024 * 1024;
+const YANDEX_UNCOMPRESSED_LIMIT = 100 * MIB;
+const CRAZY_TOTAL_LIMIT = 250 * MIB;
+const CRAZY_MOBILE_INITIAL_TARGET = 20 * MIB;
+const CRAZY_FILE_COUNT_LIMIT = 1500;
 
 const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
 const archivePath = path.join(releaseRoot, manifest.archive);
@@ -26,8 +31,22 @@ try {
 }
 
 const archivedPaths = Object.keys(files).sort();
+const rootIndexCount = archivedPaths.filter((entry) => entry === 'index.html').length;
+const uncompressedBytes = Object.values(files).reduce((sum, bytes) => sum + bytes.byteLength, 0);
+
 if (archivedPaths.length !== manifest.fileCount) failures.push(`fileCount mismatch: manifest=${manifest.fileCount} actual=${archivedPaths.length}`);
-if (!archivedPaths.includes('index.html')) failures.push('archive must contain index.html at ZIP root');
+if (rootIndexCount !== 1) failures.push(`archive must contain exactly one index.html at ZIP root; found ${rootIndexCount}`);
+if (archivedPaths.length > CRAZY_FILE_COUNT_LIMIT) failures.push(`CrazyGames file-count limit exceeded: ${archivedPaths.length} > ${CRAZY_FILE_COUNT_LIMIT}`);
+if (uncompressedBytes > YANDEX_UNCOMPRESSED_LIMIT) failures.push(`Yandex uncompressed archive limit exceeded: ${formatMiB(uncompressedBytes)} > 100 MiB`);
+if (uncompressedBytes > CRAZY_TOTAL_LIMIT) failures.push(`CrazyGames total size limit exceeded: ${formatMiB(uncompressedBytes)} > 250 MiB`);
+// Junkpack explicitly targets mobile portal traffic, so enforce the stricter
+// CrazyGames mobile-homepage initial-download recommendation as a product gate.
+if (uncompressedBytes > CRAZY_MOBILE_INITIAL_TARGET) failures.push(`mobile initial-download target exceeded: ${formatMiB(uncompressedBytes)} > 20 MiB`);
+
+for (const archivedPath of archivedPaths) {
+  if (/\s/u.test(archivedPath)) failures.push(`archive path contains whitespace: ${archivedPath}`);
+  if (/[^\x20-\x7E]/u.test(archivedPath)) failures.push(`archive path contains non-ASCII characters: ${archivedPath}`);
+}
 
 for (const entry of manifest.files ?? []) {
   const bytes = files[entry.path];
@@ -61,10 +80,15 @@ if (failures.length > 0) {
   console.log('[release] portal package verification PASS');
   console.log(`  archive: ${manifest.archive}`);
   console.log(`  files: ${archivedPaths.length}`);
+  console.log(`  uncompressed: ${formatMiB(uncompressedBytes)}`);
   console.log(`  sha256: ${sha256}`);
   console.log(`  store assets: ${manifest.storeFiles.length}`);
 }
 
 function hash(bytes) {
   return createHash('sha256').update(bytes).digest('hex');
+}
+
+function formatMiB(bytes) {
+  return `${(bytes / MIB).toFixed(2)} MiB`;
 }
