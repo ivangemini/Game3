@@ -97,11 +97,27 @@ export function registerSession(storage?: Storage): SessionStartContext {
   }
 }
 
-class BeaconTelemetryTransport implements TelemetryTransport {
-  send(endpoint: string, events: readonly TelemetryEnvelope[]): boolean {
-    if (typeof navigator === 'undefined' || typeof navigator.sendBeacon !== 'function') return false;
-    const body = new Blob([JSON.stringify({ version: 1, events })], { type: 'application/json' });
-    return navigator.sendBeacon(endpoint, body);
+export class BrowserTelemetryTransport implements TelemetryTransport {
+  async send(endpoint: string, events: readonly TelemetryEnvelope[]): Promise<boolean> {
+    const body = JSON.stringify({ version: 1, events });
+    if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+      const accepted = navigator.sendBeacon(endpoint, new Blob([body], { type: 'application/json' }));
+      if (accepted) return true;
+    }
+    if (typeof fetch !== 'function') return false;
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body,
+        keepalive: true,
+        credentials: 'omit',
+        cache: 'no-store',
+      });
+      return response.ok;
+    } catch {
+      return false;
+    }
   }
 }
 
@@ -114,11 +130,15 @@ const endpoint = typeof import.meta !== 'undefined' ? (import.meta.env.VITE_ANAL
 
 export const telemetry = new TelemetryClient({
   endpoint,
-  transport: new BeaconTelemetryTransport(),
+  transport: new BrowserTelemetryTransport(),
 });
 
 if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) void telemetry.flush();
   });
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', () => { void telemetry.flush(); });
 }
