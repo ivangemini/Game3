@@ -1,4 +1,4 @@
-# Architecture v0.14
+# Architecture v0.15
 
 ## Stack
 - Phaser 4.2.1
@@ -21,13 +21,15 @@ Large content additions may live in wave modules such as `items.wave4.ts`, `comb
 Offline/QA simulation that composes domain rules with declarative game data. It remains deterministic and outside Phaser. Pacing reports protect session structure; combat/build reports generate legal seeded backpacks across weak/typical/strong power bands and execute the same combat + boss-rule wrapper used by runtime encounters.
 
 ### `src/game/audio/`
-Asset-agnostic semantic audio cues derived from presentation events. Cue IDs/priorities/cooldowns are presentation contracts only: sound loading, WebAudio lifecycle, mixing and music remain outside the combat domain.
+Semantic audio cues derived from presentation events are the stable contract. `audioMix.ts` owns runtime-independent cooldown/priority/voice-budget admission, `audioSynthesis.ts` maps accepted cues to short deterministic synth patches, and `GameAudio.ts` owns the browser WebAudio lifecycle. Audio may be dropped or mixed differently for readability, but it can never change simulation state.
 
 ### `src/game/scenes/`
-Phaser presentation/orchestration. Scenes translate domain state into visuals/input and coordinate persistence without making presentation the source of gameplay rules.
+Phaser presentation/orchestration. Scenes translate domain state into visuals/input and coordinate persistence without making presentation the source of gameplay rules. `PrototypeScene` fans one semantic combat cue out to the audio runtime and the combat-feedback layer.
 
 ### `src/game/ui/`
 Reusable game UI components/widgets. Components expose serializable state snapshots rather than scene-object references. Hero/perk/event overlays collect decisions; callbacks update domain/persistence state rather than owning rules. `CollectionOverlay` is read-only and receives discovery through a scene callback instead of reading/writing persistence itself.
+
+Presentation-only components such as `CombatFeedback`, `TopHudActions`, `TutorialOverlay` and `uiMotion` may animate, flash, shake or pool transient objects, but their callbacks are not allowed to mutate combat outcomes.
 
 ### `src/platform/`
 Portal abstraction and implementations. Game logic calls one adapter API.
@@ -93,6 +95,22 @@ TV Tyrant owns item/cell/row interference primitives. Baby Moon owns tag interfe
 
 The wrapper advances generic combat exactly to boss telegraph/impact boundaries before applying deterministic transforms. Corrupted-loop encounter generation alternates World 2/World 3 wrapper families without increasing encounter count: even loops use Copycat Auditor + Border Shark, odd loops use Deadline Snail + Closet Monster. World 1 remains TV Tyrant and World 4 remains Baby Moon.
 
+## Presentation feedback and audio
+Combat presentation now uses one semantic cue stream for both sound and juice:
+
+1. `CombatPanel` converts combat/boss presentation events into an `AudioCue`.
+2. `PrototypeScene` forwards that cue to `GameAudio` and `CombatFeedback`.
+3. `GameAudio` applies cooldown and a 10-voice semantic budget before rendering a short WebAudio patch.
+4. `CombatFeedback` independently throttles visual spam and renders pooled particles, target rings, combat-frame pulses, outcome flashes and small camera shakes.
+
+Audio admission is runtime-only. When the semantic voice budget is full, a new cue may replace the oldest weaker voice only if its priority is higher; equal/lower-priority spam is dropped. High-frequency item/impact cues share global cooldown keys, while boss/status cues may retain source-scoped cooldowns so distinct telegraphs stay readable.
+
+The WebAudio context is created/resumed only after an actual pointer/key interaction. Page visibility suspends running audio; returning to the page only resumes a context that was previously unlocked. This respects browser autoplay rules without queuing stale combat sounds.
+
+Current SFX are compact deterministic oscillator patches, not final recorded assets. The semantic cue contract and mixer remain valid when final samples are introduced. Existing save-v8 `sfxVolume` and `musicVolume` settings feed the runtime directly, so this foundation requires no persistence migration.
+
+`CombatFeedback` keeps a 30-object particle pool for frequent bursts. Reduced-motion mode removes camera shake and particle travel while retaining short static rings/flashes so causality remains readable.
+
 ## Time, pacing and balance QA
 Combat simulation receives explicit elapsed time. Human decision pacing is modeled separately in `src/game/simulation/pacing.ts` so design-duration assumptions never leak into combat rules.
 
@@ -111,7 +129,7 @@ Persist IDs and values, never scene object references. Active-run persistence in
 
 Legacy v1–v7 saves migrate forward. Malformed save payloads fall back safely, and restored backpack items are sanitized against current definitions, blocked cells, duplicates and collisions before scene objects are created.
 
-Meta persistence also tracks durable item/recipe discovery and deepest completed corrupted-loop progress. Itemdex/Recipe Book are views over those existing discovery arrays and therefore required no schema bump from v8. Content removal must continue to tolerate legacy IDs safely. Every future schema change requires migration coverage in the same change.
+Meta persistence also tracks durable item/recipe discovery and deepest completed corrupted-loop progress. Itemdex/Recipe Book are views over those existing discovery arrays and therefore required no schema bump from v8. Audio settings already persist separate music/SFX volume values plus reduced-motion preference. Content removal must continue to tolerate legacy IDs safely. Every future schema change requires migration coverage in the same change.
 
 ## Platform adapter outline
 Capabilities may include init, player identity when available, locale, storage/cloud save, interstitial, rewarded ad, gameplay start/stop signals and leaderboard hooks. Every capability requires a graceful unsupported fallback.
@@ -119,5 +137,7 @@ Capabilities may include init, player identity when available, locale, storage/c
 ## Asset strategy
 Use generated/source art → reviewed final exports → atlases where beneficial. Keep source assets separate from runtime-optimized assets. Never bind gameplay rules to filename semantics.
 
+Final audio samples/music will use the same semantic mixer contract: short high-information SFX, compressed web-friendly assets, separate music/SFX buses and no dependency of gameplay on sample duration.
+
 ## Quality gates
-Typecheck + unit tests + production build on every main-branch push. Deterministic pacing/balance/boss/event/collection tests run as regression guards. Browser smoke verification is required once a connected/runnable browser environment is available.
+Typecheck + unit tests + production build on every main-branch push. Deterministic pacing/balance/boss/event/collection/audio-mix/audio-synthesis tests run as regression guards. Browser smoke verification is required once a connected/runnable browser environment is available.
