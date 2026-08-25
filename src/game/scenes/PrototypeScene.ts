@@ -217,7 +217,6 @@ export class PrototypeScene extends Phaser.Scene {
     );
     const shopSnapshot = shop.getSnapshot();
     activeRun = { ...activeRun, coins: shopSnapshot.coins, shopIndex: shopSnapshot.shopIndex, soldOfferIds: shopSnapshot.soldOfferIds };
-
     let runPanel!: RunProgressPanel;
     const perkOverlay = new PerkChoiceOverlay(this, PROTOTYPE_PERK_MAP, (perkId) => {
       if (!activeRun.pendingPerkOfferIds.includes(perkId) || activeRun.selectedPerkIds.includes(perkId)) return;
@@ -337,7 +336,7 @@ export class PrototypeScene extends Phaser.Scene {
         }
         if (nextProgress.mode === 'deep-choice') {
           runPanel.refresh(nextProgress.loopNumber === 1
-            ? 'Four worlds cleared. Escape now or take this build into a corrupted loop.'
+            ? 'Six worlds cleared. Escape now or take this build into a corrupted loop.'
             : `Loop ${nextProgress.loopNumber} cleared. Escape now or go deeper again.`);
           return;
         }
@@ -437,7 +436,6 @@ export class PrototypeScene extends Phaser.Scene {
       heroOverlay.hide();
       this.time.delayedCall(0, () => this.scene.restart());
     });
-
     persistRun();
     new TopHudActions(this, {
       dailyKey: todayDaily.key,
@@ -503,7 +501,7 @@ export class PrototypeScene extends Phaser.Scene {
     }).setOrigin(0.5, 0);
     this.add.text(48, 38, 'JUNK PILOT', { fontSize: '25px', color: COLORS.text, fontStyle: 'bold' });
     this.add.text(48, 73, '♥ 96 / 100', { fontSize: '22px', color: '#ff6578' });
-    this.add.text(1190, 48, '4 WORLDS  •  HEROES  •  FUSIONS  •  CORRUPTED LOOPS', {
+    this.add.text(1190, 48, '6 WORLDS  •  HEROES  •  FUSIONS  •  CORRUPTED LOOPS', {
       fontSize: '16px', color: '#ff91e6', fontStyle: 'bold',
     });
   }
