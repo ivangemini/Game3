@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { bossArtKeyForEnemyId, requestAuthoredTexture } from './authoredArt';
+import { bossArtKeyForEnemyId, requestAuthoredTexture, resolveAuthoredTexture } from './authoredArt';
 import { bossMotionSpecForArtKey, type BossMotionSpec } from './bossPresentation';
 
 export class BossPortraitLayer {
@@ -25,12 +25,14 @@ export class BossPortraitLayer {
     this.activeSpec = bossMotionSpecForArtKey(key);
 
     const render = (): void => {
-      if (this.activeKey !== key || !this.scene.sys?.isActive() || !this.scene.textures.exists(key)) return;
+      if (this.activeKey !== key || !this.scene.sys?.isActive()) return;
+      const texture = resolveAuthoredTexture(this.scene, key);
+      if (!texture) return;
       this.destroyRoot();
       const root = this.scene.add.container(this.x, this.y).setDepth(32);
       const backing = this.scene.add.rectangle(0, 0, 276, 208, 0x17131d, 1)
         .setStrokeStyle(4, this.activeSpec?.accent ?? 0xa85ad1);
-      const image = this.scene.add.image(0, 0, key).setDisplaySize(268, 201);
+      const image = this.scene.add.image(0, 0, texture.textureKey, texture.frame).setDisplaySize(268, 201);
       root.add([backing, image]);
       this.root = root;
       if (!this.reducedMotion) {
@@ -46,7 +48,7 @@ export class BossPortraitLayer {
       }
     };
 
-    if (this.scene.textures.exists(key)) render();
+    if (resolveAuthoredTexture(this.scene, key)) render();
     else requestAuthoredTexture(this.scene, key, render);
   }
 
