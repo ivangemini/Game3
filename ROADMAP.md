@@ -55,23 +55,25 @@
 - [x] Boss-victory perk overlay with persisted pending choice
 - [x] Twenty-seven prototype perks that modify tagged combat items through the shared bonus vocabulary
 - [x] Selected perks persist and affect subsequent combat snapshots
-- [x] Four-world campaign: 3 encounters per world / 12 total
+- [x] Six-world base campaign: **3 encounters per world / 18 total**, using all six authored boss families
+- [x] World 5 sequence: Carbon Copy Clerks → Mirror Mule → Copycat Auditor
+- [x] World 6 sequence: Edge Eel Syndicate → Rent Collector Crab → Border Shark
 - [x] Unique encounter IDs, per-encounter rewards and score progression
-- [x] Difficulty/reward escalation across the four worlds
-- [x] Campaign clear decision: Escape/Cash Out or Go Deeper with the same build
-- [x] Corrupted Loop foundation: another 4-world / 12-encounter cycle using the same build
+- [x] Difficulty/reward escalation across all six campaign worlds
+- [x] Campaign clear decision after encounter 18: Escape/Cash Out or Go Deeper with the same build
+- [x] Corrupted Loops intentionally remain **4 worlds / 12 encounters** using the same build
 - [x] Loop depth scales enemy HP/damage/speed and base payout
 - [x] Loop worlds stack 2 mutations in Loop 2, 3 in Loop 3 and up to 4 deeper
 - [x] Safe cash-out only at cycle boundaries; entering a loop commits the player to the full cycle
 - [x] Deepest completed corrupted loop persisted in meta save
 - [x] Six launch world mutations for campaign/Loop 2 plus six deep-loop anomaly modifiers from Loop 3 onward
 - [x] Fifteen deterministic surreal run events with two choices each
-- [x] Events trigger after the first fight of each world, persist across reload and block progression until resolved
+- [x] Events trigger after the first fight of each world, persist across reload and block progression until resolved (**6 event opportunities in campaign, 4 per loop**)
 - [x] Event choices consume/award the real run currency and can grant real backpack items
-- [x] Eight alternate non-boss corrupted enemy families from Loop 3 onward without increasing encounter count
+- [x] Eight alternate non-boss corrupted enemy families from Loop 3 onward without increasing loop encounter count
 - [x] Twenty-four prototype fusion recipes with deterministic ingredient/result handling
 - [x] Fusion unlocks after Boss 1 and respects currently locked backpack cells
-- [ ] Runtime pacing validation: first boss 3–5 min, base campaign 20–25 min, strong session 30–50 min, deep session 60+ min. Seeded target-model regression coverage plus run-start-anchored p50/p90 first-boss/base-campaign telemetry are implemented; real play traffic remains required.
+- [ ] Runtime pacing validation: first boss **3–5 min**, six-world base campaign **32–42 min**, campaign + Loop 2 **55–75 min**, Loop 3 completion **80+ min**. Seeded target-model regression coverage plus run-start-anchored p50/p90 first-boss/base-campaign telemetry are implemented; real play traffic remains required.
 
 ## P4 — Content-efficient depth [DONE]
 - [x] 35–45 launch base items (**36 prototype base items implemented**)
@@ -83,6 +85,7 @@
 - [x] ~15 launch mutation/event pool (**6 world mutations + 9 run events = 15 originally reached the target**)
 - [x] Late-run second-stage evolution pool: **4 fusion-only transformations** with no extra save gating
 - [x] User-directed Wave 5 deep-content expansion (**+6 perks, +6 run events, +6 Loop 3+ anomaly modifiers, +8 alternate non-boss corrupted enemy families; item/recipe atlas stays 60/24**)
+- [x] Long-session campaign expansion (**4→6 worlds, 12→18 campaign encounters, all six boss families in base run; Corrupted Loops stay 12 encounters**)
 
 ## P5 — Retention/meta [DONE]
 - [x] Itemdex + Recipe Book UI (**Junk Archive: 60 item slots + 24 recipe slots, hidden unknown payloads, pagination and collection progress**)
@@ -131,7 +134,7 @@
 
 ## P8 — QA, balance & performance
 - [x] Automated deterministic tests for core run/fusion/event/hero/boss domains
-- [x] Seeded pacing target simulation with percentile bands and target hit rates
+- [x] Seeded pacing target simulation with percentile bands and target hit rates (**18-encounter campaign + 12-encounter loops modeled separately**)
 - [x] Seeded combat/build simulation reports across weak/typical/strong power bands and boss checkpoints, including boss-rule wrappers
 - [x] Campaign balance sampling excludes second-stage fusion results; loop checkpoints may sample them
 - [x] Static asset + bundle budget gates (**runtime art + atlas texture + JS gzip ceilings remain CI-enforced**)
@@ -148,9 +151,9 @@
 ## P9 — Soft launch & iteration
 - [x] Repository-built portal candidate pipeline (**production build → readiness/security checks → runtime-only ZIP + separate store art → v2 per-file SHA-256 manifest → integrity verification → CI artifact; strict `release:soft-launch` additionally requires HTTPS analytics endpoint**)
 - [x] Privacy-minimal measurement pipeline (**strict versioned Node receiver → sanitized append-only NDJSON → deterministic JSON/Markdown report; receiver/report contracts and report CLI are CI-tested, raw exports are gitignored**)
-- [x] Soft-launch pacing summary foundation (**session reach + average/median/p90 time-to-hero and first-combat latency; run-start-anchored first-boss and base-campaign reach/duration; per-encounter win rate + average/median/p90 duration, without persistent identity**)
-- [x] User-directed pre-traffic Wave 5 expansion (**deep-run replayability increased without changing campaign length or item atlas**)
+- [x] Soft-launch pacing summary foundation (**session reach + average/median/p90 time-to-hero and first-combat latency; run-start-anchored first-boss and six-world campaign reach/duration; per-encounter win rate + average/median/p90 duration, without persistent identity**)
+- [x] User-directed pre-traffic content expansion (**Wave 5 combinatorial depth + six-world/18-encounter base campaign; loops remain compact at 12 encounters**)
 - [ ] release candidate to first portals
-- [ ] measure tutorial/help usage/hero choice/first boss/base-campaign duration/event choice/fusion usage/loop-entry/loop-completion/return behavior on real traffic
+- [ ] measure tutorial/help usage/hero choice/first boss/six-world campaign duration/event choice/fusion usage/loop-entry/loop-completion/return behavior on real traffic
 - [ ] tune difficulty/economy/ad pacing
 - [ ] further content after the current expansion should be driven by core retention signals or another explicit product-direction change
