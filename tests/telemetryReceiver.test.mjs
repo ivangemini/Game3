@@ -2,7 +2,11 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createTelemetryServer, validateTelemetryBatch } from '../services/telemetry-receiver.mjs';
+import {
+  MAX_BODY_BYTES,
+  createTelemetryServer,
+  validateTelemetryBatch,
+} from '../services/telemetry-receiver.mjs';
 
 const servers = [];
 const tempDirs = [];
@@ -38,35 +42,45 @@ async function startServer() {
 }
 
 describe('telemetry receiver', () => {
-  it('validates the versioned allowlisted event contract', () => {
+  it('validates the versioned allowlisted event contract and rejects payload extras', () => {
     expect(validateTelemetryBatch(batch()).ok).toBe(true);
     expect(validateTelemetryBatch(batch({ version: 2 }))).toMatchObject({ ok: false });
     expect(validateTelemetryBatch(batch({ events: [] }))).toMatchObject({ ok: false });
     expect(validateTelemetryBatch(batch({ events: [{ ...batch().events[0], name: 'unknown_event' }] }))).toMatchObject({ ok: false });
     expect(validateTelemetryBatch(batch({ events: [{ ...batch().events[0], sessionId: '' }] }))).toMatchObject({ ok: false });
+    expect(validateTelemetryBatch(batch({
+      events: [{
+        ...batch().events[0],
+        payload: { ...batch().events[0].payload, email: 'should-not-be-accepted@example.com' },
+      }],
+    }))).toMatchObject({ ok: false });
   });
 
-  it('accepts a valid batch, writes NDJSON and exposes health/CORS', async () => {
+  it('accepts a valid batch, writes sanitized NDJSON and exposes health/CORS', async () => {
     const { outputFile, baseUrl } = await startServer();
     const health = await fetch(`${baseUrl}/health`);
     expect(health.status).toBe(200);
     expect(health.headers.get('access-control-allow-origin')).toBe('*');
 
+    const enrichedBatch = batch({
+      events: [{ ...batch().events[0], ignoredEnvelopeField: 'drop-me' }],
+    });
     const response = await fetch(`${baseUrl}/v1/events`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(batch()),
+      body: JSON.stringify(enrichedBatch),
     });
     expect(response.status).toBe(204);
 
     const written = (await readFile(outputFile, 'utf8')).trim().split('\n').map((line) => JSON.parse(line));
     expect(written).toHaveLength(1);
     expect(written[0]).toMatchObject({ name: 'session_start', sessionId: 'session-test' });
+    expect(written[0]).not.toHaveProperty('ignoredEnvelopeField');
     expect(written[0]).not.toHaveProperty('ip');
     expect(written[0]).not.toHaveProperty('userAgent');
   });
 
-  it('rejects invalid media types and unknown event schemas', async () => {
+  it('rejects invalid media types, unknown schemas and oversized bodies', async () => {
     const { baseUrl } = await startServer();
     const wrongType = await fetch(`${baseUrl}/v1/events`, { method: 'POST', body: JSON.stringify(batch()) });
     expect(wrongType.status).toBe(415);
@@ -77,5 +91,12 @@ describe('telemetry receiver', () => {
       body: JSON.stringify(batch({ events: [{ ...batch().events[0], name: 'made_up' }] })),
     });
     expect(invalid.status).toBe(400);
+
+    const oversized = await fetch(`${baseUrl}/v1/events`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ version: 1, events: [], padding: 'x'.repeat(MAX_BODY_BYTES + 1024) }),
+    });
+    expect(oversized.status).toBe(413);
   });
 });
