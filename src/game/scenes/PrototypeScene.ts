@@ -1,8 +1,18 @@
 import * as Phaser from 'phaser';
-import { PROTOTYPE_ITEM_MAP, PROTOTYPE_ITEMS } from '../data/items';
+import { PROTOTYPE_FUSION_RECIPES } from '../data/fusionRecipes';
+import { PROTOTYPE_ITEM_MAP, PROTOTYPE_SHOP_ITEMS } from '../data/items';
 import { PROTOTYPE_PERKS, PROTOTYPE_PERK_MAP } from '../data/perks';
 import { getRunEncounter } from '../data/runEncounters';
+import { PROTOTYPE_RUN_EVENT_MAP, PROTOTYPE_RUN_EVENTS } from '../data/runEvents';
+import {
+  BACKPACK_HEIGHT,
+  BACKPACK_WIDTH,
+  blockedCellsForPocketUnlockCount,
+} from '../domain/backpackLayout';
+import { applyFusion, type FusionRecipe } from '../domain/fusions';
+import type { InventoryState } from '../domain/inventory';
 import { generatePerkChoices } from '../domain/perks';
+import { resolveRunEventChoice, selectRunEvent } from '../domain/runEvents';
 import {
   backpackUnlockedPocketCount,
   cashOutRun,
@@ -12,7 +22,9 @@ import {
 } from '../domain/runProgression';
 import { BackpackBoard } from '../ui/BackpackBoard';
 import { CombatPanel } from '../ui/CombatPanel';
+import { FusionPanel } from '../ui/FusionPanel';
 import { PerkChoiceOverlay } from '../ui/PerkChoiceOverlay';
+import { RunEventOverlay } from '../ui/RunEventOverlay';
 import { RunProgressPanel } from '../ui/RunProgressPanel';
 import { ShopPanel } from '../ui/ShopPanel';
 import {
@@ -20,7 +32,7 @@ import {
   loadSave,
   writeSave,
   type ActiveRunSave,
-  type SaveV6,
+  type SaveV7,
 } from '../../persistence/save';
 
 const PROTOTYPE_RUN_SEED = 'prototype-run-001';
@@ -40,7 +52,7 @@ export class PrototypeScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(COLORS.background);
     this.drawHeader();
 
-    let save: SaveV6 = loadSave();
+    let save: SaveV7 = loadSave();
     const hadActiveRun = save.activeRun !== null;
     let activeRun: ActiveRunSave = save.activeRun ?? {
       runSeed: PROTOTYPE_RUN_SEED,
@@ -55,11 +67,24 @@ export class PrototypeScene extends Phaser.Scene {
       pendingPerkOfferIds: [],
       offeredPerkEncounterIds: [],
       progress: createInitialRunProgress(),
+      eventIndex: 0,
+      pendingEventId: null,
+      resolvedEventIds: [],
     };
 
     const persistRun = (): void => {
       save = { ...save, activeRun };
       writeSave(save);
+    };
+
+    const markDiscoveredItem = (definitionId: string): void => {
+      if (save.discoveredItemIds.includes(definitionId)) return;
+      save = { ...save, discoveredItemIds: [...save.discoveredItemIds, definitionId].sort() };
+    };
+
+    const markDiscoveredRecipe = (recipeId: string): void => {
+      if (save.discoveredRecipeIds.includes(recipeId)) return;
+      save = { ...save, discoveredRecipeIds: [...save.discoveredRecipeIds, recipeId].sort() };
     };
 
     const board = new BackpackBoard(this, PROTOTYPE_ITEM_MAP, 90, 225, {
@@ -78,10 +103,17 @@ export class PrototypeScene extends Phaser.Scene {
 
     const shop = new ShopPanel(
       this,
-      PROTOTYPE_ITEMS,
+      PROTOTYPE_SHOP_ITEMS,
       90,
       735,
-      (definitionId) => board.addRewardItem(definitionId),
+      (definitionId) => {
+        const added = board.addRewardItem(definitionId);
+        if (added) {
+          markDiscoveredItem(definitionId);
+          persistRun();
+        }
+        return added;
+      },
       {
         runSeed: activeRun.runSeed,
         initialCoins: activeRun.coins,
@@ -107,7 +139,41 @@ export class PrototypeScene extends Phaser.Scene {
       };
       persistRun();
       perkOverlay.hide();
-      runPanel.refresh('Perk locked in. Repack, shop, then continue.');
+      runPanel.refresh('Perk locked in. Repack, shop, fuse, then continue.');
+    });
+
+    const eventOverlay = new RunEventOverlay(this, (event, choice) => {
+      if (activeRun.pendingEventId !== event.id) {
+        return { ok: false, message: 'This event is no longer active.' };
+      }
+
+      const resolution = resolveRunEventChoice(event, choice.id, activeRun.runSeed, activeRun.eventIndex);
+      if (shop.getCoins() < resolution.costCoins) {
+        return { ok: false, message: `Need ${resolution.costCoins - shop.getCoins()} more coins for that choice.` };
+      }
+
+      if (resolution.rewardDefinitionId) {
+        const added = board.addRewardItem(resolution.rewardDefinitionId);
+        if (!added) {
+          return { ok: false, message: 'No legal backpack space for the event reward. Rearrange junk first.' };
+        }
+        markDiscoveredItem(resolution.rewardDefinitionId);
+      }
+
+      if (!shop.spendCoins(resolution.costCoins, 'Event cost')) {
+        return { ok: false, message: 'The event payment failed.' };
+      }
+      if (resolution.rewardCoins > 0) shop.addCoins(resolution.rewardCoins, 'Event payout');
+
+      activeRun = {
+        ...activeRun,
+        eventIndex: activeRun.eventIndex + 1,
+        pendingEventId: null,
+        resolvedEventIds: [...activeRun.resolvedEventIds, event.id],
+      };
+      persistRun();
+      runPanel.refresh('Event resolved. Repack, shop or fuse before the next encounter.');
+      return { ok: true, message: resolution.resultText };
     });
 
     const combatPanel = new CombatPanel(this, 1140, 445, {
@@ -144,7 +210,7 @@ export class PrototypeScene extends Phaser.Scene {
       },
       onOutcome: ({ encounterId, outcome }) => {
         if (outcome !== 'victory') {
-          runPanel.refresh('Defeat. Repack or shop, then retry the same encounter.');
+          runPanel.refresh('Defeat. Repack, shop or fuse, then retry the same encounter.');
           return;
         }
 
@@ -155,7 +221,24 @@ export class PrototypeScene extends Phaser.Scene {
         const previousPocketCount = backpackUnlockedPocketCount(previousProgress);
         const nextProgress = registerRunVictory(previousProgress, current.scoreValue);
         const nextPocketCount = backpackUnlockedPocketCount(nextProgress);
-        activeRun = { ...activeRun, progress: nextProgress };
+
+        let scheduledEventId: string | null = null;
+        if (current.slot === 1 && activeRun.pendingEventId === null) {
+          const previousEventId = activeRun.resolvedEventIds[activeRun.resolvedEventIds.length - 1] ?? null;
+          const event = selectRunEvent(
+            PROTOTYPE_RUN_EVENTS,
+            activeRun.runSeed,
+            activeRun.eventIndex,
+            previousEventId,
+          );
+          scheduledEventId = event.id;
+        }
+
+        activeRun = {
+          ...activeRun,
+          progress: nextProgress,
+          pendingEventId: scheduledEventId ?? activeRun.pendingEventId,
+        };
 
         if (previousProgress.mode === 'loop' && nextProgress.mode === 'deep-choice') {
           save = {
@@ -169,6 +252,13 @@ export class PrototypeScene extends Phaser.Scene {
           : false;
         persistRun();
 
+        if (scheduledEventId) {
+          const event = PROTOTYPE_RUN_EVENT_MAP.get(scheduledEventId);
+          if (event) eventOverlay.show(event);
+          runPanel.refresh('STRANGE EVENT • make a choice before the next encounter.');
+          return;
+        }
+
         if (nextProgress.mode === 'deep-choice') {
           runPanel.refresh(
             nextProgress.loopNumber === 1
@@ -180,8 +270,8 @@ export class PrototypeScene extends Phaser.Scene {
 
         runPanel.refresh(
           expanded
-            ? 'BOSS DOWN • a new backpack pocket opened. Rebuild before continuing.'
-            : 'Victory. Repack and spend your reward before the next encounter.',
+            ? 'BOSS DOWN • a new backpack pocket opened. Fusion lab may have new possibilities.'
+            : 'Victory. Repack, spend rewards or fuse before the next encounter.',
         );
       },
     });
@@ -190,28 +280,92 @@ export class PrototypeScene extends Phaser.Scene {
       getProgress: () => activeRun.progress,
       getEncounter: () => getRunEncounter(activeRun.progress, activeRun.runSeed),
       onStartEncounter: (encounter) => {
-        if (activeRun.pendingPerkOfferIds.length > 0 || combatPanel.isRunning()) return false;
+        if (
+          activeRun.pendingPerkOfferIds.length > 0
+          || activeRun.pendingEventId !== null
+          || eventOverlay.isVisible()
+          || combatPanel.isRunning()
+        ) return false;
         const current = getRunEncounter(activeRun.progress, activeRun.runSeed);
         if (!current || current.encounterId !== encounter.encounterId) return false;
         return combatPanel.startEncounter(encounter.encounterId, encounter.enemy, encounter.rewardCoins);
       },
       onEnterCorruptedLoop: () => {
-        if (combatPanel.isRunning() || activeRun.pendingPerkOfferIds.length > 0) return;
+        if (
+          combatPanel.isRunning()
+          || activeRun.pendingPerkOfferIds.length > 0
+          || activeRun.pendingEventId !== null
+        ) return;
         activeRun = { ...activeRun, progress: enterCorruptedLoop(activeRun.progress) };
         persistRun();
         runPanel.refresh(`LOOP ${activeRun.progress.loopNumber} started. Mutations now stack.`);
       },
       onCashOut: () => {
-        if (combatPanel.isRunning() || activeRun.pendingPerkOfferIds.length > 0) return;
+        if (
+          combatPanel.isRunning()
+          || activeRun.pendingPerkOfferIds.length > 0
+          || activeRun.pendingEventId !== null
+        ) return;
         activeRun = { ...activeRun, progress: cashOutRun(activeRun.progress) };
         persistRun();
         runPanel.refresh('Run complete. Score and deepest completed loop are saved.');
       },
     });
 
+    new FusionPanel(this, 570, 602, PROTOTYPE_FUSION_RECIPES, PROTOTYPE_ITEM_MAP, {
+      getItems: () => board.getSnapshot().items,
+      isUnlocked: () => {
+        const campaignUnlocked = activeRun.progress.mode !== 'campaign'
+          || activeRun.progress.campaignEncounterIndex >= 3;
+        return campaignUnlocked
+          && !combatPanel.isRunning()
+          && activeRun.pendingPerkOfferIds.length === 0
+          && activeRun.pendingEventId === null;
+      },
+      onFuse: (recipe: FusionRecipe) => {
+        if (
+          combatPanel.isRunning()
+          || activeRun.pendingPerkOfferIds.length > 0
+          || activeRun.pendingEventId !== null
+        ) return false;
+
+        const snapshot = board.getSnapshot();
+        const unlockCount = backpackUnlockedPocketCount(activeRun.progress);
+        const inventory: InventoryState = {
+          width: BACKPACK_WIDTH,
+          height: BACKPACK_HEIGHT,
+          blockedCells: blockedCellsForPocketUnlockCount(unlockCount),
+          items: snapshot.items,
+        };
+        const resultInstanceId = `fusion-${snapshot.nextLootSequence}-${recipe.resultDefinitionId}`;
+        const result = applyFusion(inventory, PROTOTYPE_ITEM_MAP, recipe, resultInstanceId);
+        if (!result.ok) return false;
+
+        activeRun = {
+          ...activeRun,
+          backpackItems: result.state.items,
+          nextLootSequence: snapshot.nextLootSequence + 1,
+        };
+        markDiscoveredRecipe(recipe.id);
+        markDiscoveredItem(recipe.resultDefinitionId);
+        persistRun();
+        this.time.delayedCall(0, () => this.scene.restart());
+        return true;
+      },
+    });
+
     persistRun();
     this.createNewRunButton();
     if (activeRun.pendingPerkOfferIds.length > 0) perkOverlay.show(activeRun.pendingPerkOfferIds);
+    if (activeRun.pendingEventId) {
+      const event = PROTOTYPE_RUN_EVENT_MAP.get(activeRun.pendingEventId);
+      if (event) {
+        eventOverlay.show(event);
+      } else {
+        activeRun = { ...activeRun, pendingEventId: null };
+        persistRun();
+      }
+    }
     this.drawActivePerks(() => activeRun.selectedPerkIds);
   }
 
@@ -226,8 +380,8 @@ export class PrototypeScene extends Phaser.Scene {
     }).setOrigin(0.5, 0);
     this.add.text(48, 38, 'SCRAPSTER', { fontSize: '25px', color: COLORS.text, fontStyle: 'bold' });
     this.add.text(48, 73, '♥ 96 / 100', { fontSize: '22px', color: '#ff6578' });
-    this.add.text(1250, 48, '4 WORLDS  •  12 ENCOUNTERS  •  CORRUPTED LOOPS', {
-      fontSize: '17px', color: '#ff91e6', fontStyle: 'bold',
+    this.add.text(1190, 48, '4 WORLDS  •  EVENTS  •  FUSIONS  •  CORRUPTED LOOPS', {
+      fontSize: '16px', color: '#ff91e6', fontStyle: 'bold',
     });
   }
 
