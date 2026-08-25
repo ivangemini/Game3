@@ -7,6 +7,7 @@ import {
 import { createSeededRng, type SeededRng } from '../domain/rng';
 import {
   CAMPAIGN_ENCOUNTER_COUNT,
+  LOOP_ENCOUNTER_COUNT,
   createInitialRunProgress,
 } from '../domain/runProgression';
 
@@ -15,20 +16,20 @@ export interface DurationRange {
   readonly maxSeconds: number;
 }
 
-type FourWorldRanges = readonly [DurationRange, DurationRange, DurationRange, DurationRange];
-type FourWorldChances = readonly [number, number, number, number];
+type WorldRanges = readonly DurationRange[];
+type WorldChances = readonly number[];
 
 export interface PacingProfile {
   readonly initialSetup: DurationRange;
-  readonly campaignArrangeByWorld: FourWorldRanges;
-  readonly loopArrangeByWorld: FourWorldRanges;
+  readonly campaignArrangeByWorld: WorldRanges;
+  readonly loopArrangeByWorld: WorldRanges;
   readonly campaignCombatByKind: Readonly<Record<RunEncounterKind, DurationRange>>;
   readonly loopCombatByKind: Readonly<Record<RunEncounterKind, DurationRange>>;
   readonly eventChoice: DurationRange;
   readonly perkChoice: DurationRange;
   readonly fusionDecision: DurationRange;
   readonly deepChoice: DurationRange;
-  readonly campaignFusionChanceByWorld: FourWorldChances;
+  readonly campaignFusionChanceByWorld: WorldChances;
   readonly loopFusionChanceBase: number;
   readonly loopFusionChanceGrowthPerDepth: number;
   readonly loopFusionChanceCap: number;
@@ -71,9 +72,9 @@ export interface PacingPercentileBand {
 
 export interface PacingTargetHitRates {
   readonly firstBoss3To5Pct: number;
-  readonly campaign20To25Pct: number;
-  readonly loop2ThirtyToFiftyPct: number;
-  readonly loop3SixtyPlusPct: number;
+  readonly campaign32To42Pct: number;
+  readonly loop2FiftyFiveToSeventyFivePct: number;
+  readonly loop3EightyPlusPct: number;
 }
 
 export interface PacingReport {
@@ -92,6 +93,8 @@ export const TARGET_PACING_PROFILE: PacingProfile = {
     { minSeconds: 38, maxSeconds: 52 },
     { minSeconds: 50, maxSeconds: 68 },
     { minSeconds: 58, maxSeconds: 78 },
+    { minSeconds: 66, maxSeconds: 90 },
+    { minSeconds: 72, maxSeconds: 100 },
   ],
   loopArrangeByWorld: [
     { minSeconds: 40, maxSeconds: 56 },
@@ -113,7 +116,7 @@ export const TARGET_PACING_PROFILE: PacingProfile = {
   perkChoice: { minSeconds: 18, maxSeconds: 30 },
   fusionDecision: { minSeconds: 22, maxSeconds: 38 },
   deepChoice: { minSeconds: 14, maxSeconds: 24 },
-  campaignFusionChanceByWorld: [0.25, 0.35, 0.5, 0.65],
+  campaignFusionChanceByWorld: [0.25, 0.35, 0.5, 0.65, 0.72, 0.78],
   loopFusionChanceBase: 0.55,
   loopFusionChanceGrowthPerDepth: 0.08,
   loopFusionChanceCap: 0.8,
@@ -218,9 +221,9 @@ export function createPacingReport(
     loop3Complete: summarizeMinutes(loop3Seconds),
     targetHitRates: {
       firstBoss3To5Pct: hitRate(firstBossSeconds, (seconds) => seconds >= 180 && seconds <= 300),
-      campaign20To25Pct: hitRate(campaignSeconds, (seconds) => seconds >= 1200 && seconds <= 1500),
-      loop2ThirtyToFiftyPct: hitRate(loop2Seconds, (seconds) => seconds >= 1800 && seconds <= 3000),
-      loop3SixtyPlusPct: hitRate(loop3Seconds, (seconds) => seconds >= 3600),
+      campaign32To42Pct: hitRate(campaignSeconds, (seconds) => seconds >= 1920 && seconds <= 2520),
+      loop2FiftyFiveToSeventyFivePct: hitRate(loop2Seconds, (seconds) => seconds >= 3300 && seconds <= 4500),
+      loop3EightyPlusPct: hitRate(loop3Seconds, (seconds) => seconds >= 4800),
     },
   };
 }
@@ -245,8 +248,9 @@ function simulateCycle(
   };
   let elapsedSeconds = 0;
   let firstBossOffsetSeconds: number | null = null;
+  const encounterCount = cycle === 'campaign' ? CAMPAIGN_ENCOUNTER_COUNT : LOOP_ENCOUNTER_COUNT;
 
-  for (let index = 0; index < CAMPAIGN_ENCOUNTER_COUNT; index += 1) {
+  for (let index = 0; index < encounterCount; index += 1) {
     const encounter = resolveEncounter(cycle, loopNumber, index, runSeed);
 
     if (cycle === 'campaign' && index === 0) {
@@ -360,7 +364,7 @@ function toCycleResult(
   return {
     cycle,
     loopNumber,
-    encounterCount: CAMPAIGN_ENCOUNTER_COUNT,
+    encounterCount: cycle === 'campaign' ? CAMPAIGN_ENCOUNTER_COUNT : LOOP_ENCOUNTER_COUNT,
     eventCount: breakdown.eventCount,
     perkCount: breakdown.perkCount,
     fusionCount: breakdown.fusionCount,
@@ -375,14 +379,14 @@ function toCycleResult(
   };
 }
 
-function rangeForWorld(ranges: FourWorldRanges, world: number): DurationRange {
+function rangeForWorld(ranges: WorldRanges, world: number): DurationRange {
   const index = Math.max(0, Math.min(ranges.length - 1, Math.floor(world) - 1));
   const range = ranges[index];
   if (!range) throw new Error(`Missing pacing range for world ${world}`);
   return range;
 }
 
-function chanceForWorld(chances: FourWorldChances, world: number): number {
+function chanceForWorld(chances: WorldChances, world: number): number {
   const index = Math.max(0, Math.min(chances.length - 1, Math.floor(world) - 1));
   return chances[index] ?? 0;
 }
