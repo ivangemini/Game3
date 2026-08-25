@@ -85,10 +85,10 @@
 ## P5 — Retention/meta [IN PROGRESS]
 - [x] Itemdex + Recipe Book UI (**Junk Archive: 60 item slots + 24 recipe slots, hidden unknown payloads, pagination and collection progress**)
 - [x] Discovery state for items and fusion recipes
-- [ ] unlock milestones
+- [x] Unlock milestones (**5 derived Archive Ranks with cosmetic seals; final Void Archivist requires full current collection + Corrupted Loop 2**)
 - [ ] Daily seeded run
 - [x] Corrupted Loop + score foundation
-- [ ] achievements
+- [x] Achievements (**13 derived Trophy Shelf goals across items, recipes, secret evolutions and loop depth**)
 
 ## P6 — Presentation pass
 - [ ] final art pipeline + atlases
