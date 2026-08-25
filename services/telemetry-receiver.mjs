@@ -5,6 +5,7 @@ import { pathToFileURL } from 'node:url';
 
 const EVENT_NAMES = new Set([
   'session_start',
+  'session_age',
   'run_started',
   'tutorial_opened',
   'tutorial_completed',
@@ -21,6 +22,7 @@ const EVENT_NAMES = new Set([
   'ad_result',
 ]);
 
+const RETURN_AGE_BUCKETS = new Set(['new', 'under-24h', '1-2d', '3-7d', '8-30d', '30d-plus', 'unknown']);
 const SAFE_ID = /^[A-Za-z0-9._:-]+$/;
 const SAFE_SESSION_ID = /^[A-Za-z0-9._-]+$/;
 
@@ -125,6 +127,8 @@ function validatePayload(name, payload) {
         && typeof payload.returning === 'boolean'
         && validText(payload.platform, 1, 32)
         && validText(payload.viewportMode, 1, 32);
+    case 'session_age':
+      return onlyKeys(payload, ['bucket']) && RETURN_AGE_BUCKETS.has(payload.bucket);
     case 'run_started':
       return onlyKeys(payload, ['mode']) && (payload.mode === 'standard' || payload.mode === 'daily');
     case 'tutorial_opened':
