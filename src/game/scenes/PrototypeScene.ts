@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { PROTOTYPE_FUSION_RECIPES } from '../data/fusionRecipes';
+import { PROTOTYPE_FUSION_RECIPES, SECOND_STAGE_FUSION_RECIPE_IDS } from '../data/fusionRecipes';
 import { PROTOTYPE_HEROES, PROTOTYPE_HERO_MAP } from '../data/heroes';
 import { PROTOTYPE_ITEM_MAP, PROTOTYPE_ITEMS, PROTOTYPE_SHOP_ITEMS } from '../data/items';
 import { PROTOTYPE_PERKS, PROTOTYPE_PERK_MAP } from '../data/perks';
@@ -23,6 +23,7 @@ import { CollectionOverlay } from '../ui/CollectionOverlay';
 import { CombatPanel } from '../ui/CombatPanel';
 import { FusionPanel } from '../ui/FusionPanel';
 import { HeroChoiceOverlay } from '../ui/HeroChoiceOverlay';
+import { MetaProgressOverlay } from '../ui/MetaProgressOverlay';
 import { PerkChoiceOverlay } from '../ui/PerkChoiceOverlay';
 import { RunEventOverlay } from '../ui/RunEventOverlay';
 import { RunProgressPanel } from '../ui/RunProgressPanel';
@@ -87,6 +88,17 @@ export class PrototypeScene extends Phaser.Scene {
       () => ({
         discoveredItemIds: save.discoveredItemIds,
         discoveredRecipeIds: save.discoveredRecipeIds,
+      }),
+    );
+    const metaOverlay = new MetaProgressOverlay(
+      this,
+      PROTOTYPE_ITEMS.map((item) => item.id),
+      PROTOTYPE_FUSION_RECIPES.map((recipe) => recipe.id),
+      SECOND_STAGE_FUSION_RECIPE_IDS,
+      () => ({
+        discoveredItemIds: save.discoveredItemIds,
+        discoveredRecipeIds: save.discoveredRecipeIds,
+        bestCorruptedLoop: save.bestCorruptedLoop,
       }),
     );
 
@@ -240,20 +252,21 @@ export class PrototypeScene extends Phaser.Scene {
           || activeRun.pendingEventId !== null
           || eventOverlay.isVisible()
           || collectionOverlay.isVisible()
+          || metaOverlay.isVisible()
           || combatPanel.isRunning()) return false;
         const current = getRunEncounter(activeRun.progress, activeRun.runSeed);
         if (!current || current.encounterId !== encounter.encounterId) return false;
         return combatPanel.startEncounter(encounter.encounterId, encounter.enemy, encounter.rewardCoins);
       },
       onEnterCorruptedLoop: () => {
-        if (activeRun.heroId === null || combatPanel.isRunning() || collectionOverlay.isVisible()
+        if (activeRun.heroId === null || combatPanel.isRunning() || collectionOverlay.isVisible() || metaOverlay.isVisible()
           || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return;
         activeRun = { ...activeRun, progress: enterCorruptedLoop(activeRun.progress) };
         persistRun();
         runPanel.refresh(`LOOP ${activeRun.progress.loopNumber} started. Mutations now stack.`);
       },
       onCashOut: () => {
-        if (activeRun.heroId === null || combatPanel.isRunning() || collectionOverlay.isVisible()
+        if (activeRun.heroId === null || combatPanel.isRunning() || collectionOverlay.isVisible() || metaOverlay.isVisible()
           || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return;
         activeRun = { ...activeRun, progress: cashOutRun(activeRun.progress) };
         persistRun();
@@ -266,11 +279,11 @@ export class PrototypeScene extends Phaser.Scene {
       isUnlocked: () => {
         const campaignUnlocked = activeRun.progress.mode !== 'campaign' || activeRun.progress.campaignEncounterIndex >= 3;
         return activeRun.heroId !== null && campaignUnlocked && !combatPanel.isRunning()
-          && !collectionOverlay.isVisible()
+          && !collectionOverlay.isVisible() && !metaOverlay.isVisible()
           && activeRun.pendingPerkOfferIds.length === 0 && activeRun.pendingEventId === null;
       },
       onFuse: (recipe: FusionRecipe) => {
-        if (activeRun.heroId === null || combatPanel.isRunning() || collectionOverlay.isVisible()
+        if (activeRun.heroId === null || combatPanel.isRunning() || collectionOverlay.isVisible() || metaOverlay.isVisible()
           || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return false;
         const snapshot = board.getSnapshot();
         const inventory: InventoryState = {
@@ -304,9 +317,14 @@ export class PrototypeScene extends Phaser.Scene {
     persistRun();
     this.createNewRunButton();
     this.createCollectionButton(() => {
-      if (activeRun.heroId === null || combatPanel.isRunning() || eventOverlay.isVisible()
+      if (activeRun.heroId === null || combatPanel.isRunning() || eventOverlay.isVisible() || metaOverlay.isVisible()
         || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return;
       collectionOverlay.show();
+    });
+    this.createMetaButton(() => {
+      if (activeRun.heroId === null || combatPanel.isRunning() || eventOverlay.isVisible() || collectionOverlay.isVisible()
+        || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return;
+      metaOverlay.show();
     });
     if (activeRun.heroId === null) {
       heroOverlay.show();
@@ -347,6 +365,22 @@ export class PrototypeScene extends Phaser.Scene {
     }).setOrigin(0.5);
     button.on('pointerover', () => button.setFillStyle(0x493258));
     button.on('pointerout', () => button.setFillStyle(0x33243f));
+    button.on('pointerdown', () => { button.setScale(0.97); label.setScale(0.97); });
+    button.on('pointerup', () => {
+      button.setScale(1); label.setScale(1); onOpen();
+    });
+  }
+
+  private createMetaButton(onOpen: () => void): void {
+    const x = 1348; const y = 145;
+    const button = this.add.rectangle(x, y, 284, 30, 0x2a2233, 1)
+      .setStrokeStyle(2, 0x8b6aa2)
+      .setInteractive({ useHandCursor: true });
+    const label = this.add.text(x, y, 'TROPHY SHELF  ✦  ARCHIVE RANKS', {
+      fontSize: '10px', color: '#e7c8f5', fontStyle: 'bold',
+    }).setOrigin(0.5);
+    button.on('pointerover', () => button.setFillStyle(0x3b2e48));
+    button.on('pointerout', () => button.setFillStyle(0x2a2233));
     button.on('pointerdown', () => { button.setScale(0.97); label.setScale(0.97); });
     button.on('pointerup', () => {
       button.setScale(1); label.setScale(1); onOpen();
