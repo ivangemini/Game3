@@ -83,8 +83,16 @@ export const BALANCE_CHECKPOINTS: readonly BalanceCheckpoint[] = [
     encounterIndex: 11, unlockedPocketCount: 3, typicalItemCount: 7, typicalPerkCount: 3, fusionChance: 0.36,
   },
   {
+    id: 'loop-2-boss-2', label: 'Loop 2 Boss 2 / Copycat Auditor', cycle: 'loop', loopNumber: 2,
+    encounterIndex: 5, unlockedPocketCount: 3, typicalItemCount: 8, typicalPerkCount: 5, fusionChance: 0.5,
+  },
+  {
+    id: 'loop-2-boss-3', label: 'Loop 2 Boss 3 / Border Shark', cycle: 'loop', loopNumber: 2,
+    encounterIndex: 8, unlockedPocketCount: 3, typicalItemCount: 8, typicalPerkCount: 6, fusionChance: 0.54,
+  },
+  {
     id: 'loop-2-boss-4', label: 'Loop 2 Final Boss', cycle: 'loop', loopNumber: 2,
-    encounterIndex: 11, unlockedPocketCount: 3, typicalItemCount: 8, typicalPerkCount: 4, fusionChance: 0.5,
+    encounterIndex: 11, unlockedPocketCount: 3, typicalItemCount: 8, typicalPerkCount: 7, fusionChance: 0.58,
   },
 ];
 

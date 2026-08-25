@@ -1,4 +1,9 @@
-import type { ClutterCrushPresentationEvent, TimeTaxPresentationEvent } from '../domain/bossCombat';
+import type {
+  ClutterCrushPresentationEvent,
+  DuplicateDebtPresentationEvent,
+  EdgeRentPresentationEvent,
+  TimeTaxPresentationEvent,
+} from '../domain/bossCombat';
 import type { CombatPresentationEvent } from '../domain/combat';
 
 export type AudioCuePriority = 1 | 2 | 3 | 4;
@@ -10,6 +15,8 @@ export type AudioCueId =
   | 'boss.jam.telegraph' | 'boss.jam.impact' | 'boss.slime.telegraph' | 'boss.slime.impact'
   | 'boss.magnet.telegraph' | 'boss.magnet.impact' | 'boss.eclipse.telegraph' | 'boss.eclipse.impact'
   | 'boss.time-tax.telegraph' | 'boss.time-tax.impact' | 'boss.clutter.telegraph' | 'boss.clutter.impact'
+  | 'boss.duplicate-debt.telegraph' | 'boss.duplicate-debt.impact'
+  | 'boss.edge-rent.telegraph' | 'boss.edge-rent.impact'
   | 'combat.victory' | 'combat.defeat';
 
 export interface AudioCue {
@@ -61,6 +68,19 @@ export function audioCueForClutterCrushEvent(event: ClutterCrushPresentationEven
   return event.kind === 'boss-clutter-telegraph'
     ? cue('boss.clutter.telegraph', event.atMs, 3, 'boss', 320)
     : cue('boss.clutter.impact', event.atMs, 4, 'boss', 280);
+}
+
+export function audioCueForDuplicateDebtEvent(event: DuplicateDebtPresentationEvent): AudioCue {
+  const sourceId = event.definitionId ?? undefined;
+  return event.kind === 'boss-duplicate-telegraph'
+    ? cue('boss.duplicate-debt.telegraph', event.atMs, 3, 'boss', 320, sourceId)
+    : cue('boss.duplicate-debt.impact', event.atMs, 4, 'boss', 280, sourceId);
+}
+
+export function audioCueForEdgeRentEvent(event: EdgeRentPresentationEvent): AudioCue {
+  return event.kind === 'boss-edge-telegraph'
+    ? cue('boss.edge-rent.telegraph', event.atMs, 3, 'boss', 340)
+    : cue('boss.edge-rent.impact', event.atMs, 4, 'boss', 300);
 }
 
 function cue(id: AudioCueId, atMs: number, priority: AudioCuePriority, group: AudioCueGroup, cooldownMs: number, sourceId?: string): AudioCue {

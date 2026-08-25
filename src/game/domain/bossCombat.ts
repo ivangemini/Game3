@@ -1,3 +1,4 @@
+import { BACKPACK_HEIGHT, BACKPACK_WIDTH } from './backpackLayout';
 import {
   advanceCombat,
   type CombatAdvanceResult,
@@ -17,6 +18,25 @@ export interface ClutterCrushDefinition {
   readonly intervalMs: number;
   readonly telegraphMs: number;
   readonly damagePerLooseItem: number;
+}
+
+export interface DuplicateDebtDefinition {
+  readonly intervalMs: number;
+  readonly telegraphMs: number;
+  readonly damagePerExtraCopy: number;
+}
+
+export interface EdgeRentDefinition {
+  readonly intervalMs: number;
+  readonly telegraphMs: number;
+  readonly damagePerEdgeItem: number;
+}
+
+export interface DuplicateDebtTarget {
+  readonly definitionId: string;
+  readonly itemInstanceIds: readonly string[];
+  readonly copyCount: number;
+  readonly extraCopyCount: number;
 }
 
 export type TimeTaxPresentationEvent =
@@ -55,10 +75,54 @@ export type ClutterCrushPresentationEvent =
       readonly healthDamage: number;
     };
 
+export type DuplicateDebtPresentationEvent =
+  | {
+      readonly kind: 'boss-duplicate-telegraph';
+      readonly atMs: number;
+      readonly definitionId: string | null;
+      readonly itemInstanceIds: readonly string[];
+      readonly impactAtMs: number;
+      readonly copyCount: number;
+      readonly extraCopyCount: number;
+    }
+  | {
+      readonly kind: 'boss-duplicate-impact';
+      readonly atMs: number;
+      readonly definitionId: string | null;
+      readonly itemInstanceIds: readonly string[];
+      readonly copyCount: number;
+      readonly extraCopyCount: number;
+      readonly damagePerExtraCopy: number;
+      readonly totalDamage: number;
+      readonly absorbedByShield: number;
+      readonly healthDamage: number;
+    };
+
+export type EdgeRentPresentationEvent =
+  | {
+      readonly kind: 'boss-edge-telegraph';
+      readonly atMs: number;
+      readonly itemInstanceIds: readonly string[];
+      readonly impactAtMs: number;
+      readonly affectedItemCount: number;
+    }
+  | {
+      readonly kind: 'boss-edge-impact';
+      readonly atMs: number;
+      readonly itemInstanceIds: readonly string[];
+      readonly affectedItemCount: number;
+      readonly damagePerEdgeItem: number;
+      readonly totalDamage: number;
+      readonly absorbedByShield: number;
+      readonly healthDamage: number;
+    };
+
 export type BossCombatPresentationEvent =
   | CombatPresentationEvent
   | TimeTaxPresentationEvent
-  | ClutterCrushPresentationEvent;
+  | ClutterCrushPresentationEvent
+  | DuplicateDebtPresentationEvent
+  | EdgeRentPresentationEvent;
 
 export interface BossCombatAdvanceResult extends Omit<CombatAdvanceResult, 'events'> {
   readonly events: readonly BossCombatPresentationEvent[];
@@ -76,35 +140,63 @@ const CLOSET_MONSTER_BASE_RULE: ClutterCrushDefinition = {
   damagePerLooseItem: 3,
 };
 
+const COPYCAT_AUDITOR_BASE_RULE: DuplicateDebtDefinition = {
+  intervalMs: 5600,
+  telegraphMs: 1100,
+  damagePerExtraCopy: 4,
+};
+
+const BORDER_SHARK_BASE_RULE: EdgeRentDefinition = {
+  intervalMs: 6500,
+  telegraphMs: 1300,
+  damagePerEdgeItem: 2,
+};
+
 export function timeTaxDefinitionForEnemyId(enemyId: string): TimeTaxDefinition | null {
   if (enemyId === 'deadline-snail') return DEADLINE_SNAIL_BASE_RULE;
-  const loopMatch = /^loop-(\d+)-deadline-snail$/.exec(enemyId);
-  if (!loopMatch) return null;
-  const loopNumber = Math.max(2, Number.parseInt(loopMatch[1] ?? '2', 10));
-  const depth = loopNumber - 1;
-  const speedScale = 1 + depth * 0.08;
+  const loopNumber = loopNumberForEnemyId(enemyId, 'deadline-snail');
+  if (loopNumber === null) return null;
   return {
     ...DEADLINE_SNAIL_BASE_RULE,
-    intervalMs: Math.max(3200, Math.round(DEADLINE_SNAIL_BASE_RULE.intervalMs / speedScale)),
+    intervalMs: scaledLoopInterval(DEADLINE_SNAIL_BASE_RULE.intervalMs, loopNumber, 3200),
   };
 }
 
 export function clutterCrushDefinitionForEnemyId(enemyId: string): ClutterCrushDefinition | null {
   if (enemyId === 'closet-monster') return CLOSET_MONSTER_BASE_RULE;
-  const loopMatch = /^loop-(\d+)-closet-monster$/.exec(enemyId);
-  if (!loopMatch) return null;
-  const loopNumber = Math.max(2, Number.parseInt(loopMatch[1] ?? '2', 10));
-  const depth = loopNumber - 1;
-  const speedScale = 1 + depth * 0.08;
+  const loopNumber = loopNumberForEnemyId(enemyId, 'closet-monster');
+  if (loopNumber === null) return null;
   return {
     ...CLOSET_MONSTER_BASE_RULE,
-    intervalMs: Math.max(4000, Math.round(CLOSET_MONSTER_BASE_RULE.intervalMs / speedScale)),
+    intervalMs: scaledLoopInterval(CLOSET_MONSTER_BASE_RULE.intervalMs, loopNumber, 4000),
+  };
+}
+
+export function duplicateDebtDefinitionForEnemyId(enemyId: string): DuplicateDebtDefinition | null {
+  if (enemyId === 'copycat-auditor') return COPYCAT_AUDITOR_BASE_RULE;
+  const loopNumber = loopNumberForEnemyId(enemyId, 'copycat-auditor');
+  if (loopNumber === null) return null;
+  return {
+    ...COPYCAT_AUDITOR_BASE_RULE,
+    intervalMs: scaledLoopInterval(COPYCAT_AUDITOR_BASE_RULE.intervalMs, loopNumber, 3600),
+  };
+}
+
+export function edgeRentDefinitionForEnemyId(enemyId: string): EdgeRentDefinition | null {
+  if (enemyId === 'border-shark') return BORDER_SHARK_BASE_RULE;
+  const loopNumber = loopNumberForEnemyId(enemyId, 'border-shark');
+  if (loopNumber === null) return null;
+  return {
+    ...BORDER_SHARK_BASE_RULE,
+    intervalMs: scaledLoopInterval(BORDER_SHARK_BASE_RULE.intervalMs, loopNumber, 4200),
   };
 }
 
 export function isBossRuleEnemy(enemyId: string): boolean {
   return timeTaxDefinitionForEnemyId(enemyId) !== null
-    || clutterCrushDefinitionForEnemyId(enemyId) !== null;
+    || clutterCrushDefinitionForEnemyId(enemyId) !== null
+    || duplicateDebtDefinitionForEnemyId(enemyId) !== null
+    || edgeRentDefinitionForEnemyId(enemyId) !== null;
 }
 
 export function fastestTimeTaxTarget(items: ReadonlyMap<string, CombatBuildItem>): CombatBuildItem | null {
@@ -143,6 +235,39 @@ export function looseClutterItems(items: ReadonlyMap<string, CombatBuildItem>): 
     }));
 }
 
+export function duplicateDebtTarget(items: ReadonlyMap<string, CombatBuildItem>): DuplicateDebtTarget | null {
+  const groups = new Map<string, string[]>();
+  for (const item of [...items.values()].sort((a, b) => a.instanceId.localeCompare(b.instanceId))) {
+    const group = groups.get(item.definitionId) ?? [];
+    group.push(item.instanceId);
+    groups.set(item.definitionId, group);
+  }
+
+  const ranked = [...groups.entries()]
+    .filter(([, instanceIds]) => instanceIds.length > 1)
+    .sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
+  const target = ranked[0];
+  if (!target) return null;
+  const [definitionId, itemInstanceIds] = target;
+  return {
+    definitionId,
+    itemInstanceIds: [...itemInstanceIds].sort((a, b) => a.localeCompare(b)),
+    copyCount: itemInstanceIds.length,
+    extraCopyCount: Math.max(0, itemInstanceIds.length - 1),
+  };
+}
+
+export function edgeRentItems(items: ReadonlyMap<string, CombatBuildItem>): readonly CombatBuildItem[] {
+  return [...items.values()]
+    .sort((a, b) => a.instanceId.localeCompare(b.instanceId))
+    .filter((item) => item.occupiedCells.some((cell) =>
+      cell.x === 0
+      || cell.y === 0
+      || cell.x === BACKPACK_WIDTH - 1
+      || cell.y === BACKPACK_HEIGHT - 1,
+    ));
+}
+
 export function isTimeTaxPresentationEvent(
   event: BossCombatPresentationEvent,
 ): event is TimeTaxPresentationEvent {
@@ -155,6 +280,18 @@ export function isClutterCrushPresentationEvent(
   return event.kind === 'boss-clutter-telegraph' || event.kind === 'boss-clutter-impact';
 }
 
+export function isDuplicateDebtPresentationEvent(
+  event: BossCombatPresentationEvent,
+): event is DuplicateDebtPresentationEvent {
+  return event.kind === 'boss-duplicate-telegraph' || event.kind === 'boss-duplicate-impact';
+}
+
+export function isEdgeRentPresentationEvent(
+  event: BossCombatPresentationEvent,
+): event is EdgeRentPresentationEvent {
+  return event.kind === 'boss-edge-telegraph' || event.kind === 'boss-edge-impact';
+}
+
 export function advanceCombatWithBossRules(
   inputState: CombatState,
   setup: CombatSetup,
@@ -164,6 +301,10 @@ export function advanceCombatWithBossRules(
   if (timeTax) return advanceWithTimeTax(inputState, setup, deltaMs, timeTax);
   const clutterCrush = clutterCrushDefinitionForEnemyId(setup.enemy.id);
   if (clutterCrush) return advanceWithClutterCrush(inputState, setup, deltaMs, clutterCrush);
+  const duplicateDebt = duplicateDebtDefinitionForEnemyId(setup.enemy.id);
+  if (duplicateDebt) return advanceWithDuplicateDebt(inputState, setup, deltaMs, duplicateDebt);
+  const edgeRent = edgeRentDefinitionForEnemyId(setup.enemy.id);
+  if (edgeRent) return advanceWithEdgeRent(inputState, setup, deltaMs, edgeRent);
   return advanceCombat(inputState, setup, deltaMs);
 }
 
@@ -174,7 +315,7 @@ function advanceWithTimeTax(
   rule: TimeTaxDefinition,
 ): BossCombatAdvanceResult {
   if (inputState.outcome !== 'active' || deltaMs === 0) return advanceCombat(inputState, setup, deltaMs);
-  if (!Number.isFinite(deltaMs) || deltaMs < 0) throw new RangeError('deltaMs must be non-negative');
+  validateDeltaMs(deltaMs);
 
   const targetTime = inputState.timeMs + deltaMs;
   const boundaries = bossBoundaries(inputState.timeMs, targetTime, rule.intervalMs, rule.telegraphMs);
@@ -233,7 +374,7 @@ function advanceWithClutterCrush(
   rule: ClutterCrushDefinition,
 ): BossCombatAdvanceResult {
   if (inputState.outcome !== 'active' || deltaMs === 0) return advanceCombat(inputState, setup, deltaMs);
-  if (!Number.isFinite(deltaMs) || deltaMs < 0) throw new RangeError('deltaMs must be non-negative');
+  validateDeltaMs(deltaMs);
 
   const targetTime = inputState.timeMs + deltaMs;
   const boundaries = bossBoundaries(inputState.timeMs, targetTime, rule.intervalMs, rule.telegraphMs);
@@ -260,16 +401,8 @@ function advanceWithClutterCrush(
     }
 
     const incoming = looseIds.length * rule.damagePerLooseItem;
-    const absorbedByShield = Math.min(state.playerShield, incoming);
-    const healthDamage = incoming - absorbedByShield;
-    const playerShield = state.playerShield - absorbedByShield;
-    const playerHp = Math.max(0, state.playerHp - healthDamage);
-    state = {
-      ...state,
-      playerShield,
-      playerHp,
-      ...(playerHp <= 0 ? { outcome: 'defeat' as const } : {}),
-    };
+    const damage = applyShieldedBossDamage(state, incoming);
+    state = damage.state;
     events.push({
       kind: 'boss-clutter-impact',
       atMs: boundary.atMs,
@@ -277,16 +410,156 @@ function advanceWithClutterCrush(
       affectedItemCount: looseIds.length,
       damagePerLooseItem: rule.damagePerLooseItem,
       totalDamage: incoming,
-      absorbedByShield,
-      healthDamage,
+      absorbedByShield: damage.absorbedByShield,
+      healthDamage: damage.healthDamage,
     });
-    if (playerHp <= 0) {
+    if (state.outcome === 'defeat') {
       events.push({ kind: 'outcome', atMs: boundary.atMs, outcome: 'defeat' });
       break;
     }
   }
 
   return finishAdvance(state, setup, targetTime, events);
+}
+
+function advanceWithDuplicateDebt(
+  inputState: CombatState,
+  setup: CombatSetup,
+  deltaMs: number,
+  rule: DuplicateDebtDefinition,
+): BossCombatAdvanceResult {
+  if (inputState.outcome !== 'active' || deltaMs === 0) return advanceCombat(inputState, setup, deltaMs);
+  validateDeltaMs(deltaMs);
+
+  const targetTime = inputState.timeMs + deltaMs;
+  const boundaries = bossBoundaries(inputState.timeMs, targetTime, rule.intervalMs, rule.telegraphMs);
+  const events: BossCombatPresentationEvent[] = [];
+  let state = inputState;
+
+  for (const boundary of boundaries) {
+    if (state.outcome !== 'active') break;
+    const advanced = advanceToBoundary(state, setup, boundary.atMs);
+    state = advanced.state;
+    events.push(...advanced.events);
+    if (state.outcome !== 'active' || state.timeMs !== boundary.atMs) break;
+
+    const target = duplicateDebtTarget(setup.items);
+    const definitionId = target?.definitionId ?? null;
+    const itemInstanceIds = target?.itemInstanceIds ?? [];
+    const copyCount = target?.copyCount ?? 0;
+    const extraCopyCount = target?.extraCopyCount ?? 0;
+
+    if (boundary.kind === 'telegraph') {
+      events.push({
+        kind: 'boss-duplicate-telegraph',
+        atMs: boundary.atMs,
+        definitionId,
+        itemInstanceIds,
+        impactAtMs: boundary.impactAtMs,
+        copyCount,
+        extraCopyCount,
+      });
+      continue;
+    }
+
+    const incoming = extraCopyCount * rule.damagePerExtraCopy;
+    const damage = applyShieldedBossDamage(state, incoming);
+    state = damage.state;
+    events.push({
+      kind: 'boss-duplicate-impact',
+      atMs: boundary.atMs,
+      definitionId,
+      itemInstanceIds,
+      copyCount,
+      extraCopyCount,
+      damagePerExtraCopy: rule.damagePerExtraCopy,
+      totalDamage: incoming,
+      absorbedByShield: damage.absorbedByShield,
+      healthDamage: damage.healthDamage,
+    });
+    if (state.outcome === 'defeat') {
+      events.push({ kind: 'outcome', atMs: boundary.atMs, outcome: 'defeat' });
+      break;
+    }
+  }
+
+  return finishAdvance(state, setup, targetTime, events);
+}
+
+function advanceWithEdgeRent(
+  inputState: CombatState,
+  setup: CombatSetup,
+  deltaMs: number,
+  rule: EdgeRentDefinition,
+): BossCombatAdvanceResult {
+  if (inputState.outcome !== 'active' || deltaMs === 0) return advanceCombat(inputState, setup, deltaMs);
+  validateDeltaMs(deltaMs);
+
+  const targetTime = inputState.timeMs + deltaMs;
+  const boundaries = bossBoundaries(inputState.timeMs, targetTime, rule.intervalMs, rule.telegraphMs);
+  const events: BossCombatPresentationEvent[] = [];
+  let state = inputState;
+
+  for (const boundary of boundaries) {
+    if (state.outcome !== 'active') break;
+    const advanced = advanceToBoundary(state, setup, boundary.atMs);
+    state = advanced.state;
+    events.push(...advanced.events);
+    if (state.outcome !== 'active' || state.timeMs !== boundary.atMs) break;
+
+    const edgeIds = edgeRentItems(setup.items).map((item) => item.instanceId);
+    if (boundary.kind === 'telegraph') {
+      events.push({
+        kind: 'boss-edge-telegraph',
+        atMs: boundary.atMs,
+        itemInstanceIds: edgeIds,
+        impactAtMs: boundary.impactAtMs,
+        affectedItemCount: edgeIds.length,
+      });
+      continue;
+    }
+
+    const incoming = edgeIds.length * rule.damagePerEdgeItem;
+    const damage = applyShieldedBossDamage(state, incoming);
+    state = damage.state;
+    events.push({
+      kind: 'boss-edge-impact',
+      atMs: boundary.atMs,
+      itemInstanceIds: edgeIds,
+      affectedItemCount: edgeIds.length,
+      damagePerEdgeItem: rule.damagePerEdgeItem,
+      totalDamage: incoming,
+      absorbedByShield: damage.absorbedByShield,
+      healthDamage: damage.healthDamage,
+    });
+    if (state.outcome === 'defeat') {
+      events.push({ kind: 'outcome', atMs: boundary.atMs, outcome: 'defeat' });
+      break;
+    }
+  }
+
+  return finishAdvance(state, setup, targetTime, events);
+}
+
+function applyShieldedBossDamage(
+  state: CombatState,
+  incoming: number,
+): { readonly state: CombatState; readonly absorbedByShield: number; readonly healthDamage: number } {
+  const normalizedIncoming = Math.max(0, Math.round(incoming));
+  const absorbedByShield = Math.min(state.playerShield, normalizedIncoming);
+  const healthDamage = normalizedIncoming - absorbedByShield;
+  const playerShield = state.playerShield - absorbedByShield;
+  const playerHp = Math.max(0, state.playerHp - healthDamage);
+  return {
+    state: {
+      ...state,
+      playerShield,
+      playerHp,
+      ...(playerHp <= 0 ? { outcome: 'defeat' as const } : {}),
+    },
+    absorbedByShield,
+    healthDamage,
+  };
 }
 
 function advanceToBoundary(state: CombatState, setup: CombatSetup, boundaryAtMs: number): CombatAdvanceResult {
@@ -305,6 +578,22 @@ function finishAdvance(
     return { state: advanced.state, events: [...events, ...advanced.events] };
   }
   return { state, events };
+}
+
+function validateDeltaMs(deltaMs: number): void {
+  if (!Number.isFinite(deltaMs) || deltaMs < 0) throw new RangeError('deltaMs must be non-negative');
+}
+
+function loopNumberForEnemyId(enemyId: string, baseId: string): number | null {
+  const match = new RegExp(`^loop-(\\d+)-${baseId}$`).exec(enemyId);
+  if (!match) return null;
+  return Math.max(2, Number.parseInt(match[1] ?? '2', 10));
+}
+
+function scaledLoopInterval(baseIntervalMs: number, loopNumber: number, floorMs: number): number {
+  const depth = Math.max(1, loopNumber - 1);
+  const speedScale = 1 + depth * 0.08;
+  return Math.max(floorMs, Math.round(baseIntervalMs / speedScale));
 }
 
 interface BossBoundary {

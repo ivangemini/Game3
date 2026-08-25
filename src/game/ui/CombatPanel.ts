@@ -2,6 +2,8 @@ import * as Phaser from 'phaser';
 import {
   audioCueForClutterCrushEvent,
   audioCueForCombatEvent,
+  audioCueForDuplicateDebtEvent,
+  audioCueForEdgeRentEvent,
   audioCueForTimeTaxEvent,
   combatStartAudioCue,
   type AudioCue,
@@ -12,8 +14,12 @@ import { PROTOTYPE_PERK_MAP } from '../data/perks';
 import {
   advanceCombatWithBossRules,
   clutterCrushDefinitionForEnemyId,
+  duplicateDebtDefinitionForEnemyId,
+  edgeRentDefinitionForEnemyId,
   isBossRuleEnemy,
   isClutterCrushPresentationEvent,
+  isDuplicateDebtPresentationEvent,
+  isEdgeRentPresentationEvent,
   isTimeTaxPresentationEvent,
   timeTaxDefinitionForEnemyId,
   type BossCombatPresentationEvent,
@@ -244,6 +250,44 @@ export class CombatPanel {
       return;
     }
 
+    if (isDuplicateDebtPresentationEvent(event)) {
+      this.onAudioCue?.(audioCueForDuplicateDebtEvent(event));
+      if (event.kind === 'boss-duplicate-telegraph') {
+        const label = event.definitionId
+          ? `${event.definitionId.toUpperCase()} ×${event.copyCount} • ${event.extraCopyCount} EXTRA`
+          : 'NO DUPLICATES';
+        this.bossStatusText.setText(`DUPLICATE DEBT → ${label} • IMPACT IN ${((event.impactAtMs - event.atMs) / 1000).toFixed(1)}s`);
+        this.showBackpackItems(event.itemInstanceIds, 0xffb86b, Math.max(120, event.impactAtMs - event.atMs), true);
+        this.pushLog(`${this.seconds(event.atMs)} • auditor finds ${event.extraCopyCount} duplicate debt`);
+        return;
+      }
+      this.bossStatusText.setText(`DUPLICATE DEBT → ${event.totalDamage} fine • ${event.absorbedByShield} shielded`);
+      this.showBackpackItems(event.itemInstanceIds, 0xff7a59, 520, false);
+      this.pushLog(`${this.seconds(event.atMs)} • duplicate fine ${event.healthDamage} HP`);
+      if (!this.reducedMotion && event.healthDamage > 0) {
+        this.scene.tweens.add({ targets: [this.playerText, this.barGraphics], alpha: 0.45, yoyo: true, duration: 95 });
+      }
+      return;
+    }
+
+    if (isEdgeRentPresentationEvent(event)) {
+      this.onAudioCue?.(audioCueForEdgeRentEvent(event));
+      if (event.kind === 'boss-edge-telegraph') {
+        const label = event.affectedItemCount > 0 ? `${event.affectedItemCount} BORDER ITEMS` : 'CENTERED BUILD';
+        this.bossStatusText.setText(`EDGE RENT → ${label} • IMPACT IN ${((event.impactAtMs - event.atMs) / 1000).toFixed(1)}s`);
+        this.showBackpackItems(event.itemInstanceIds, 0x6be7ff, Math.max(120, event.impactAtMs - event.atMs), true);
+        this.pushLog(`${this.seconds(event.atMs)} • shark rents ${event.affectedItemCount} edge items`);
+        return;
+      }
+      this.bossStatusText.setText(`EDGE RENT → ${event.totalDamage} rent • ${event.absorbedByShield} shielded`);
+      this.showBackpackItems(event.itemInstanceIds, 0x36b8ff, 540, false);
+      this.pushLog(`${this.seconds(event.atMs)} • border rent ${event.healthDamage} HP`);
+      if (!this.reducedMotion && event.healthDamage > 0) {
+        this.scene.tweens.add({ targets: [this.playerText, this.barGraphics], alpha: 0.45, yoyo: true, duration: 95 });
+      }
+      return;
+    }
+
     this.onAudioCue?.(audioCueForCombatEvent(event));
     if (event.kind === 'item-triggered') { this.pushLog(`${this.seconds(event.atMs)} • ${event.itemInstanceId} triggered`); return; }
     if (event.kind === 'item-jammed') { this.pushLog(`${this.seconds(event.atMs)} • ${event.itemInstanceId} JAMMED — trigger lost`); return; }
@@ -398,6 +442,16 @@ export class CombatPanel {
       const nextImpact = (Math.floor(state.timeMs / clutter.intervalMs) + 1) * clutter.intervalMs;
       entries.push(`CRUSH ${Math.max(0, (nextImpact - state.timeMs) / 1000).toFixed(1)}s`);
     }
+    const duplicateDebt = duplicateDebtDefinitionForEnemyId(enemy.id);
+    if (duplicateDebt) {
+      const nextImpact = (Math.floor(state.timeMs / duplicateDebt.intervalMs) + 1) * duplicateDebt.intervalMs;
+      entries.push(`DEBT ${Math.max(0, (nextImpact - state.timeMs) / 1000).toFixed(1)}s`);
+    }
+    const edgeRent = edgeRentDefinitionForEnemyId(enemy.id);
+    if (edgeRent) {
+      const nextImpact = (Math.floor(state.timeMs / edgeRent.intervalMs) + 1) * edgeRent.intervalMs;
+      entries.push(`RENT ${Math.max(0, (nextImpact - state.timeMs) / 1000).toFixed(1)}s`);
+    }
     this.nextActionText.setText(entries.join(' • '));
   }
 
@@ -416,6 +470,8 @@ export class CombatPanel {
     if (enemy.tagInterference) systems.push('TAG ECLIPSE');
     if (timeTaxDefinitionForEnemyId(enemy.id)) systems.push('TIME TAX');
     if (clutterCrushDefinitionForEnemyId(enemy.id)) systems.push('CLUTTER CRUSH');
+    if (duplicateDebtDefinitionForEnemyId(enemy.id)) systems.push('DUPLICATE DEBT');
+    if (edgeRentDefinitionForEnemyId(enemy.id)) systems.push('EDGE RENT');
     return systems;
   }
   private punchEnemy(scale: number): void {

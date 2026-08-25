@@ -116,6 +116,7 @@ export function createLoopEncounter(
   const safeLoop = Math.max(2, Math.floor(loopNumber));
   const safeIndex = Math.max(0, Math.min(BASE_CAMPAIGN_ENCOUNTERS.length - 1, Math.floor(encounterIndex)));
   const template = BASE_CAMPAIGN_ENCOUNTERS[safeIndex] ?? BASE_CAMPAIGN_ENCOUNTERS[0]!;
+  const variant = loopVariantForTemplate(template, safeLoop);
   const depth = safeLoop - 1;
   const rewardMultiplier = loopRewardMultiplier(safeLoop);
   const world = worldForLoopEncounter(safeIndex);
@@ -127,24 +128,24 @@ export function createLoopEncounter(
 
   const base: BaseEncounterDefinition = {
     ...template,
-    encounterId: `loop-${safeLoop}-w${world}-s${slot}-${template.enemy.id}`,
+    encounterId: `loop-${safeLoop}-w${world}-s${slot}-${variant.enemy.id}`,
     world,
     slot,
-    title: `Corrupted ${template.title}`,
+    title: `Corrupted ${variant.title}`,
     subtitle: `LOOP ${safeLoop} • ${modifiers.length} simultaneous reality mutations.`,
     rewardCoins: Math.max(1, Math.round(template.rewardCoins * rewardMultiplier)),
     scoreValue: Math.max(1, Math.round(template.scoreValue * rewardMultiplier)),
     enemy: {
-      ...template.enemy,
-      id: `loop-${safeLoop}-${template.enemy.id}`,
-      name: `Corrupted ${template.enemy.name}`,
-      maxHp: Math.max(1, Math.round(template.enemy.maxHp * hpScale)),
-      attackDamage: Math.max(0, Math.round(template.enemy.attackDamage * damageScale)),
-      attackIntervalMs: Math.max(900, Math.round(template.enemy.attackIntervalMs / speedScale)),
-      ...(template.enemy.interference ? { interference: { ...template.enemy.interference, intervalMs: Math.max(2300, Math.round(template.enemy.interference.intervalMs / speedScale)) } } : {}),
-      ...(template.enemy.cellInterference ? { cellInterference: { ...template.enemy.cellInterference, intervalMs: Math.max(3200, Math.round(template.enemy.cellInterference.intervalMs / speedScale)) } } : {}),
-      ...(template.enemy.rowInterference ? { rowInterference: { ...template.enemy.rowInterference, intervalMs: Math.max(3900, Math.round(template.enemy.rowInterference.intervalMs / speedScale)) } } : {}),
-      ...(template.enemy.tagInterference ? { tagInterference: { ...template.enemy.tagInterference, intervalMs: Math.max(3400, Math.round(template.enemy.tagInterference.intervalMs / speedScale)) } } : {}),
+      ...variant.enemy,
+      id: `loop-${safeLoop}-${variant.enemy.id}`,
+      name: `Corrupted ${variant.enemy.name}`,
+      maxHp: Math.max(1, Math.round(variant.enemy.maxHp * hpScale)),
+      attackDamage: Math.max(0, Math.round(variant.enemy.attackDamage * damageScale)),
+      attackIntervalMs: Math.max(900, Math.round(variant.enemy.attackIntervalMs / speedScale)),
+      ...(variant.enemy.interference ? { interference: { ...variant.enemy.interference, intervalMs: Math.max(2300, Math.round(variant.enemy.interference.intervalMs / speedScale)) } } : {}),
+      ...(variant.enemy.cellInterference ? { cellInterference: { ...variant.enemy.cellInterference, intervalMs: Math.max(3200, Math.round(variant.enemy.cellInterference.intervalMs / speedScale)) } } : {}),
+      ...(variant.enemy.rowInterference ? { rowInterference: { ...variant.enemy.rowInterference, intervalMs: Math.max(3900, Math.round(variant.enemy.rowInterference.intervalMs / speedScale)) } } : {}),
+      ...(variant.enemy.tagInterference ? { tagInterference: { ...variant.enemy.tagInterference, intervalMs: Math.max(3400, Math.round(variant.enemy.tagInterference.intervalMs / speedScale)) } } : {}),
     },
   };
   return applyModifiers(base, modifiers);
@@ -156,6 +157,39 @@ export function campaignLabel(index: number): string {
 
 export function loopLabel(loopNumber: number, index: number): string {
   return `LOOP ${Math.max(2, Math.floor(loopNumber))} • WORLD ${worldForLoopEncounter(index)}/${CAMPAIGN_WORLDS} • ${slotForLoopEncounter(index)}/3`;
+}
+
+function loopVariantForTemplate(
+  template: BaseEncounterDefinition,
+  loopNumber: number,
+): { readonly title: string; readonly enemy: EnemyCombatDefinition } {
+  if (loopNumber % 2 === 0 && template.enemy.id === 'deadline-snail') {
+    return {
+      title: 'Copycat Auditor',
+      enemy: basicBossVariant(template.enemy, 'copycat-auditor', 'Copycat Auditor'),
+    };
+  }
+  if (loopNumber % 2 === 0 && template.enemy.id === 'closet-monster') {
+    return {
+      title: 'Border Shark',
+      enemy: basicBossVariant(template.enemy, 'border-shark', 'Border Shark'),
+    };
+  }
+  return { title: template.title, enemy: template.enemy };
+}
+
+function basicBossVariant(
+  source: EnemyCombatDefinition,
+  id: string,
+  name: string,
+): EnemyCombatDefinition {
+  return {
+    id,
+    name,
+    maxHp: source.maxHp,
+    attackIntervalMs: source.attackIntervalMs,
+    attackDamage: source.attackDamage,
+  };
 }
 
 function applyModifiers(base: BaseEncounterDefinition, modifiers: readonly RunWorldModifier[]): RunEncounterDefinition {
