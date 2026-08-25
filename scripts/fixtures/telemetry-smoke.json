@@ -8,6 +8,12 @@
       "timestampMs": 1000
     },
     {
+      "name": "session_age",
+      "payload": { "bucket": "new" },
+      "sessionId": "smoke-a",
+      "timestampMs": 1001
+    },
+    {
       "name": "hero_selected",
       "payload": { "heroId": "scrapster" },
       "sessionId": "smoke-a",
