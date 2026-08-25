@@ -20,6 +20,7 @@ jobs:
       - run: npm run build
       - run: npm run release:check
       - run: npm run release:archive
+      - run: npm run release:verify
       - name: Upload portal candidate
         if: github.event_name == 'push'
         uses: actions/upload-artifact@v4
