@@ -40,6 +40,36 @@ describe('save persistence', () => {
     expect(loadSave(storage)).toEqual(save);
   });
 
+  it('keeps the previous validated save as a recovery backup', () => {
+    const storage = new MemoryStorage();
+    const first: SaveV8 = { ...DEFAULT_SAVE, bestCorruptedLoop: 1 };
+    const second: SaveV8 = { ...DEFAULT_SAVE, bestCorruptedLoop: 2 };
+    writeSave(first, storage);
+    writeSave(second, storage);
+    expect(JSON.parse(storage.getItem('junkpack.save.backup') ?? 'null')).toEqual(first);
+    expect(loadSave(storage)).toEqual(second);
+  });
+
+  it('recovers a corrupted primary slot from the previous valid backup', () => {
+    const storage = new MemoryStorage();
+    const recoverable: SaveV8 = { ...DEFAULT_SAVE, discoveredItemIds: ['laser-cat'], bestCorruptedLoop: 2 };
+    const newer: SaveV8 = { ...DEFAULT_SAVE, discoveredItemIds: ['laser-cat', 'mutant-duck'], bestCorruptedLoop: 3 };
+    writeSave(recoverable, storage);
+    writeSave(newer, storage);
+    storage.setItem('junkpack.save', '{broken json');
+    expect(loadSave(storage)).toEqual(recoverable);
+    expect(JSON.parse(storage.getItem('junkpack.save') ?? 'null')).toEqual(recoverable);
+  });
+
+  it('does not overwrite a good backup with an already corrupt primary slot', () => {
+    const storage = new MemoryStorage();
+    const good: SaveV8 = { ...DEFAULT_SAVE, bestCorruptedLoop: 4 };
+    storage.setItem('junkpack.save.backup', JSON.stringify(good));
+    storage.setItem('junkpack.save', '{broken json');
+    writeSave({ ...DEFAULT_SAVE, bestCorruptedLoop: 5 }, storage);
+    expect(JSON.parse(storage.getItem('junkpack.save.backup') ?? 'null')).toEqual(good);
+  });
+
   it('migrates v1 meta saves into v8 without inventing a run', () => {
     const storage = new MemoryStorage();
     storage.setItem('junkpack.save', JSON.stringify({
@@ -168,7 +198,7 @@ describe('save persistence', () => {
     expect(migrated.activeRun?.heroId).toBeNull();
   });
 
-  it('falls back safely when persisted progression is malformed', () => {
+  it('falls back safely when persisted progression is malformed and no backup exists', () => {
     const storage = new MemoryStorage();
     storage.setItem('junkpack.save', JSON.stringify({
       ...DEFAULT_SAVE,
