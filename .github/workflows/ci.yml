@@ -46,7 +46,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: junkpack-portal-screenshots
-          path: release/screenshots/
+          path: portal-screenshot-*.png
           retention-days: 14
       - name: Upload Playwright report on failure
         if: failure()
