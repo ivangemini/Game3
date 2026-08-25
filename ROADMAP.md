@@ -92,6 +92,7 @@
 
 ## P6 — Presentation pass [IN PROGRESS]
 - [x] Responsive web-shell foundation (**safe-area insets, portrait orientation gate, compact-landscape viewport profile and resize/orientation sync**)
+- [x] Shared UI motion foundation (**120–180 ms overlay transitions, 3% press feedback, reduced-motion fallback, Archive/Trophy progress bars**)
 - [ ] final art pipeline + atlases
 - [ ] responsive game HUD reflow / small-text legibility on real mobile landscape
 - [ ] animation/VFX pass
