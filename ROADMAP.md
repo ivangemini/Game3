@@ -108,11 +108,12 @@
 - [x] Combat semantic feedback foundation (**30-object particle pool, item/status rings, hit bursts, boss-frame pulses, outcome flashes, restrained shake, reduced-motion fallback**)
 - [x] Non-combat run feedback foundation (**shop purchase/reward/reroll/error SFX hooks, fusion reveal, event-drop toast, pocket-unlock feedback**)
 - [x] Final animation/VFX implementation across backpack and rewards (**drag lift/drop/snap/invalid feedback, reward cards, coin staging, event drops, fusion anticipation/reveal/settle and directional synergy trails; runtime acceptance remains in P8**)
-- [x] Autoplay-safe WebAudio SFX mixer foundation (**semantic cue fan-out, deterministic synth patches, cooldowns, 10-voice priority budget, page visibility suspend/resume, persisted SFX volume**)
-- [x] Procedural adaptive music foundation (**deterministic menu/combat/boss patterns, persisted Music volume and semantic combat-mode switching**)
+- [x] Autoplay-safe WebAudio SFX mixer foundation (**semantic cue fan-out, deterministic tonal patches, cooldowns, 10-voice priority budget, page visibility suspend/resume, persisted SFX volume**)
+- [x] Procedural SFX texture pass (**one shared deterministic noise buffer, filtered transient sweeps for impacts/bosses/fusion/rewards and deterministic per-source offsets; no additional HTTP/audio-file payload**)
+- [x] Procedural adaptive music implementation (**16-step deterministic menu/combat/boss phrases, intensity-specific cadence/gain, sparse sub accents, combat/boss swing and persisted Music volume**)
 - [x] Priority-aware mix ducking (**boss telegraphs/player hits duck moderately; priority-4 boss impacts/outcomes duck strongly with deterministic attack/hold/release; user Music volume remains independent**)
-- [ ] Final audio/music asset pass (**authored samples/music and final mix tuning remain; portal/ad suspend/resume lifecycle is implemented**)
-- [x] First-run onboarding flow (**5-step hero → pack → synergy → fight → fusion tutorial, reduced-motion support and persistent Help entry point**)
+- [ ] Final authored audio/music + physical mix pass (**optional authored samples/stems, speaker/headphone loudness/EQ tuning and real portal-ad mix acceptance remain; procedural runtime is complete**)
+- [x] First-run onboarding flow (**hero choice + persistent Help entry point; full 5-step Field Manual is opt-in so first play reaches the run after one meaningful click**)
 - [x] Final onboarding presentation implementation (**Field Manual layout, five step-specific visual diagrams, progress rail, step accents, transitions and Reduced Motion path**)
 - [x] Branded runtime loading screen (**atlas progress, current-file status, asset-error fallback messaging and portal-ready signal gated until preload completes**)
 - [x] Portal thumbnail/store art pipeline (**editable original compositions + generated/validated 512×512 icon, 800×470 cover and 1560×520 hero PNG; measured outputs 28.2/32.8/48.3 KiB**)
@@ -131,18 +132,19 @@
 - [x] Seeded pacing target simulation with percentile bands and target hit rates
 - [x] Seeded combat/build simulation reports across weak/typical/strong power bands and boss checkpoints, including boss-rule wrappers
 - [x] Campaign balance sampling excludes second-stage fusion results; loop checkpoints may sample them
-- [x] Static asset + bundle budget gates (**94.7 KiB generated runtime art payload, 10.39 MiB estimated atlas texture memory, 3 atlas groups; JS gzip budgets remain CI-enforced**)
-- [x] Portal adapter contract tests (**platform detection, Yandex/CrazyGames initialization and rewarded lifecycle semantics, natural-break policy**)
+- [x] Static asset + bundle budget gates (**runtime art + atlas texture + JS gzip ceilings remain CI-enforced**)
+- [x] Portal adapter contract tests (**platform detection, strict host/referrer parsing, Yandex/CrazyGames initialization/rewarded lifecycle semantics, natural-break policy**)
 - [x] Automated mobile/browser matrix (**Playwright production smoke across Chromium desktop/compact/mobile/portrait, WebKit mobile landscape and Firefox desktop; viewport/overflow/save recovery/console/network/atlas-first checks**)
 - [x] Automated runtime performance regression smoke (**CI-safe RAF responsiveness ceiling, bounded render backing store, compact atlas-first network waterfall; intended to catch catastrophic regressions rather than claim device FPS**)
 - [x] Browser-level portal bootstrap compliance harness (**forced Yandex/CrazyGames adapters with injected SDK doubles validate initialization/loading-ready lifecycle without external SDK fetches**)
+- [x] Portal archive/compliance gates (**root index, path charset/whitespace, Yandex/Crazy size/file-count ceilings, 20 MiB mobile product target, context-menu suppression and one-click first launch are enforced by release/browser tests**)
 - [x] Save migrations/recovery UX (**v1–v7 → v8 migrations, previous-valid backup slot, corrupt-primary recovery, safe reset fallback and visible web-shell recovery/write warnings**)
 - [ ] real-device performance profiling (**frame time, peak WebGL memory, portal network waterfall, low-memory lifecycle; automated regression baseline + capture protocol exist**)
 - [ ] portal-specific compliance checks (**repository/unit/browser harness implemented; real Yandex debug panel / CrazyGames SDK tester acceptance still required**)
 
 ## P9 — Soft launch & iteration
-- [x] Repository-built portal candidate pipeline (**production build → readiness checks → ZIP + store art → v2 SHA-256 manifest → integrity verification → CI artifact; actual portal submission remains below**)
+- [x] Repository-built portal candidate pipeline (**production build → readiness checks → ZIP + store art → v2 per-file SHA-256 manifest → integrity verification → CI artifact; strict `release:soft-launch` additionally requires HTTPS analytics endpoint**)
 - [ ] release candidate to first portals
-- [ ] measure tutorial completion/hero choice/first boss/base-campaign duration/event choice/fusion usage/loop-entry/loop-completion/return behavior
+- [ ] measure tutorial/help usage/hero choice/first boss/base-campaign duration/event choice/fusion usage/loop-entry/loop-completion/return behavior
 - [ ] tune difficulty/economy/ad pacing
 - [ ] add content only after core retention signals justify it
