@@ -1,5 +1,5 @@
 import type { ItemBonuses } from './synergies';
-import type { Cell } from './types';
+import type { Cell, ItemTag } from './types';
 
 export interface CombatItemProfile {
   readonly definitionId: string;
@@ -23,6 +23,7 @@ export interface CombatBuildItem {
   readonly scrapArmor: number;
   readonly occupiedCells: readonly Cell[];
   readonly magnetic: boolean;
+  readonly tags: readonly ItemTag[];
 }
 
 export interface EnemyInterferenceDefinition {
@@ -46,6 +47,13 @@ export interface EnemyRowInterferenceDefinition {
   readonly durationMs: number;
 }
 
+export interface EnemyTagInterferenceDefinition {
+  readonly kind: 'tag-eclipse';
+  readonly intervalMs: number;
+  readonly telegraphMs: number;
+  readonly durationMs: number;
+}
+
 export interface EnemyCombatDefinition {
   readonly id: string;
   readonly name: string;
@@ -55,6 +63,7 @@ export interface EnemyCombatDefinition {
   readonly interference?: EnemyInterferenceDefinition;
   readonly cellInterference?: EnemyCellInterferenceDefinition;
   readonly rowInterference?: EnemyRowInterferenceDefinition;
+  readonly tagInterference?: EnemyTagInterferenceDefinition;
 }
 
 export type CombatOutcome = 'active' | 'victory' | 'defeat';
@@ -68,13 +77,16 @@ export type CombatQueuedEffect =
   | { readonly kind: 'boss-cell-telegraph'; readonly dueAtMs: number; readonly sequence: number; readonly cell: Cell }
   | { readonly kind: 'boss-cell-interference'; readonly dueAtMs: number; readonly sequence: number; readonly cell: Cell }
   | { readonly kind: 'boss-row-telegraph'; readonly dueAtMs: number; readonly sequence: number; readonly row: number }
-  | { readonly kind: 'boss-row-interference'; readonly dueAtMs: number; readonly sequence: number; readonly row: number };
+  | { readonly kind: 'boss-row-interference'; readonly dueAtMs: number; readonly sequence: number; readonly row: number }
+  | { readonly kind: 'boss-tag-telegraph'; readonly dueAtMs: number; readonly sequence: number; readonly tag: ItemTag }
+  | { readonly kind: 'boss-tag-interference'; readonly dueAtMs: number; readonly sequence: number; readonly tag: ItemTag };
 
 export type CombatPresentationEvent =
   | { readonly kind: 'item-triggered'; readonly atMs: number; readonly itemInstanceId: string }
   | { readonly kind: 'item-jammed'; readonly atMs: number; readonly itemInstanceId: string }
   | { readonly kind: 'item-slimed'; readonly atMs: number; readonly itemInstanceId: string; readonly cell: Cell }
   | { readonly kind: 'item-scrambled'; readonly atMs: number; readonly itemInstanceId: string; readonly row: number }
+  | { readonly kind: 'item-eclipsed'; readonly atMs: number; readonly itemInstanceId: string; readonly tag: ItemTag }
   | { readonly kind: 'enemy-damaged'; readonly atMs: number; readonly itemInstanceId: string; readonly amount: number; readonly source: 'item' | 'poison' }
   | { readonly kind: 'poison-applied'; readonly atMs: number; readonly itemInstanceId: string; readonly amount: number }
   | { readonly kind: 'shield-gained'; readonly atMs: number; readonly itemInstanceId: string; readonly amount: number }
@@ -85,6 +97,8 @@ export type CombatPresentationEvent =
   | { readonly kind: 'boss-cell-slimed'; readonly atMs: number; readonly cell: Cell; readonly durationMs: number }
   | { readonly kind: 'boss-row-telegraph'; readonly atMs: number; readonly row: number; readonly impactAtMs: number; readonly magneticPriority: boolean }
   | { readonly kind: 'boss-row-scrambled'; readonly atMs: number; readonly row: number; readonly durationMs: number }
+  | { readonly kind: 'boss-tag-telegraph'; readonly atMs: number; readonly tag: ItemTag; readonly impactAtMs: number; readonly affectedItemCount: number }
+  | { readonly kind: 'boss-tag-eclipsed'; readonly atMs: number; readonly tag: ItemTag; readonly durationMs: number; readonly affectedItemCount: number }
   | { readonly kind: 'outcome'; readonly atMs: number; readonly outcome: Exclude<CombatOutcome, 'active'> };
 
 export interface CombatSetup {
@@ -105,6 +119,7 @@ export interface CombatState {
   readonly jammedUntilByItemId: Readonly<Record<string, number>>;
   readonly slimedUntilByCellKey: Readonly<Record<string, number>>;
   readonly scrambledUntilByRow: Readonly<Record<string, number>>;
+  readonly eclipsedUntilByTag: Readonly<Record<string, number>>;
 }
 
 export interface CombatAdvanceResult {
@@ -114,8 +129,13 @@ export interface CombatAdvanceResult {
 
 const POISON_TICK_INTERVAL_MS = 1000;
 const MIN_TRIGGER_INTERVAL_MS = 250;
+const ECLIPSE_TAG_PRIORITY: readonly ItemTag[] = [
+  'weapon', 'device', 'poison', 'pet', 'laser', 'chaos', 'metal', 'food', 'antenna', 'slime',
+  'battery', 'cat', 'duck', 'magnet',
+];
 const cellKey = (cell: Cell): string => `${cell.x}:${cell.y}`;
 const rowKey = (row: number): string => String(Math.max(0, Math.floor(row)));
+const tagKey = (tag: ItemTag): string => tag;
 
 function normalizeNonNegativeInt(value: number): number {
   if (!Number.isFinite(value)) return 0;
@@ -128,6 +148,7 @@ export function createCombatBuildItem(
   bonuses: ItemBonuses | undefined,
   occupiedCells: readonly Cell[] = [],
   magnetic = false,
+  tags: readonly ItemTag[] = [],
 ): CombatBuildItem {
   const triggerSpeedPct = Math.max(0, bonuses?.triggerSpeedPct ?? 0);
   const triggerIntervalMs = Math.max(MIN_TRIGGER_INTERVAL_MS, Math.round(profile.triggerIntervalMs / (1 + triggerSpeedPct / 100)));
@@ -144,6 +165,7 @@ export function createCombatBuildItem(
     scrapArmor: normalizeNonNegativeInt(bonuses?.scrapArmor ?? 0),
     occupiedCells: occupiedCells.map((cell) => ({ ...cell })),
     magnetic,
+    tags: [...new Set(tags)].sort((a, b) => eclipsePriority(a) - eclipsePriority(b) || a.localeCompare(b)),
   };
 }
 
@@ -153,6 +175,7 @@ export function createCombatState(setup: CombatSetup): CombatState {
   if (setup.enemy.interference) validateTimedInterference(setup.enemy.interference);
   if (setup.enemy.cellInterference) validateTimedInterference(setup.enemy.cellInterference);
   if (setup.enemy.rowInterference) validateTimedInterference(setup.enemy.rowInterference);
+  if (setup.enemy.tagInterference) validateTimedInterference(setup.enemy.tagInterference);
 
   let nextSequence = 0;
   const queue: CombatQueuedEffect[] = [];
@@ -170,6 +193,7 @@ export function createCombatState(setup: CombatSetup): CombatState {
   if (setup.enemy.interference) nextSequence = scheduleChannelInterference(queue, setup, setup.enemy.interference.intervalMs, nextSequence);
   if (setup.enemy.cellInterference) nextSequence = scheduleCellInterference(queue, setup, setup.enemy.cellInterference.intervalMs, nextSequence);
   if (setup.enemy.rowInterference) nextSequence = scheduleRowInterference(queue, setup, setup.enemy.rowInterference.intervalMs, nextSequence);
+  if (setup.enemy.tagInterference) nextSequence = scheduleTagInterference(queue, setup, setup.enemy.tagInterference.intervalMs, nextSequence);
 
   return {
     timeMs: 0,
@@ -183,6 +207,7 @@ export function createCombatState(setup: CombatSetup): CombatState {
     jammedUntilByItemId: {},
     slimedUntilByCellKey: {},
     scrambledUntilByRow: {},
+    eclipsedUntilByTag: {},
   };
 }
 
@@ -202,6 +227,7 @@ export function advanceCombat(inputState: CombatState, setup: CombatSetup, delta
   const jammedUntilByItemId: Record<string, number> = { ...inputState.jammedUntilByItemId };
   const slimedUntilByCellKey: Record<string, number> = { ...inputState.slimedUntilByCellKey };
   const scrambledUntilByRow: Record<string, number> = { ...inputState.scrambledUntilByRow };
+  const eclipsedUntilByTag: Record<string, number> = { ...inputState.eclipsedUntilByTag };
   const events: CombatPresentationEvent[] = [];
 
   while (queue.length > 0 && outcome === 'active') {
@@ -217,12 +243,15 @@ export function advanceCombat(inputState: CombatState, setup: CombatSetup, delta
       const jammedUntil = jammedUntilByItemId[item.instanceId] ?? 0;
       const slimedCell = item.occupiedCells.find((cell) => (slimedUntilByCellKey[cellKey(cell)] ?? 0) > atMs);
       const scrambledCell = item.occupiedCells.find((cell) => (scrambledUntilByRow[rowKey(cell.y)] ?? 0) > atMs);
+      const eclipsedTag = item.tags.find((tag) => (eclipsedUntilByTag[tagKey(tag)] ?? 0) > atMs);
       if (jammedUntil > atMs) {
         events.push({ kind: 'item-jammed', atMs, itemInstanceId: item.instanceId });
       } else if (slimedCell) {
         events.push({ kind: 'item-slimed', atMs, itemInstanceId: item.instanceId, cell: slimedCell });
       } else if (scrambledCell) {
         events.push({ kind: 'item-scrambled', atMs, itemInstanceId: item.instanceId, row: scrambledCell.y });
+      } else if (eclipsedTag) {
+        events.push({ kind: 'item-eclipsed', atMs, itemInstanceId: item.instanceId, tag: eclipsedTag });
       } else {
         events.push({ kind: 'item-triggered', atMs, itemInstanceId: item.instanceId });
         const totalDamage = item.damage + item.chaosPower * 2 + item.bonusLaserShots * item.extraLaserDamage;
@@ -321,6 +350,35 @@ export function advanceCombat(inputState: CombatState, setup: CombatSetup, delta
       continue;
     }
 
+    if (nextEffect.kind === 'boss-tag-telegraph') {
+      const interference = setup.enemy.tagInterference;
+      if (interference) {
+        events.push({
+          kind: 'boss-tag-telegraph',
+          atMs,
+          tag: nextEffect.tag,
+          impactAtMs: atMs + interference.telegraphMs,
+          affectedItemCount: countItemsWithTag(setup.items, nextEffect.tag),
+        });
+      }
+      continue;
+    }
+
+    if (nextEffect.kind === 'boss-tag-interference') {
+      const interference = setup.enemy.tagInterference;
+      if (!interference) continue;
+      eclipsedUntilByTag[tagKey(nextEffect.tag)] = atMs + interference.durationMs;
+      events.push({
+        kind: 'boss-tag-eclipsed',
+        atMs,
+        tag: nextEffect.tag,
+        durationMs: interference.durationMs,
+        affectedItemCount: countItemsWithTag(setup.items, nextEffect.tag),
+      });
+      nextSequence = scheduleTagInterference(queue, setup, atMs + interference.intervalMs, nextSequence);
+      continue;
+    }
+
     if (enemyPoison > 0) {
       const poisonDamage = enemyPoison;
       enemyHp = Math.max(0, enemyHp - poisonDamage);
@@ -340,6 +398,7 @@ export function advanceCombat(inputState: CombatState, setup: CombatSetup, delta
   for (const [id, until] of Object.entries(jammedUntilByItemId)) if (until <= resolvedTimeMs) delete jammedUntilByItemId[id];
   for (const [key, until] of Object.entries(slimedUntilByCellKey)) if (until <= resolvedTimeMs) delete slimedUntilByCellKey[key];
   for (const [key, until] of Object.entries(scrambledUntilByRow)) if (until <= resolvedTimeMs) delete scrambledUntilByRow[key];
+  for (const [key, until] of Object.entries(eclipsedUntilByTag)) if (until <= resolvedTimeMs) delete eclipsedUntilByTag[key];
 
   return {
     state: {
@@ -354,6 +413,7 @@ export function advanceCombat(inputState: CombatState, setup: CombatSetup, delta
       jammedUntilByItemId,
       slimedUntilByCellKey,
       scrambledUntilByRow,
+      eclipsedUntilByTag,
     },
     events,
   };
@@ -404,6 +464,36 @@ function scheduleRowInterference(queue: CombatQueuedEffect[], setup: CombatSetup
   return nextSequence + 2;
 }
 
+function scheduleTagInterference(queue: CombatQueuedEffect[], setup: CombatSetup, impactAtMs: number, nextSequence: number): number {
+  const interference = setup.enemy.tagInterference;
+  if (!interference) return nextSequence;
+  const tag = dominantEclipseTag(setup.items);
+  if (!tag) return nextSequence;
+  queue.push({ kind: 'boss-tag-telegraph', dueAtMs: Math.max(0, impactAtMs - interference.telegraphMs), sequence: nextSequence, tag });
+  queue.push({ kind: 'boss-tag-interference', dueAtMs: impactAtMs, sequence: nextSequence + 1, tag });
+  return nextSequence + 2;
+}
+
+function dominantEclipseTag(items: ReadonlyMap<string, CombatBuildItem>): ItemTag | null {
+  const counts = new Map<ItemTag, number>();
+  for (const item of [...items.values()].sort((a, b) => a.instanceId.localeCompare(b.instanceId))) {
+    for (const tag of new Set(item.tags)) counts.set(tag, (counts.get(tag) ?? 0) + 1);
+  }
+  const ranked = [...counts.entries()]
+    .filter(([, count]) => count > 0)
+    .sort((a, b) => b[1] - a[1] || eclipsePriority(a[0]) - eclipsePriority(b[0]) || a[0].localeCompare(b[0]));
+  return ranked[0]?.[0] ?? null;
+}
+
+function eclipsePriority(tag: ItemTag): number {
+  const index = ECLIPSE_TAG_PRIORITY.indexOf(tag);
+  return index >= 0 ? index : ECLIPSE_TAG_PRIORITY.length;
+}
+
+function countItemsWithTag(items: ReadonlyMap<string, CombatBuildItem>, tag: ItemTag): number {
+  return [...items.values()].filter((item) => item.tags.includes(tag)).length;
+}
+
 function interferenceTargets(items: ReadonlyMap<string, CombatBuildItem>): string[] {
   const meaningful = [...items.values()]
     .filter((item) => item.damage > 0 || item.poisonOnHit > 0 || item.shieldOnTrigger > 0 || item.bonusLaserShots > 0 || item.chaosPower > 0)
@@ -435,9 +525,7 @@ function uniqueRows(items: readonly CombatBuildItem[]): number[] {
 }
 
 function rowContainsMagneticItem(items: ReadonlyMap<string, CombatBuildItem>, row: number): boolean {
-  return [...items.values()].some(
-    (item) => item.magnetic && item.occupiedCells.some((cell) => cell.y === row),
-  );
+  return [...items.values()].some((item) => item.magnetic && item.occupiedCells.some((cell) => cell.y === row));
 }
 
 function sortQueue(queue: readonly CombatQueuedEffect[]): CombatQueuedEffect[] { return [...queue].sort(compareEffects); }

@@ -1,4 +1,4 @@
-# Architecture v0.7
+# Architecture v0.8
 
 ## Stack
 - Phaser 4.2.1
@@ -49,23 +49,27 @@ Heroes are light per-run rule-benders, not classes. `src/game/domain/heroes.ts` 
 3. apply selected run perks;
 4. create immutable combat items.
 
-This keeps hero effects deterministic and testable without Phaser. The Scavenger's starting-coin bonus is an economy effect applied once when the hero is chosen; combat-oriented heroes never mutate the backpack or combat state directly.
+Combat items also retain a stable copy of their gameplay tags. This lets boss rules such as Baby Moon's Tag Eclipse reason about build composition without importing declarative item data back into the combat domain.
+
+The Scavenger's starting-coin bonus is an economy effect applied once when the hero is chosen; combat-oriented heroes never mutate the backpack or combat state directly.
 
 ## Combat
 `src/game/domain/combat.ts` owns the combat clock and ordered effect queue. The queue resolves by `dueAtMs`, then stable `sequence`, so equal-time effects have a documented deterministic order.
 
 The render loop passes explicit elapsed milliseconds to `advanceCombat`; render FPS never determines trigger count, damage or outcome. A single large advance and many smaller advances over the same simulated duration must converge to the same state.
 
-Backpack effects are converted into combat stats before simulation. Current examples include trigger speed, poison, laser shots, chaos damage and scrap armor. Boss interference can jam item triggers, slime occupied cells or temporarily scramble crossing rows. Phaser consumes presentation events for animation/audio/UI but cannot modify the combat result through presentation timing.
+Backpack effects are converted into combat stats before simulation. Current examples include trigger speed, poison, laser shots, chaos damage and scrap armor. Boss interference can jam item triggers, slime occupied cells, scramble crossing rows or temporarily eclipse a dominant item tag. Phaser consumes presentation events for animation/audio/UI but cannot modify the combat result through presentation timing.
 
-`CombatPanel` also maps each presentation event to a semantic `AudioCue` and exposes it through an optional callback. This is one-way presentation output: muting, throttling or failing to play audio cannot influence combat state.
+TV Tyrant owns item/cell/row interference primitives. Baby Moon owns `tagInterference`: the domain counts tags in the immutable combat snapshot, deterministically selects the most represented family, telegraphs it and suppresses matching item triggers for the eclipse window. Corrupted-loop scaling changes cadence without mixing boss-family rules.
+
+`CombatPanel` maps each presentation event to a semantic `AudioCue` and exposes it through an optional callback. This is one-way presentation output: muting, throttling or failing to play audio cannot influence combat state.
 
 ## Time, pacing and balance QA
 Combat simulation receives explicit elapsed time. Human decision pacing is modeled separately in `src/game/simulation/pacing.ts` so design-duration assumptions never leak into combat rules.
 
 The seeded pacing model composes the real 12-encounter campaign/loop structure with target human decision-time ranges and produces first-boss, campaign, Loop 2 and Loop 3 percentile checkpoints. It is a regression guard, not a substitute for real play telemetry.
 
-The seeded combat/build model generates legal backpacks against the current pocket constraints, samples perk/fusion exposure by power band, feeds those builds through the real synergy/perk/combat pipeline and reports outcomes plus item correlations. Synthetic build reports diagnose balance; soft-launch telemetry remains the authority for player behavior.
+The seeded combat/build model generates legal backpacks against the current pocket constraints, samples perk/fusion exposure by power band, feeds those builds through the real synergy/perk/hero/combat pipeline and reports outcomes plus item correlations. Synthetic build reports diagnose balance; soft-launch telemetry remains the authority for player behavior.
 
 ## Saves
 Current schema: **v8**.
@@ -83,4 +87,4 @@ Capabilities may include init, player identity when available, locale, storage/c
 Use generated/source art → reviewed final exports → atlases where beneficial. Keep source assets separate from runtime-optimized assets. Never bind gameplay rules to filename semantics.
 
 ## Quality gates
-Typecheck + unit tests + production build on every main-branch push. Deterministic pacing/balance simulations run in tests as regression guards. Browser smoke verification is required once a connected/runnable browser environment is available.
+Typecheck + unit tests + production build on every main-branch push. Deterministic pacing/balance/boss simulations run in tests as regression guards. Browser smoke verification is required once a connected/runnable browser environment is available.

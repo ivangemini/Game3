@@ -45,6 +45,9 @@ const slimeCell = (intervalMs: number, telegraphMs: number, durationMs: number) 
 const magnetRow = (intervalMs: number, telegraphMs: number, durationMs: number) => ({
   kind: 'magnet-row' as const, intervalMs, telegraphMs, durationMs,
 });
+const tagEclipse = (intervalMs: number, telegraphMs: number, durationMs: number) => ({
+  kind: 'tag-eclipse' as const, intervalMs, telegraphMs, durationMs,
+});
 
 export const WORLD_MODIFIERS: readonly RunWorldModifier[] = [
   { id: 'greedy-signal', name: 'Greedy Signal', description: 'Enemies +20% HP • rewards +30%.', enemyHpPct: 20, enemyDamagePct: 0, enemyAttackSpeedPct: 0, rewardPct: 30 },
@@ -69,7 +72,7 @@ const BASE_CAMPAIGN_ENCOUNTERS: readonly BaseEncounterDefinition[] = [
   { encounterId: 'w3-final-broadcast', world: 3, slot: 3, kind: 'boss', title: 'TV Tyrant: Final Broadcast', subtitle: 'Third boss • all three signal attacks are active.', rewardCoins: 42, scoreValue: 650, enemy: { id: 'tv-tyrant-final', name: 'TV Tyrant // Final Broadcast', maxHp: 332, attackIntervalMs: 1900, attackDamage: 16, interference: channelJam(3300, 700, 2700), cellInterference: slimeCell(4400, 850, 3000), rowInterference: magnetRow(6100, 1050, 2700) } },
   { encounterId: 'w4-grinning-fridge', world: 4, slot: 1, kind: 'fight', title: 'Grinning Fridge', subtitle: 'World 4 • full backpack, no excuses.', rewardCoins: 24, scoreValue: 360, enemy: { id: 'grinning-fridge', name: 'Grinning Fridge', maxHp: 310, attackIntervalMs: 1725, attackDamage: 16 } },
   { encounterId: 'w4-duck-cult', world: 4, slot: 2, kind: 'elite', title: 'Rubber Duck Choir', subtitle: 'Elite • a final pressure test before reality breaks.', rewardCoins: 31, scoreValue: 470, enemy: { id: 'rubber-duck-choir', name: 'Rubber Duck Choir', maxHp: 382, attackIntervalMs: 1550, attackDamage: 18 } },
-  { encounterId: 'w4-baby-moon', world: 4, slot: 3, kind: 'boss', title: 'Baby Moon', subtitle: 'Final campaign boss • reality is already starting to corrupt.', rewardCoins: 55, scoreValue: 850, enemy: { id: 'baby-moon', name: 'Baby Moon', maxHp: 475, attackIntervalMs: 1825, attackDamage: 20, interference: channelJam(3000, 650, 2900), cellInterference: slimeCell(3900, 800, 3200) } },
+  { encounterId: 'w4-baby-moon', world: 4, slot: 3, kind: 'boss', title: 'Baby Moon', subtitle: 'Final campaign boss • Tag Eclipse attacks your most stacked build family.', rewardCoins: 55, scoreValue: 850, enemy: { id: 'baby-moon', name: 'Baby Moon', maxHp: 475, attackIntervalMs: 1825, attackDamage: 20, tagInterference: tagEclipse(5200, 1200, 3000) } },
 ];
 
 export function modifierForWorld(runSeed: string | number, world: number): RunWorldModifier {
@@ -160,6 +163,12 @@ export function createLoopEncounter(
         rowInterference: {
           ...template.enemy.rowInterference,
           intervalMs: Math.max(3900, Math.round(template.enemy.rowInterference.intervalMs / speedScale)),
+        },
+      } : {}),
+      ...(template.enemy.tagInterference ? {
+        tagInterference: {
+          ...template.enemy.tagInterference,
+          intervalMs: Math.max(3400, Math.round(template.enemy.tagInterference.intervalMs / speedScale)),
         },
       } : {}),
     },

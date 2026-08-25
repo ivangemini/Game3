@@ -1,4 +1,4 @@
-# Junkpack: Boss Rush — Game Design v0.7
+# Junkpack: Boss Rush — Game Design v0.8
 
 ## Elevator pitch
 A compact roguelite inventory autobattler where the player picks a light rule-bending junk pilot, packs absurd junk into a constrained backpack, discovers synergies and fusion recipes, then fights surreal bosses that directly interfere with the backpack's rules.
@@ -119,7 +119,11 @@ A hero must never make non-matching items unusable. The player should still be a
 ### Bosses
 Launch target: 6 major boss families plus modifiers. Each boss changes backpack valuation/positioning and has clear telegraphs and counterplay.
 
-The first implemented boss family is TV Tyrant. Its prototype attacks the build with Channel Jam, Slime Signal and Magnet Scramble; later variants stack the interference more aggressively. World 4 introduces Baby Moon as a separate visual/fantasy target while the prototype still reuses proven interference primitives until its own boss rules are implemented.
+Two boss families are now mechanically distinct:
+- **TV Tyrant** attacks spatial reliability with Channel Jam, Slime Signal and Magnet Scramble. Later TV variants layer those three readable interference primitives more aggressively.
+- **Baby Moon** attacks build concentration with **Tag Eclipse**. It counts tags in the immutable combat-start build, telegraphs the most represented family and temporarily suppresses triggers from every matching item. Other tag families remain active, so diversified builds retain a live secondary engine.
+
+Tag Eclipse uses stable tie-breaking and shows the affected item count before impact. Its counterplay is to diversify damage/poison/shield families or pivot tags through shop/fusion choices before World 4. Corrupted Baby Moon shortens Eclipse cadence rather than inheriting TV Tyrant attacks, preserving boss-family identity.
 
 ### Perks
 Launch target: 20–25 run perks. The prototype currently has **10** perks covering devices, pets, weapons, chaos, metal, antenna, slime, food and global trigger speed. Perks should modify build identity more often than provide generic flat percentages, but lightweight tag bonuses remain useful while the content pool is still being validated.
@@ -168,4 +172,4 @@ For long sessions, ad pacing must respect the run rhythm. Boss clear / world tra
 Real-time PvP, guilds/chat, open world, large story campaign, server-heavy economy, battle pass, dozens of heroes, hundreds of handmade stages.
 
 ## Success criterion for MVP
-A player can choose a hero without being class-locked, complete materially different runs using the same compact content pool, understand why a build works, experience bosses changing backpack rules, reach the first boss quickly, keep modifying the build after 15–20 minutes through events/fusions/pocket growth, and have a credible reason to risk the same successful build for a 30–60+ minute session through Corrupted Loops.
+A player can choose a hero without being class-locked, complete materially different runs using the same compact content pool, understand why a build works, experience mechanically distinct bosses changing backpack rules, reach the first boss quickly, keep modifying the build after 15–20 minutes through events/fusions/pocket growth, and have a credible reason to risk the same successful build for a 30–60+ minute session through Corrupted Loops.

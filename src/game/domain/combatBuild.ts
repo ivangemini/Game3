@@ -49,6 +49,7 @@ export function createCombatBuild(
         bonuses,
         cellsForPlacement(definition, placement.origin, placement.rotation),
         definition.tags.includes('metal'),
+        definition.tags,
       ),
     );
   }

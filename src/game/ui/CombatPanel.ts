@@ -15,7 +15,7 @@ import {
 import { createCombatBuild } from '../domain/combatBuild';
 import type { HeroDefinition } from '../domain/heroes';
 import type { InventoryState } from '../domain/inventory';
-import type { Cell, PlacedItem } from '../domain/types';
+import type { Cell, ItemTag, PlacedItem } from '../domain/types';
 
 export interface CombatVictoryReward {
   readonly encounterId: string;
@@ -204,6 +204,7 @@ export class CombatPanel {
     if (event.kind === 'item-jammed') { this.pushLog(`${this.seconds(event.atMs)} • ${event.itemInstanceId} JAMMED — trigger lost`); return; }
     if (event.kind === 'item-slimed') { this.pushLog(`${this.seconds(event.atMs)} • ${event.itemInstanceId} blocked by SLIME [${event.cell.x},${event.cell.y}]`); return; }
     if (event.kind === 'item-scrambled') { this.pushLog(`${this.seconds(event.atMs)} • ${event.itemInstanceId} MAGNET-SCRAMBLED on row ${event.row + 1}`); return; }
+    if (event.kind === 'item-eclipsed') { this.pushLog(`${this.seconds(event.atMs)} • ${event.itemInstanceId} ECLIPSED [${event.tag.toUpperCase()}]`); return; }
     if (event.kind === 'enemy-damaged') { this.pushLog(`${this.seconds(event.atMs)} • ${event.source === 'poison' ? 'POISON' : event.itemInstanceId} dealt ${event.amount}`); this.punchEnemy(0.96); return; }
     if (event.kind === 'poison-applied') { this.pushLog(`${this.seconds(event.atMs)} • +${event.amount} poison`); return; }
     if (event.kind === 'shield-gained') { this.pushLog(`${this.seconds(event.atMs)} • +${event.amount} shield`); return; }
@@ -241,6 +242,16 @@ export class CombatPanel {
       this.bossStatusText.setText(`MAGNET SCRAMBLE → ROW ${event.row + 1} unstable ${(event.durationMs / 1000).toFixed(1)}s`);
       this.showBackpackRow(event.row, 0x5de7ff, event.durationMs, false);
       this.pushLog(`${this.seconds(event.atMs)} • row ${event.row + 1} SCRAMBLED`); return;
+    }
+    if (event.kind === 'boss-tag-telegraph') {
+      this.bossStatusText.setText(`TAG ECLIPSE → ${event.tag.toUpperCase()} ×${event.affectedItemCount} • IMPACT IN ${((event.impactAtMs - event.atMs) / 1000).toFixed(1)}s`);
+      this.showBackpackTag(event.tag, 0xf5d5ff, Math.max(120, event.impactAtMs - event.atMs), true);
+      this.pushLog(`${this.seconds(event.atMs)} • moon targets ${event.tag.toUpperCase()} ×${event.affectedItemCount}`); return;
+    }
+    if (event.kind === 'boss-tag-eclipsed') {
+      this.bossStatusText.setText(`TAG ECLIPSE → ${event.tag.toUpperCase()} silenced ${(event.durationMs / 1000).toFixed(1)}s • ${event.affectedItemCount} items`);
+      this.showBackpackTag(event.tag, 0xc46cff, event.durationMs, false);
+      this.pushLog(`${this.seconds(event.atMs)} • ${event.tag.toUpperCase()} FAMILY ECLIPSED`); return;
     }
 
     const won = event.outcome === 'victory';
@@ -290,6 +301,15 @@ export class CombatPanel {
     this.scene.time.delayedCall(durationMs, () => overlay.destroy());
   }
 
+  private showBackpackTag(tag: ItemTag, color: number, durationMs: number, telegraph: boolean): void {
+    const items = this.setup?.items;
+    if (!items) return;
+    for (const item of items.values()) {
+      if (!item.tags.includes(tag)) continue;
+      for (const cell of item.occupiedCells) this.showBackpackCell(cell, color, durationMs, telegraph);
+    }
+  }
+
   private renderState(): void {
     const state = this.state;
     const enemy = this.setup?.enemy ?? SCRAP_DUMMY;
@@ -306,7 +326,11 @@ export class CombatPanel {
     if (!state || state.outcome !== 'active') { this.nextActionText.setText(''); return; }
     const entries: string[] = [];
     const labels: Array<[string, string]> = [
-      ['enemy-attack', 'HIT'], ['boss-interference', 'JAM'], ['boss-cell-interference', 'SLIME'], ['boss-row-interference', 'MAGNET'],
+      ['enemy-attack', 'HIT'],
+      ['boss-interference', 'JAM'],
+      ['boss-cell-interference', 'SLIME'],
+      ['boss-row-interference', 'MAGNET'],
+      ['boss-tag-interference', 'ECLIPSE'],
     ];
     for (const [kind, label] of labels) {
       const effect = state.queue.find((candidate) => candidate.kind === kind);
@@ -319,12 +343,15 @@ export class CombatPanel {
     this.barGraphics.fillStyle(0x35242b, 1); this.barGraphics.fillRoundedRect(x, y, width, 14, 6);
     this.barGraphics.fillStyle(color, 1); this.barGraphics.fillRoundedRect(x, y, width * Math.max(0, Math.min(1, ratio)), 14, 6);
   }
-  private isBoss(enemy: EnemyCombatDefinition): boolean { return !!enemy.interference || !!enemy.cellInterference || !!enemy.rowInterference; }
+  private isBoss(enemy: EnemyCombatDefinition): boolean {
+    return !!enemy.interference || !!enemy.cellInterference || !!enemy.rowInterference || !!enemy.tagInterference;
+  }
   private bossSystems(enemy: EnemyCombatDefinition): string[] {
     const systems: string[] = [];
     if (enemy.interference) systems.push('CHANNEL JAM');
     if (enemy.cellInterference) systems.push('SLIME SIGNAL');
     if (enemy.rowInterference) systems.push('MAGNET SCRAMBLE');
+    if (enemy.tagInterference) systems.push('TAG ECLIPSE');
     return systems;
   }
   private punchEnemy(scale: number): void {

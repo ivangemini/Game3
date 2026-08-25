@@ -9,6 +9,7 @@ export type AudioCueId =
   | 'item.jammed'
   | 'item.slimed'
   | 'item.scrambled'
+  | 'item.eclipsed'
   | 'enemy.hit'
   | 'enemy.poison-tick'
   | 'poison.apply'
@@ -20,6 +21,8 @@ export type AudioCueId =
   | 'boss.slime.impact'
   | 'boss.magnet.telegraph'
   | 'boss.magnet.impact'
+  | 'boss.eclipse.telegraph'
+  | 'boss.eclipse.impact'
   | 'combat.victory'
   | 'combat.defeat';
 
@@ -53,6 +56,8 @@ export function audioCueForCombatEvent(event: CombatPresentationEvent): AudioCue
       return cue('item.slimed', event.atMs, 2, 'status', 140, event.itemInstanceId);
     case 'item-scrambled':
       return cue('item.scrambled', event.atMs, 2, 'status', 140, event.itemInstanceId);
+    case 'item-eclipsed':
+      return cue('item.eclipsed', event.atMs, 2, 'status', 150, event.itemInstanceId);
     case 'enemy-damaged':
       return event.source === 'poison'
         ? cue('enemy.poison-tick', event.atMs, 1, 'impact', 180, event.itemInstanceId)
@@ -75,6 +80,10 @@ export function audioCueForCombatEvent(event: CombatPresentationEvent): AudioCue
       return cue('boss.magnet.telegraph', event.atMs, 3, 'boss', 280);
     case 'boss-row-scrambled':
       return cue('boss.magnet.impact', event.atMs, 4, 'boss', 240);
+    case 'boss-tag-telegraph':
+      return cue('boss.eclipse.telegraph', event.atMs, 3, 'boss', 300, event.tag);
+    case 'boss-tag-eclipsed':
+      return cue('boss.eclipse.impact', event.atMs, 4, 'boss', 260, event.tag);
     case 'outcome':
       return cue(event.outcome === 'victory' ? 'combat.victory' : 'combat.defeat', event.atMs, 4, 'outcome', 0);
     default: {
