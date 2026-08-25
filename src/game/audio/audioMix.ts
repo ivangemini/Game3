@@ -14,6 +14,13 @@ export interface AudioMixDecision {
   readonly reason?: 'cooldown' | 'voice-budget';
 }
 
+export interface MusicDuckProfile {
+  readonly target: number;
+  readonly attackMs: number;
+  readonly holdMs: number;
+  readonly releaseMs: number;
+}
+
 /**
  * Runtime-independent admission control for semantic audio cues.
  *
@@ -103,6 +110,16 @@ export function audioCooldownKey(cue: AudioCue): string {
   return sourceScoped && cue.sourceId
     ? `${cue.id}:${cue.sourceId}`
     : cue.id;
+}
+
+export function musicDuckForCue(cue: AudioCue): MusicDuckProfile | null {
+  if (cue.priority >= 4) {
+    return { target: 0.34, attackMs: 28, holdMs: 210, releaseMs: 420 };
+  }
+  if (cue.priority === 3 && (cue.group === 'boss' || cue.id === 'player.hit')) {
+    return { target: 0.58, attackMs: 24, holdMs: 120, releaseMs: 300 };
+  }
+  return null;
 }
 
 function finiteMs(value: number): number {
