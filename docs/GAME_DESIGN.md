@@ -1,4 +1,4 @@
-# Junkpack: Boss Rush — Game Design v0.14
+# Junkpack: Boss Rush — Game Design v0.15
 
 ## Elevator pitch
 A compact roguelite inventory autobattler where the player chooses a light rule-bending junk pilot, packs absurd junk into a constrained backpack, discovers spatial synergies and fusion recipes, then fights surreal bosses that directly interfere with build valuation and backpack rules.
@@ -18,6 +18,7 @@ Web-first: Yandex Games, CrazyGames and compatible HTML5 portals. Short onboardi
 9. Continue through four compact worlds.
 10. After the campaign finale, Escape/Cash Out or enter a full Corrupted Loop with the same build.
 11. Repeat deeper loops while mutations and boss-family rotations force new adaptations.
+12. Use the persistent Junk Archive to inspect discoveries and unfinished collection goals between active decisions.
 
 ## Pacing target
 - Meaningful decision/payoff roughly every 20–45 seconds.
@@ -161,7 +162,7 @@ This keeps campaign reports free of impossible early late-run power while exerci
 ## Persistence and discovery
 Current save schema: **v8**. Active run persists run seed, hero ID, economy/shop state, backpack placements/rotations, generated sequence, progression/loop state, claim-once encounter rewards, selected perks and deterministic event state.
 
-Legacy v1–v7 saves migrate forward. Discovery persists item IDs and successful recipe IDs. Boss cadence/targeting, expanded event selection and second-stage fusion availability require no new save fields; they derive from current inventory and stable seeded IDs.
+Legacy v1–v7 saves migrate forward. Discovery persists item IDs and successful recipe IDs. Boss cadence/targeting, expanded event selection, second-stage fusion availability and the Junk Archive require no new save fields; they derive from existing stable discovery/content IDs.
 
 ## P4 milestone
 The content-efficient-depth milestone is complete at prototype scope:
@@ -176,8 +177,17 @@ The content-efficient-depth milestone is complete at prototype scope:
 
 Further raw content should be driven by playtest/retention evidence rather than added by default.
 
-## Meta
-Planned/partial meta: Itemdex, Recipe Book, achievements, Daily seeded run, deepest completed Corrupted Loop and score. Permanent power creep should remain limited.
+## Meta / Junk Archive
+The first P5 retention layer is implemented as the **Junk Archive** with two tabs:
+
+- **Itemdex** — 60 stable item slots. Unknown entries remain anonymous; discovered entries reveal name, rarity, source, tags, description and compact shape preview.
+- **Recipe Book** — 24 stable recipe slots. Unknown recipes do not reveal ingredient or result definitions. Successful real fusions reveal ingredients/result, with second-stage transformations called out only after discovery.
+
+Both tabs show discovered/total progress and percentage. Progress is calculated against the current catalog, so stale IDs in old saves do not inflate completion.
+
+The archive is intentionally read-only. It grants no stats, currency or items and therefore creates an unfinished collection goal without permanent power creep. It can be opened between active decisions but not during combat or over hero/perk/event choices.
+
+Remaining P5 layers are unlock milestones, Daily seeded run and achievements. Deepest completed Corrupted Loop and score foundations already persist.
 
 ## Visual identity
 Original absurd junk-surrealism: laser cats, cursed appliances, mutant ducks, tactical food, junk monsters, slime electronics, grinning refrigerators and impossible celestial creatures. Avoid direct copies of branded or recognizable third-party meme IP.
@@ -189,4 +199,4 @@ Rewarded: revive, post-boss reward multiplier, reroll, bonus chest/attempt. Inte
 Real-time PvP, guilds/chat, open world, large story campaign, server-heavy economy, battle pass, dozens of heroes or hundreds of handmade stages.
 
 ## Success criterion for MVP
-A player can choose a hero without class lock-in, complete materially different runs from a compact content pool, understand why a build works, discover multiple second-stage fusions, experience six mechanically distinct boss families, encounter varied short event decisions, reach the first boss quickly, keep modifying the build after 15–20 minutes and have a credible reason to risk the same successful build for a 30–60+ minute Corrupted Loop session.
+A player can choose a hero without class lock-in, complete materially different runs from a compact content pool, understand why a build works, discover multiple second-stage fusions, track unfinished item/recipe collection goals without spoilers, experience six mechanically distinct boss families, encounter varied short event decisions, reach the first boss quickly, keep modifying the build after 15–20 minutes and have a credible reason to risk the same successful build for a 30–60+ minute Corrupted Loop session.
