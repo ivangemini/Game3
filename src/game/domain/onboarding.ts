@@ -44,12 +44,19 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
   },
 ];
 
-export function shouldAutoShowOnboarding(input: Readonly<{
+/**
+ * The full Field Manual is deliberately opt-in through HELP.
+ *
+ * First launch already requires one meaningful hero-selection click before the
+ * player can interact with the run. Auto-opening a second five-step modal adds
+ * portal friction and delays the core backpack loop. Keep this function as the
+ * single policy boundary so an experiment can re-enable automatic onboarding
+ * later without coupling the scene to profile heuristics.
+ */
+export function shouldAutoShowOnboarding(_input: Readonly<{
   hadActiveRun: boolean;
   discoveredItemCount: number;
   discoveredRecipeCount: number;
 }>): boolean {
-  return !input.hadActiveRun
-    && input.discoveredItemCount === 0
-    && input.discoveredRecipeCount === 0;
+  return false;
 }
