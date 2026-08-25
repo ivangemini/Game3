@@ -4,7 +4,7 @@ A web-first roguelite inventory autobattler / boss-rush about packing absurd jun
 
 ## Status
 
-Soft-launch candidate hardening. The complete deterministic campaign/Corrupted Loop gameplay stack, authored item/boss UI art pipeline, versioned recovery-safe saves, portal adapters/ads, telemetry foundation and automated quality gates are implemented. Remaining work is concentrated in real-device acceptance, real portal tester compliance, final authored audio/presentation tuning and data-driven iteration. See `ROADMAP.md`.
+Soft-launch candidate hardening plus a user-directed deep-content expansion. The complete deterministic campaign/Corrupted Loop gameplay stack, authored item/boss UI art pipeline, versioned recovery-safe saves, portal adapters/ads, telemetry foundation and automated quality gates are implemented. Remaining work is concentrated in real-device acceptance, real portal tester compliance, final authored audio/presentation tuning and data-driven iteration. See `ROADMAP.md`.
 
 ## Stack
 
@@ -67,7 +67,10 @@ Read `AGENTS.md` first. It routes work to specialized files in `skills/` and the
 ## Current gameplay/release foundation
 
 - 4-world / 12-encounter campaign plus repeatable Corrupted Loops;
-- 36 base items, 24 fusion recipes, 10 spatial synergies, 4 heroes, 21 perks and 6 boss families;
+- 36 base items, 24 fusion recipes, 10 spatial synergies, 4 heroes, 27 perks and 6 boss families;
+- 15 deterministic surreal run events;
+- 6 launch world mutations, expanding to a 12-modifier pool from Corrupted Loop 3 onward;
+- 8 alternate non-boss corrupted enemy families from Loop 3 onward;
 - deterministic seeded shops, events, combat and progression;
 - tactile 6×5 backpack with progressive pocket unlocks and authored 60/60 item art;
 - versioned v8 local saves with legacy migrations and automatic valid-backup recovery;
