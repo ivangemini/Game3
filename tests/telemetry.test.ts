@@ -94,9 +94,9 @@ describe('BrowserTelemetryTransport', () => {
 });
 
 describe('registerSession', () => {
-  it('reports first session once and returning sessions afterwards without an identity', () => {
+  it('reports first and returning sessions with only a coarse local age bucket', () => {
     const storage = new MemoryStorage();
-    expect(registerSession(storage)).toEqual({ returning: false });
-    expect(registerSession(storage)).toEqual({ returning: true });
+    expect(registerSession(storage, 1_000_000)).toEqual({ returning: false, returnAgeBucket: 'new' });
+    expect(registerSession(storage, 1_001_000)).toEqual({ returning: true, returnAgeBucket: 'under-24h' });
   });
 });
