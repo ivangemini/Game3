@@ -1,6 +1,6 @@
 import type { SaveSettings } from '../../persistence/save';
 import type { AudioCue } from './audioCues';
-import { AudioMixGate } from './audioMix';
+import { AudioMixGate, musicDuckForCue } from './audioMix';
 import { musicStepFor, type MusicMode } from './musicPattern';
 import { synthPatchForCue } from './audioSynthesis';
 
@@ -15,6 +15,7 @@ export class GameAudio {
   private masterGain: GainNode | null = null;
   private sfxGain: GainNode | null = null;
   private musicGain: GainNode | null = null;
+  private musicDuckGain: GainNode | null = null;
   private readonly gate = new AudioMixGate(10);
   private readonly voices = new Map<number, RuntimeVoice>();
   private unlocked = false;
@@ -57,6 +58,7 @@ export class GameAudio {
     const decision = this.gate.decide(cue, nowMs, patch.durationMs);
     if (!decision.accepted || decision.token === undefined) return false;
     if (decision.evictToken !== undefined) this.stopVoice(decision.evictToken);
+    this.applyMusicDuck(cue, context);
 
     const voiceStart = context.currentTime;
     const oscillators: OscillatorNode[] = [];
@@ -134,6 +136,7 @@ export class GameAudio {
     this.masterGain = null;
     this.sfxGain = null;
     this.musicGain = null;
+    this.musicDuckGain = null;
     if (context && context.state !== 'closed') void context.close();
   }
 
@@ -142,20 +145,43 @@ export class GameAudio {
     const masterGain = context.createGain();
     const sfxGain = context.createGain();
     const musicGain = context.createGain();
+    const musicDuckGain = context.createGain();
     sfxGain.connect(masterGain);
-    musicGain.connect(masterGain);
+    musicGain.connect(musicDuckGain);
+    musicDuckGain.connect(masterGain);
     masterGain.connect(context.destination);
     masterGain.gain.value = 0.9;
+    musicDuckGain.gain.value = 1;
     this.context = context;
     this.masterGain = masterGain;
     this.sfxGain = sfxGain;
     this.musicGain = musicGain;
+    this.musicDuckGain = musicDuckGain;
     this.applyVolumes();
   }
 
   private applyVolumes(): void {
     if (this.sfxGain) this.sfxGain.gain.value = volumeCurve(this.sfxVolume);
     if (this.musicGain) this.musicGain.gain.value = volumeCurve(this.musicVolume);
+  }
+
+  private applyMusicDuck(cue: AudioCue, context: AudioContext): void {
+    const profile = musicDuckForCue(cue);
+    const duck = this.musicDuckGain?.gain;
+    if (!profile || !duck || this.musicVolume <= 0) return;
+
+    const now = context.currentTime;
+    const attackEnd = now + profile.attackMs / 1000;
+    const holdEnd = attackEnd + profile.holdMs / 1000;
+    const releaseEnd = holdEnd + profile.releaseMs / 1000;
+    const current = Math.max(0.0001, duck.value);
+    const target = Math.max(0.0001, profile.target);
+
+    duck.cancelScheduledValues(now);
+    duck.setValueAtTime(current, now);
+    duck.exponentialRampToValueAtTime(target, attackEnd);
+    duck.setValueAtTime(target, holdEnd);
+    duck.exponentialRampToValueAtTime(1, releaseEnd);
   }
 
   private updateMusicModeFromCue(cue: AudioCue): void {
