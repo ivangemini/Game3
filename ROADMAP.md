@@ -13,17 +13,18 @@
 - [x] Mouse + touch drag/drop foundation
 - [x] Valid/invalid cell preview and snap-back
 - [x] Selected-item rotation with placement validation
-- [x] 8 prototype absurd-junk items
+- [x] 8 prototype absurd-junk base items
 - [x] 5 real side-contact gameplay synergies with deterministic derived bonuses
 - [x] Live synergy links, active-link badges and activation feedback
 - [x] Basic seeded shop/reward choice with run currency and deterministic rerolls
 - [x] Purchased junk enters the real backpack through deterministic legal placement
 - [x] Save/restore current run: backpack, rotations, loot sequence, seed, coins, shop step and sold offers
-- [x] Versioned save v6 with legacy migrations, encounter claims, perk state and long-session progression
+- [x] Versioned save v7 with legacy migrations, encounter claims, perk state, long-session progression and pending events
 - [x] Progressive backpack: one lower pocket cell unlocks after Boss 1, Boss 2 and Boss 3
+- [x] Shared backpack-layout domain for blocked pocket cells outside Phaser
 - [ ] Final interaction polish against real runtime/assets
 
-**Gate:** arranging items is satisfying before combat exists. Current prototype has drag lift, placement previews, elastic snap, invalid-action feedback, synergy activation feedback and mid-run backpack growth; final polish remains tied to runtime visual review.
+**Gate:** arranging items is satisfying before combat exists. Current prototype has drag lift, placement previews, elastic snap, invalid-action feedback, synergy activation feedback, fusion and mid-run backpack growth; final polish remains tied to runtime visual review.
 
 ## P2 — Combat vertical slice [IN PROGRESS]
 - [x] Deterministic combat clock/effect queue independent of render FPS
@@ -39,6 +40,7 @@
 - [x] Slime Signal is visualized directly over the backpack grid
 - [x] Victory rewards feed the real run/shop economy
 - [x] Encounter rewards are claim-once per run and persisted
+- [x] Fused junk has distinct combat profiles and participates in the existing synergy/perk pipeline
 - [ ] TV Tyrant interference 3: telegraphed row scramble / magnet displacement
 - [ ] Audio hooks
 
@@ -60,21 +62,26 @@
 - [x] Safe cash-out only at cycle boundaries; entering a loop commits the player to the full cycle
 - [x] Deepest completed corrupted loop persisted in meta save
 - [x] Seeded world mutation system with six prototype risk/reward rules that modify real encounter stats and payouts
-- [ ] lightweight events between selected encounters
+- [x] Six deterministic surreal run events with two choices each
+- [x] Events trigger after the first fight of each world, persist across reload and block progression until resolved
+- [x] Event choices consume/award the real run currency and can grant real backpack items
+- [x] Six prototype fusion recipes with deterministic ingredient/result handling
+- [x] Fusion unlocks after Boss 1 and respects currently locked backpack cells
 - [ ] target pacing validation: first boss 3–5 min, base campaign 20–25 min, strong session 30–50 min, deep session 60+ min
 
 ## P4 — Content-efficient depth
-- [ ] 35–45 launch items
-- [ ] 20–30 fusion recipes
+- [ ] 35–45 launch base items
+- [ ] 20–30 launch fusion recipes (6 prototype recipes implemented)
 - [ ] tag/synergy families
 - [ ] 4 heroes
 - [ ] 6 boss families + modifiers
 - [ ] 20–25 perks
-- [ ] ~15 mutations/events pool
-- [ ] late-run item transformations / secret evolutions
+- [ ] ~15 mutations/events pool (12 combined prototype rules/events currently)
+- [ ] late-run secret transformations / second-stage evolutions
 
 ## P5 — Retention/meta
-- [ ] Itemdex + Recipe Book
+- [ ] Itemdex + Recipe Book UI
+- [x] Discovery state for items and fusion recipes
 - [ ] unlock milestones
 - [ ] Daily seeded run
 - [x] Corrupted Loop + score foundation
@@ -97,15 +104,15 @@
 - [ ] cloud/leaderboard hooks where justified
 
 ## P8 — QA, balance & performance
-- [ ] automated domain tests
+- [x] Automated deterministic tests for core run/fusion/event domains
 - [ ] seeded simulation/balance reports
 - [ ] mobile/browser matrix
-- [ ] save migrations/recovery
+- [ ] save migrations/recovery UX
 - [ ] performance profiling and asset budgets
 - [ ] portal-specific compliance checks
 
 ## P9 — Soft launch & iteration
 - [ ] release candidate to first portals
-- [ ] measure tutorial completion/first boss/base-campaign duration/loop-entry/loop-completion/return behavior
+- [ ] measure tutorial completion/first boss/base-campaign duration/event choice/fusion usage/loop-entry/loop-completion/return behavior
 - [ ] tune difficulty/economy/ad pacing
 - [ ] add content only after core retention signals justify it
