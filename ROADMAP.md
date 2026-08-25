@@ -107,7 +107,7 @@
 ## P8 — QA, balance & performance
 - [x] Automated deterministic tests for core run/fusion/event domains
 - [x] Seeded pacing target simulation with percentile bands and target hit rates
-- [ ] Seeded combat/build simulation balance reports
+- [x] Seeded combat/build simulation reports across weak/typical/strong power bands and boss checkpoints
 - [ ] mobile/browser matrix
 - [ ] save migrations/recovery UX
 - [ ] performance profiling and asset budgets

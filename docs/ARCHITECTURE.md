@@ -1,4 +1,4 @@
-# Architecture v0.5
+# Architecture v0.6
 
 ## Stack
 - Phaser 4.2.1
@@ -16,7 +16,7 @@ Pure TypeScript simulation and rules. No Phaser imports. Inventory geometry, see
 Declarative content: items, combat profiles, encounters, bosses, perks, events, fusion recipes and balance tables. Stable IDs only.
 
 ### `src/game/simulation/`
-Offline/QA simulation that may compose domain rules with declarative game data. It is not a presentation layer and must remain deterministic. Pacing/balance reports belong here rather than inside Phaser scenes.
+Offline/QA simulation that composes domain rules with declarative game data. It remains deterministic and outside Phaser. Pacing reports protect session structure; combat/build reports generate legal seeded backpacks across weak/typical/strong power bands and execute the real combat engine against progression checkpoints.
 
 ### `src/game/audio/`
 Asset-agnostic semantic audio cues derived from presentation events. Cue IDs/priorities/cooldowns are presentation contracts only: sound loading, WebAudio lifecycle, mixing and music remain outside the combat domain.
@@ -50,10 +50,12 @@ Backpack effects are converted into combat stats before simulation. Current exam
 
 `CombatPanel` also maps each presentation event to a semantic `AudioCue` and exposes it through an optional callback. This is one-way presentation output: muting, throttling or failing to play audio cannot influence combat state.
 
-## Time and pacing QA
+## Time, pacing and balance QA
 Combat simulation receives explicit elapsed time. Human decision pacing is modeled separately in `src/game/simulation/pacing.ts` so design-duration assumptions never leak into combat rules.
 
 The seeded pacing model composes the real 12-encounter campaign/loop structure with target human decision-time ranges and produces first-boss, campaign, Loop 2 and Loop 3 percentile checkpoints. It is a regression guard, not a substitute for real play telemetry.
+
+The seeded combat/build model generates legal backpacks against the current pocket constraints, samples perk/fusion exposure by power band, feeds those builds through the real synergy/perk/combat pipeline and reports outcomes plus item correlations. Synthetic build reports diagnose balance; soft-launch telemetry remains the authority for player behavior.
 
 ## Saves
 Current schema: **v7**.
@@ -71,4 +73,4 @@ Capabilities may include init, player identity when available, locale, storage/c
 Use generated/source art → reviewed final exports → atlases where beneficial. Keep source assets separate from runtime-optimized assets. Never bind gameplay rules to filename semantics.
 
 ## Quality gates
-Typecheck + unit tests + production build on every main-branch push. Deterministic pacing/balance simulations should run in tests once promoted to a regression gate. Browser smoke verification is required once a connected/runnable browser environment is available.
+Typecheck + unit tests + production build on every main-branch push. Deterministic pacing/balance simulations run in tests as regression guards. Browser smoke verification is required once a connected/runnable browser environment is available.
