@@ -35,15 +35,11 @@
 - [x] Rendered enemy with live HP/shield/poison HUD
 - [x] Combat starts from immutable backpack/hero/perk snapshot and locks inventory input until result
 - [x] Lightweight hit/outcome feedback with reduced-motion behavior
-- [x] TV Tyrant interference 1: deterministic Channel Jam with telegraph
-- [x] TV Tyrant interference 2: Slime Signal targets an occupied backpack cell, telegraphs it, then suppresses touching item triggers
-- [x] Slime Signal is visualized directly over the backpack grid
-- [x] TV Tyrant interference 3: Magnet Scramble prioritizes metal-heavy rows, telegraphs the row and temporarily suppresses crossing item triggers
-- [x] Magnet Scramble escalates on later TV variants / corrupted variants
-- [x] Baby Moon Tag Eclipse: deterministic dominant-tag telegraph + temporary family-wide trigger suppression
-- [x] Tag Eclipse is visualized over every affected backpack cell and scales cadence in corrupted loops
-- [x] Deadline Snail Time Tax: deterministic fastest-item telegraph + one-shot delay of that item's next queued trigger
-- [x] Time Tax preserves render-chunk invariance, has backpack telegraph/audio hooks and accelerates cadence in corrupted loops
+- [x] TV Tyrant interference: Channel Jam, Slime Signal and Magnet Scramble with deterministic telegraphs
+- [x] Baby Moon Tag Eclipse: dominant-tag telegraph + temporary family-wide trigger suppression
+- [x] Deadline Snail Time Tax: fastest-item telegraph + one-shot delay of that item's next queued trigger
+- [x] Closet Monster Clutter Crush: loose-item telegraph + shield-aware pressure from isolated junk
+- [x] Boss-rule wrappers preserve render-chunk invariance and scale cadence in corrupted loops
 - [x] Victory rewards feed the real run/shop economy
 - [x] Encounter rewards are claim-once per run and persisted
 - [x] Fused junk has distinct combat profiles and participates in the existing synergy/perk pipeline
@@ -79,7 +75,7 @@
 - [ ] 20–30 launch fusion recipes (12 prototype recipes implemented)
 - [x] Expanded tag/synergy-family foundation: 10 spatial contact rules across core + food/antenna/slime cross-links
 - [x] 4 prototype heroes with persisted per-run choice and real economy/combat effects
-- [ ] 6 boss families + modifiers (3 prototype families implemented: TV Tyrant + Deadline Snail + Baby Moon)
+- [ ] 6 boss families + modifiers (4 prototype families implemented: TV Tyrant + Deadline Snail + Closet Monster + Baby Moon)
 - [ ] 20–25 perks (10 prototype perks implemented)
 - [ ] ~15 mutations/events pool (12 combined prototype rules/events currently)
 - [ ] late-run secret transformations / second-stage evolutions
