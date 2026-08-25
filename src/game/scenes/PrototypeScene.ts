@@ -6,6 +6,7 @@ import { PROTOTYPE_PERKS, PROTOTYPE_PERK_MAP } from '../data/perks';
 import { getRunEncounter } from '../data/runEncounters';
 import { PROTOTYPE_RUN_EVENT_MAP, PROTOTYPE_RUN_EVENTS } from '../data/runEvents';
 import { BACKPACK_HEIGHT, BACKPACK_WIDTH, blockedCellsForPocketUnlockCount } from '../domain/backpackLayout';
+import { createDailyRunIdentity, dailyKeyFromSeed } from '../domain/dailyRun';
 import { applyFusion, type FusionRecipe } from '../domain/fusions';
 import type { HeroId } from '../domain/heroes';
 import type { InventoryState } from '../domain/inventory';
@@ -39,6 +40,27 @@ import {
 const PROTOTYPE_RUN_SEED = 'prototype-run-001';
 const COLORS = { background: 0x0b0d13, text: '#f7f2e8', muted: '#aaa5b2' } as const;
 
+function createFreshRun(runSeed: string): ActiveRunSave {
+  return {
+    runSeed,
+    shopIndex: 0,
+    coins: 110,
+    soldOfferIds: [],
+    backpackItems: [],
+    nextLootSequence: 1,
+    claimedEncounterIds: [],
+    selectedPerkIds: [],
+    perkChoiceIndex: 0,
+    pendingPerkOfferIds: [],
+    offeredPerkEncounterIds: [],
+    progress: createInitialRunProgress(),
+    eventIndex: 0,
+    pendingEventId: null,
+    resolvedEventIds: [],
+    heroId: null,
+  };
+}
+
 export class PrototypeScene extends Phaser.Scene {
   constructor() { super('prototype'); }
 
@@ -48,24 +70,8 @@ export class PrototypeScene extends Phaser.Scene {
 
     let save: SaveV8 = loadSave();
     const hadActiveRun = save.activeRun !== null;
-    let activeRun: ActiveRunSave = save.activeRun ?? {
-      runSeed: PROTOTYPE_RUN_SEED,
-      shopIndex: 0,
-      coins: 110,
-      soldOfferIds: [],
-      backpackItems: [],
-      nextLootSequence: 1,
-      claimedEncounterIds: [],
-      selectedPerkIds: [],
-      perkChoiceIndex: 0,
-      pendingPerkOfferIds: [],
-      offeredPerkEncounterIds: [],
-      progress: createInitialRunProgress(),
-      eventIndex: 0,
-      pendingEventId: null,
-      resolvedEventIds: [],
-      heroId: null,
-    };
+    let activeRun: ActiveRunSave = save.activeRun ?? createFreshRun(PROTOTYPE_RUN_SEED);
+    const todayDaily = createDailyRunIdentity();
 
     const persistRun = (): void => {
       save = { ...save, activeRun };
@@ -316,6 +322,13 @@ export class PrototypeScene extends Phaser.Scene {
 
     persistRun();
     this.createNewRunButton();
+    this.createDailyRunButton(todayDaily.key, dailyKeyFromSeed(activeRun.runSeed) === todayDaily.key, () => {
+      if (combatPanel.isRunning() || eventOverlay.isVisible() || collectionOverlay.isVisible() || metaOverlay.isVisible()
+        || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return;
+      activeRun = createFreshRun(todayDaily.seed);
+      persistRun();
+      this.scene.restart();
+    });
     this.createCollectionButton(() => {
       if (activeRun.heroId === null || combatPanel.isRunning() || eventOverlay.isVisible() || metaOverlay.isVisible()
         || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return;
@@ -336,7 +349,7 @@ export class PrototypeScene extends Phaser.Scene {
         else { activeRun = { ...activeRun, pendingEventId: null }; persistRun(); }
       }
     }
-    this.drawRunIdentity(() => activeRun.selectedPerkIds, () => activeRun.heroId);
+    this.drawRunIdentity(() => activeRun.selectedPerkIds, () => activeRun.heroId, () => activeRun.runSeed);
   }
 
   private drawHeader(): void {
@@ -352,6 +365,22 @@ export class PrototypeScene extends Phaser.Scene {
     this.add.text(48, 73, '♥ 96 / 100', { fontSize: '22px', color: '#ff6578' });
     this.add.text(1190, 48, '4 WORLDS  •  HEROES  •  FUSIONS  •  CORRUPTED LOOPS', {
       fontSize: '16px', color: '#ff91e6', fontStyle: 'bold',
+    });
+  }
+
+  private createDailyRunButton(key: string, active: boolean, onStart: () => void): void {
+    const x = 365; const y = 104;
+    const button = this.add.rectangle(x, y, 250, 34, active ? 0x314421 : 0x263224, 1)
+      .setStrokeStyle(2, active ? 0xb5ff4d : 0x71994a)
+      .setInteractive({ useHandCursor: true });
+    const label = this.add.text(x, y, active ? `DAILY ${key}  •  ACTIVE` : `DAILY RUN  •  ${key}`, {
+      fontSize: '11px', color: active ? '#dfffba' : '#c8e6a8', fontStyle: 'bold',
+    }).setOrigin(0.5);
+    button.on('pointerover', () => button.setFillStyle(active ? 0x415b2b : 0x354630));
+    button.on('pointerout', () => button.setFillStyle(active ? 0x314421 : 0x263224));
+    button.on('pointerdown', () => { button.setScale(0.97); label.setScale(0.97); });
+    button.on('pointerup', () => {
+      button.setScale(1); label.setScale(1); onStart();
     });
   }
 
@@ -413,13 +442,19 @@ export class PrototypeScene extends Phaser.Scene {
     });
   }
 
-  private drawRunIdentity(getPerkIds: () => readonly string[], getHeroId: () => HeroId | null): void {
+  private drawRunIdentity(
+    getPerkIds: () => readonly string[],
+    getHeroId: () => HeroId | null,
+    getRunSeed: () => string,
+  ): void {
     const text = this.add.text(570, 151, '', { fontSize: '12px', color: '#cfa8ff', fontStyle: 'bold' });
     const update = (): void => {
       const heroId = getHeroId();
       const heroName = heroId ? PROTOTYPE_HERO_MAP.get(heroId)?.name ?? heroId : 'choose hero';
       const perkNames = getPerkIds().map((id) => PROTOTYPE_PERK_MAP.get(id)?.name ?? id);
-      text.setText(`HERO • ${heroName.toUpperCase()}    RUN PERKS • ${perkNames.length > 0 ? perkNames.join(' • ') : 'none yet'}`);
+      const dailyKey = dailyKeyFromSeed(getRunSeed());
+      const runLabel = dailyKey ? `DAILY ${dailyKey}` : 'STANDARD RUN';
+      text.setText(`${runLabel}    HERO • ${heroName.toUpperCase()}    RUN PERKS • ${perkNames.length > 0 ? perkNames.join(' • ') : 'none yet'}`);
     };
     update();
     this.events.on('update', update);
