@@ -1,12 +1,12 @@
 import * as Phaser from 'phaser';
-import { campaignLabel, type RunEncounterDefinition } from '../data/runEncounters';
-import type { RunProgressState } from '../domain/runProgression';
+import { campaignLabel, loopLabel, type RunEncounterDefinition } from '../data/runEncounters';
+import { loopRewardMultiplier, type RunProgressState } from '../domain/runProgression';
 
 export interface RunProgressPanelOptions {
   readonly getProgress: () => RunProgressState;
   readonly getEncounter: () => RunEncounterDefinition | null;
   readonly onStartEncounter: (encounter: RunEncounterDefinition) => boolean;
-  readonly onEnterEndless: () => void;
+  readonly onEnterCorruptedLoop: () => void;
   readonly onCashOut: () => void;
 }
 
@@ -55,22 +55,24 @@ export class RunProgressPanel {
     this.scoreText.setText(`SCORE  ${progress.score}`);
     this.statusText.setText(message ?? 'Repack and shop between encounters.');
 
-    if (progress.mode === 'cashout') {
-      this.titleText.setText('RUN CLEARED');
-      this.stageText.setText('3 WORLDS COMPLETE');
-      this.encounterText.setText('Take the win or keep the build alive.');
-      this.subtitleText.setText('Endless scales every wave. Every 5th wave is a corrupted boss.');
-      this.rewardText.setText('ENDLESS START  ×1.50 rewards');
-      this.mutationText.setText('Mutations keep changing in Endless blocks.');
-      this.createActionButton(this.left + 100, this.top + 280, 'ENTER ENDLESS', 0x49305a, 0xd47cff, () => this.options.onEnterEndless());
-      this.createActionButton(this.left + 100, this.top + 316, 'CASH OUT', 0x33432a, 0xa8ff68, () => this.options.onCashOut());
+    if (progress.mode === 'deep-choice') {
+      const nextLoop = progress.loopNumber + 1;
+      const mutationCount = Math.min(4, nextLoop);
+      this.titleText.setText('REALITY BROKEN');
+      this.stageText.setText(progress.loopNumber === 1 ? '4 WORLDS COMPLETE' : `LOOP ${progress.loopNumber} COMPLETE`);
+      this.encounterText.setText('ESCAPE OR GO DEEPER?');
+      this.subtitleText.setText(`Going deeper keeps this exact build for another 4 corrupted worlds. Each world stacks ${mutationCount} mutations.`);
+      this.rewardText.setText(`NEXT LOOP  ×${loopRewardMultiplier(nextLoop).toFixed(2)} base rewards`);
+      this.mutationText.setText('GO DEEPER commits the build to a full 12-encounter loop before the next safe exit.');
+      this.createActionButton(this.left + 100, this.top + 280, 'GO DEEPER', 0x49305a, 0xd47cff, () => this.options.onEnterCorruptedLoop());
+      this.createActionButton(this.left + 100, this.top + 316, 'ESCAPE / CASH OUT', 0x33432a, 0xa8ff68, () => this.options.onCashOut());
       return;
     }
 
     if (progress.mode === 'complete') {
       this.titleText.setText('RUN COMPLETE');
       this.stageText.setText('SCORE LOCKED');
-      this.encounterText.setText('This run is finished.');
+      this.encounterText.setText('This reality survived you.');
       this.subtitleText.setText('Start a new run to chase a different backpack, mutation and perk path.');
       this.rewardText.setText('');
       this.mutationText.setText('');
@@ -79,19 +81,28 @@ export class RunProgressPanel {
 
     const encounter = this.options.getEncounter();
     if (!encounter) return;
-    this.titleText.setText(progress.mode === 'endless' ? 'ENDLESS' : 'RUN');
-    this.stageText.setText(progress.mode === 'campaign' ? campaignLabel(progress.campaignEncounterIndex) : `WAVE ${progress.endlessWave}`);
+    this.titleText.setText(progress.mode === 'loop' ? 'CORRUPTED LOOP' : 'RUN');
+    this.stageText.setText(
+      progress.mode === 'campaign'
+        ? campaignLabel(progress.campaignEncounterIndex)
+        : loopLabel(progress.loopNumber, progress.loopEncounterIndex),
+    );
     this.encounterText.setText(encounter.title.toUpperCase());
     this.subtitleText.setText(encounter.subtitle);
     this.rewardText.setText(`REWARD  +${encounter.rewardCoins} coins`);
-    this.mutationText.setText(`MUTATION • ${encounter.modifier.name}\n${encounter.modifier.description}`);
-    this.createActionButton(this.left + 100, this.top + 286, progress.mode === 'endless' ? `START WAVE ${progress.endlessWave}` : 'START ENCOUNTER', 0x3a324d, 0xb96cff, () => {
+    this.mutationText.setText(this.mutationSummary(encounter));
+    this.createActionButton(this.left + 100, this.top + 302, 'START ENCOUNTER', 0x3a324d, 0xb96cff, () => {
       const started = this.options.onStartEncounter(encounter);
       this.statusText.setText(started ? 'Fight running — backpack snapshot locked.' : 'Cannot start now. Finish the current choice/fight first.');
     });
-    if (progress.mode === 'endless') {
-      this.createActionButton(this.left + 100, this.top + 320, 'CASH OUT RUN', 0x30392b, 0x91d860, () => this.options.onCashOut());
+  }
+
+  private mutationSummary(encounter: RunEncounterDefinition): string {
+    const names = encounter.modifiers.map((modifier) => modifier.name).join(' + ');
+    if (encounter.modifiers.length === 1) {
+      return `MUTATION • ${names}\n${encounter.modifiers[0]?.description ?? ''}`;
     }
+    return `MUTATIONS ×${encounter.modifiers.length}\n${names}`;
   }
 
   private createActionButton(
