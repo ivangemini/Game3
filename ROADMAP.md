@@ -100,7 +100,8 @@
 - [x] Item art replacement pipeline foundation (**stable `junk-items` atlas + `item.<definitionId>` frame contract with automatic procedural fallback**)
 - [x] Authored art wave 1 (**12 high-frequency item SVGs + all 4 hero portraits + TV Tyrant combat portrait; lazy TextureManager adoption with fallback and atlas-compatible keys**)
 - [x] Authored boss art wave 2 (**all 6 boss-family SVG portraits + corrupted-ID mapping + family-specific idle/telegraph/impact motion with Reduced Motion fallback**)
-- [ ] Final authored catalog + packed item/boss/UI atlases (**remaining item/UI art, review refinements, packing/compression and browser/mobile acceptance; boss portrait coverage is 6/6**)
+- [x] Authored item art wave 2 (**20 additional item SVGs: remaining original shop/base set + 8 high-salience first-stage fusion results; total item-art coverage is 32/60 = 53.3%**)
+- [ ] Final authored catalog + packed item/boss/UI atlases (**28 item definitions + UI art remain; review refinements, packing/compression and browser/mobile acceptance still required; boss portrait coverage is 6/6**)
 - [x] Combat semantic feedback foundation (**30-object particle pool, item/status rings, hit bursts, boss-frame pulses, outcome flashes, restrained shake, reduced-motion fallback**)
 - [x] Non-combat run feedback foundation (**shop purchase/reward/reroll/error SFX hooks, fusion reveal, event-drop toast, pocket-unlock feedback**)
 - [ ] Final animation/VFX pass across backpack drag/drop, reward staging and final art assets
