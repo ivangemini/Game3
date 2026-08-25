@@ -3,6 +3,14 @@ import { createInitialRunProgress, isRunProgressState, type RunProgressState } f
 import type { PlacedItem } from '../game/domain/types';
 
 const SAVE_KEY = 'junkpack.save';
+const SAVE_BACKUP_KEY = 'junkpack.save.backup';
+export const SAVE_NOTICE_EVENT = 'junkpack:save-notice';
+
+export type SaveNoticeKind = 'recovered-backup' | 'reset-corrupt' | 'write-failed';
+
+export interface SaveNoticeDetail {
+  readonly kind: SaveNoticeKind;
+}
 
 export interface SaveSettings {
   readonly musicVolume: number;
@@ -52,23 +60,63 @@ export const DEFAULT_SAVE: SaveV8 = {
 };
 
 export function loadSave(storage: Storage = localStorage): SaveV8 {
-  const raw = storage.getItem(SAVE_KEY);
-  if (!raw) return DEFAULT_SAVE;
+  let raw: string | null = null;
   try {
-    const parsed: unknown = JSON.parse(raw);
-    if (isSaveV8(parsed)) return parsed;
-    return migrateLegacySave(parsed) ?? DEFAULT_SAVE;
+    raw = storage.getItem(SAVE_KEY);
   } catch {
+    emitSaveNotice('reset-corrupt');
     return DEFAULT_SAVE;
   }
+  if (!raw) return DEFAULT_SAVE;
+
+  const primary = decodePersistedSave(raw);
+  if (primary) return primary;
+
+  let backupRaw: string | null = null;
+  try {
+    backupRaw = storage.getItem(SAVE_BACKUP_KEY);
+  } catch {
+    emitSaveNotice('reset-corrupt');
+    return DEFAULT_SAVE;
+  }
+  const backup = backupRaw ? decodePersistedSave(backupRaw) : null;
+  if (backup) {
+    try { storage.setItem(SAVE_KEY, JSON.stringify(backup)); } catch { /* recovery can still continue in memory */ }
+    emitSaveNotice('recovered-backup');
+    return backup;
+  }
+
+  emitSaveNotice('reset-corrupt');
+  return DEFAULT_SAVE;
 }
 
 export function writeSave(save: SaveV8, storage: Storage = localStorage): void {
-  storage.setItem(SAVE_KEY, JSON.stringify(save));
+  try {
+    const currentRaw = storage.getItem(SAVE_KEY);
+    if (currentRaw && decodePersistedSave(currentRaw)) storage.setItem(SAVE_BACKUP_KEY, currentRaw);
+    storage.setItem(SAVE_KEY, JSON.stringify(save));
+  } catch {
+    emitSaveNotice('write-failed');
+  }
 }
 
 export function clearActiveRun(save: SaveV8): SaveV8 {
   return { ...save, activeRun: null };
+}
+
+function decodePersistedSave(raw: string): SaveV8 | null {
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (isSaveV8(parsed)) return parsed;
+    return migrateLegacySave(parsed);
+  } catch {
+    return null;
+  }
+}
+
+function emitSaveNotice(kind: SaveNoticeKind): void {
+  if (typeof window === 'undefined' || typeof CustomEvent === 'undefined') return;
+  window.dispatchEvent(new CustomEvent<SaveNoticeDetail>(SAVE_NOTICE_EVENT, { detail: { kind } }));
 }
 
 interface LegacyMeta {
