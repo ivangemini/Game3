@@ -1,4 +1,7 @@
 import type { ItemDefinition, ItemTag, Rarity } from '../domain/types';
+import { ITEM_ATLAS_TEXTURE_KEY } from '../assets/atlasContract';
+
+export { ITEM_ATLAS_TEXTURE_KEY };
 
 export interface RarityVisualToken {
   readonly fill: number;
@@ -8,8 +11,6 @@ export interface RarityVisualToken {
   readonly text: string;
   readonly label: string;
 }
-
-export const ITEM_ATLAS_TEXTURE_KEY = 'junk-items';
 
 export const PANEL_VISUALS = {
   ink: 0x0c0d12,
