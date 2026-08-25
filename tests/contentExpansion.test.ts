@@ -33,12 +33,12 @@ const placed = (
 ): PlacedItem => ({ instanceId, definitionId, origin: { x, y }, rotation: 0 });
 
 describe('content expansion pack', () => {
-  it('reaches launch-range content counts without orphaned profiles or recipes', () => {
+  it('keeps the authored item catalog stable while expanding the perk pool', () => {
     expect(PROTOTYPE_BASE_ITEMS).toHaveLength(36);
     expect(PROTOTYPE_FUSION_ITEMS).toHaveLength(24);
     expect(PROTOTYPE_ITEMS).toHaveLength(60);
     expect(PROTOTYPE_FUSION_RECIPES).toHaveLength(24);
-    expect(PROTOTYPE_PERKS).toHaveLength(21);
+    expect(PROTOTYPE_PERKS).toHaveLength(27);
     expect(SYNERGY_RULES).toHaveLength(10);
     expect(PROTOTYPE_SHOP_ITEMS).toHaveLength(36);
 
