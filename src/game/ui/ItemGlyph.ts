@@ -1,6 +1,13 @@
 import * as Phaser from 'phaser';
 import type { ItemDefinition, ItemTag } from '../domain/types';
-import { PANEL_VISUALS, primaryVisualTag, rarityVisual, stableItemAccent } from './visualTokens';
+import {
+  ITEM_ATLAS_TEXTURE_KEY,
+  PANEL_VISUALS,
+  itemArtKey,
+  primaryVisualTag,
+  rarityVisual,
+  stableItemAccent,
+} from './visualTokens';
 
 export interface ItemGlyphOptions {
   readonly size?: number;
@@ -9,9 +16,11 @@ export interface ItemGlyphOptions {
 }
 
 /**
- * Gameplay-size procedural item mark used until reviewed atlas art replaces it.
- * The silhouette vocabulary is stable by primary tag, while rarity and item ID
- * provide controlled material/accent variation.
+ * Gameplay-size item renderer.
+ *
+ * Reviewed atlas art wins automatically when `junk-items` contains the stable
+ * `item.<definitionId>` frame. Until then, the deterministic procedural glyph
+ * preserves silhouette/readability and keeps layout work independent of art delivery.
  */
 export function createItemGlyph(
   scene: Phaser.Scene,
@@ -32,9 +41,21 @@ export function createItemGlyph(
     .setStrokeStyle(1, accent, 0.75);
   root.add([shadow, plate, inset]);
 
-  const graphics = scene.add.graphics();
-  drawTagGlyph(graphics, primaryVisualTag(definition), size * 0.31, rarity.accent, accent);
-  root.add(graphics);
+  const frameKey = itemArtKey(definition.id);
+  const atlas = scene.textures.exists(ITEM_ATLAS_TEXTURE_KEY)
+    ? scene.textures.get(ITEM_ATLAS_TEXTURE_KEY)
+    : null;
+  if (atlas?.has(frameKey)) {
+    const sprite = scene.add.image(0, -1, ITEM_ATLAS_TEXTURE_KEY, frameKey);
+    const maxSide = Math.max(1, sprite.width, sprite.height);
+    const scale = (size - 10) / maxSide;
+    sprite.setScale(scale);
+    root.add(sprite);
+  } else {
+    const graphics = scene.add.graphics();
+    drawTagGlyph(graphics, primaryVisualTag(definition), size * 0.31, rarity.accent, accent);
+    root.add(graphics);
+  }
 
   if (!options.compact) {
     const tape = scene.add.rectangle(0, size * 0.34, size * 0.52, Math.max(5, size * 0.1), PANEL_VISUALS.paper, 0.9)
@@ -151,7 +172,12 @@ function chaos(g: Phaser.GameObjects.Graphics, r: number, accent: number): void 
   g.lineStyle(r * 0.18, accent, 1);
   for (let arm = 0; arm < 5; arm += 1) {
     const angle = arm * Math.PI * 0.4;
-    g.lineBetween(Math.cos(angle) * r * 0.15, Math.sin(angle) * r * 0.15, Math.cos(angle + 0.7) * r * 0.88, Math.sin(angle + 0.7) * r * 0.88);
+    g.lineBetween(
+      Math.cos(angle) * r * 0.15,
+      Math.sin(angle) * r * 0.15,
+      Math.cos(angle + 0.7) * r * 0.88,
+      Math.sin(angle + 0.7) * r * 0.88,
+    );
   }
   g.fillCircle(0, 0, r * 0.2);
 }
