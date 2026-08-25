@@ -12,7 +12,6 @@ describe('procedural music pattern', () => {
         expect(Number.isFinite(first.rootHz)).toBe(true);
         expect(first.rootHz).toBeGreaterThan(0);
         if (first.accentHz !== null) expect(first.accentHz).toBeGreaterThan(0);
-        if (first.bassHz !== null) expect(first.bassHz).toBeGreaterThan(0);
         expect(first.intervalMs).toBeGreaterThan(0);
         expect(first.durationMs).toBeGreaterThan(0);
         expect(first.gain).toBeGreaterThan(0);
@@ -30,13 +29,21 @@ describe('procedural music pattern', () => {
     expect(combat.gain).toBeGreaterThan(menu.gain);
   });
 
-  it('uses a sparse bass cadence and deterministic swing outside the menu', () => {
-    expect(musicStepFor('menu', 0).bassHz).not.toBeNull();
-    expect(musicStepFor('menu', 1).bassHz).toBeNull();
-    expect(musicStepFor('combat', 0).bassHz).not.toBeNull();
-    expect(musicStepFor('combat', 1).bassHz).toBeNull();
-    expect(musicStepFor('combat', 0).intervalMs).not.toBe(musicStepFor('combat', 1).intervalMs);
-    expect(musicStepFor('boss', 0).intervalMs).not.toBe(musicStepFor('boss', 1).intervalMs);
+  it('uses sparse sub accents and deterministic swing outside the menu', () => {
+    const combat0 = musicStepFor('combat', 0);
+    const combat1 = musicStepFor('combat', 1);
+    const combat4 = musicStepFor('combat', 4);
+    const boss0 = musicStepFor('boss', 0);
+    const boss1 = musicStepFor('boss', 1);
+
+    expect(combat0.accentHz).not.toBeNull();
+    expect(combat0.accentHz!).toBeLessThan(combat0.rootHz);
+    expect(combat1.accentHz).toBeNull();
+    expect(combat4.accentHz).not.toBeNull();
+    expect(combat4.accentHz!).toBeGreaterThan(combat4.rootHz);
+    expect(combat0.intervalMs).not.toBe(combat1.intervalMs);
+    expect(boss0.intervalMs).not.toBe(boss1.intervalMs);
+    expect(musicStepFor('menu', 0).intervalMs).toBe(musicStepFor('menu', 1).intervalMs);
   });
 
   it('does not repeat the old eight-step phrase verbatim in the second half', () => {
