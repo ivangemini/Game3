@@ -19,6 +19,7 @@ export class GameAudio {
   private readonly voices = new Map<number, RuntimeVoice>();
   private unlocked = false;
   private disposed = false;
+  private externallySuspended = false;
   private sfxVolume = 0.9;
   private musicVolume = 0.8;
   private musicMode: MusicMode = 'menu';
@@ -27,13 +28,11 @@ export class GameAudio {
 
   constructor(settings?: Pick<SaveSettings, 'sfxVolume' | 'musicVolume'>) {
     if (settings) this.setVolumes(settings);
-    if (typeof document !== 'undefined') {
-      document.addEventListener('visibilitychange', this.handleVisibilityChange);
-    }
+    if (typeof document !== 'undefined') document.addEventListener('visibilitychange', this.handleVisibilityChange);
   }
 
   async unlock(): Promise<boolean> {
-    if (this.disposed || typeof window === 'undefined' || typeof window.AudioContext !== 'function') return false;
+    if (this.disposed || this.externallySuspended || typeof window === 'undefined' || typeof window.AudioContext !== 'function') return false;
     if (!this.context) this.createContext();
     if (!this.context) return false;
 
@@ -51,7 +50,7 @@ export class GameAudio {
     this.updateMusicModeFromCue(cue);
     const context = this.context;
     const output = this.sfxGain;
-    if (this.disposed || !this.unlocked || !context || !output || context.state !== 'running') return false;
+    if (this.disposed || this.externallySuspended || !this.unlocked || !context || !output || context.state !== 'running') return false;
 
     const patch = synthPatchForCue(cue);
     const nowMs = runtimeNowMs();
@@ -73,11 +72,9 @@ export class GameAudio {
       oscillator.type = layer.wave;
       oscillator.frequency.setValueAtTime(layer.startHz, startAt);
       oscillator.frequency.exponentialRampToValueAtTime(Math.max(1, layer.endHz), endAt);
-
       gain.gain.setValueAtTime(0.0001, startAt);
       gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, layer.gain), attackEnd);
       gain.gain.exponentialRampToValueAtTime(0.0001, endAt);
-
       oscillator.connect(gain);
       gain.connect(output);
       oscillator.start(startAt);
@@ -105,20 +102,33 @@ export class GameAudio {
   }
 
   isUnlocked(): boolean {
-    return this.unlocked && this.context?.state === 'running';
+    return this.unlocked && !this.externallySuspended && this.context?.state === 'running';
+  }
+
+  suspendForPlatform(): void {
+    this.externallySuspended = true;
+    const context = this.context;
+    if (context?.state === 'running') void context.suspend();
+  }
+
+  resumeFromPlatform(): void {
+    this.externallySuspended = false;
+    const context = this.context;
+    if (!context || !this.unlocked || this.disposed) return;
+    if (typeof document !== 'undefined' && document.hidden) return;
+    if (context.state === 'suspended') void context.resume();
   }
 
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
-    if (typeof document !== 'undefined') {
-      document.removeEventListener('visibilitychange', this.handleVisibilityChange);
-    }
+    if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', this.handleVisibilityChange);
     if (this.musicTimer !== null && typeof window !== 'undefined') window.clearTimeout(this.musicTimer);
     this.musicTimer = null;
     for (const token of [...this.voices.keys()]) this.stopVoice(token);
     this.gate.reset();
     this.unlocked = false;
+    this.externallySuspended = false;
     const context = this.context;
     this.context = null;
     this.masterGain = null;
@@ -132,11 +142,9 @@ export class GameAudio {
     const masterGain = context.createGain();
     const sfxGain = context.createGain();
     const musicGain = context.createGain();
-
     sfxGain.connect(masterGain);
     musicGain.connect(masterGain);
     masterGain.connect(context.destination);
-
     masterGain.gain.value = 0.9;
     this.context = context;
     this.masterGain = masterGain;
@@ -177,8 +185,7 @@ export class GameAudio {
     this.musicStepIndex += 1;
     const context = this.context;
     const output = this.musicGain;
-    if (!this.unlocked || !context || !output || context.state !== 'running' || this.musicVolume <= 0) return step.intervalMs;
-
+    if (this.externallySuspended || !this.unlocked || !context || !output || context.state !== 'running' || this.musicVolume <= 0) return step.intervalMs;
     this.scheduleMusicTone(context, output, 'triangle', step.rootHz, step.durationMs, step.gain);
     if (step.accentHz !== null) {
       this.scheduleMusicTone(context, output, 'sine', step.accentHz, Math.round(step.durationMs * 0.72), step.gain * 0.55);
@@ -231,7 +238,7 @@ export class GameAudio {
       if (context.state === 'running') void context.suspend();
       return;
     }
-    if (this.unlocked && context.state === 'suspended') void context.resume();
+    if (!this.externallySuspended && this.unlocked && context.state === 'suspended') void context.resume();
   };
 }
 
