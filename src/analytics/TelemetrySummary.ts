@@ -189,12 +189,11 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
   }
 
   const returnAgeBuckets: Record<string, number> = {};
+  for (const bucket of sessionAgeBySession.values()) returnAgeBuckets[bucket] = (returnAgeBuckets[bucket] ?? 0) + 1;
+
   let sessionsWithAgeBucket = 0;
   for (const sessionId of sessionStartedAt.keys()) {
-    const bucket = sessionAgeBySession.get(sessionId);
-    if (bucket === undefined) continue;
-    sessionsWithAgeBucket += 1;
-    returnAgeBuckets[bucket] = (returnAgeBuckets[bucket] ?? 0) + 1;
+    if (sessionAgeBySession.has(sessionId)) sessionsWithAgeBucket += 1;
   }
 
   const timeToHero = sessionLatencies(sessionStartedAt, firstHeroAt);
