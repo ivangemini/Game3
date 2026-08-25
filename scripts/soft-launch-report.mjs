@@ -3,6 +3,15 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import ts from 'typescript';
 
+const SESSION_AGE_COVERAGE_SAMPLE = 10;
+const SESSION_AGE_COVERAGE_TARGET = 0.95;
+const FIRST_BOSS_PACING_SAMPLE = 20;
+const FIRST_BOSS_MIN_MS = 3 * 60_000;
+const FIRST_BOSS_MAX_MS = 5 * 60_000;
+const BASE_CAMPAIGN_PACING_SAMPLE = 15;
+const BASE_CAMPAIGN_MIN_MS = 20 * 60_000;
+const BASE_CAMPAIGN_MAX_MS = 25 * 60_000;
+
 export function parseTelemetryText(text) {
   const trimmed = text.trim();
   if (!trimmed) return [];
@@ -32,15 +41,63 @@ export function normalizeTelemetryValue(value) {
   throw new Error('Telemetry object is neither an event envelope nor a batch with an events array.');
 }
 
+export function buildReviewSignals(summary) {
+  const signals = [];
+  const ageCoverage = sessionAgeCoverage(summary);
+  const ageSample = Number.isFinite(summary.sessions) ? Math.max(0, summary.sessions) : 0;
+
+  if (ageSample < SESSION_AGE_COVERAGE_SAMPLE) {
+    signals.push(`[DATA] Return-age instrumentation: ${ageSample}/${SESSION_AGE_COVERAGE_SAMPLE} session starts collected before applying the coverage gate.`);
+  } else if (ageCoverage < SESSION_AGE_COVERAGE_TARGET) {
+    signals.push(`[WATCH] Return-age instrumentation coverage is ${percent(ageCoverage)}; target is at least ${percent(SESSION_AGE_COVERAGE_TARGET)} before interpreting age-bucket mix.`);
+  } else {
+    signals.push(`[ON TARGET] Return-age instrumentation coverage is ${percent(ageCoverage)}.`);
+  }
+
+  const firstBossSample = finiteCount(summary.sessionsWithFirstBoss);
+  if (firstBossSample < FIRST_BOSS_PACING_SAMPLE) {
+    signals.push(`[DATA] First-boss pacing: ${firstBossSample}/${FIRST_BOSS_PACING_SAMPLE} reached sessions; hold tuning until the operational sample floor is met.`);
+  } else {
+    signals.push(pacingSignal(
+      'First-boss pacing',
+      summary.medianTimeToFirstBossMs,
+      FIRST_BOSS_MIN_MS,
+      FIRST_BOSS_MAX_MS,
+    ));
+  }
+
+  const campaignSample = finiteCount(summary.sessionsCompletingBaseCampaign);
+  if (campaignSample < BASE_CAMPAIGN_PACING_SAMPLE) {
+    signals.push(`[DATA] Base-campaign pacing: ${campaignSample}/${BASE_CAMPAIGN_PACING_SAMPLE} completions; hold tuning until the operational sample floor is met.`);
+  } else {
+    signals.push(pacingSignal(
+      'Base-campaign pacing',
+      summary.medianBaseCampaignDurationMs,
+      BASE_CAMPAIGN_MIN_MS,
+      BASE_CAMPAIGN_MAX_MS,
+    ));
+  }
+
+  return signals;
+}
+
 export function renderMarkdown(summary) {
   const returnBuckets = Object.entries(summary.returnAgeBuckets ?? {});
+  const reviewSignals = buildReviewSignals(summary);
   const lines = [
     '# Junkpack Soft-launch Report',
     '',
     `Sessions: **${summary.sessions}** · returning **${percent(summary.returningRate)}**`,
+    `Return-age telemetry coverage: **${percent(sessionAgeCoverage(summary))}** (${finiteCount(summary.sessionsWithAgeBucket)}/${summary.sessions}).`,
     returnBuckets.length > 0
       ? `Return age buckets: ${returnBuckets.map(([bucket, count]) => `${bucket} **${count}**`).join(' · ')}`
-      : 'Return age buckets: no session-age events in this export.',
+      : 'Return age buckets: no session-age events matched to session starts in this export.',
+    '',
+    '## Review signals',
+    '',
+    ...reviewSignals.map((signal) => `- ${signal}`),
+    '',
+    'These are operational triage signals, not statistical-significance claims. Return-age buckets describe the age mix of observed sessions; they are not D1/D7 cohort-retention rates.',
     '',
     '## First-session funnel',
     '',
@@ -134,6 +191,27 @@ async function writeOutput(filePath, content) {
   await fs.mkdir(path.dirname(absolute), { recursive: true });
   await fs.writeFile(absolute, content, 'utf8');
   console.error(`[analytics] wrote ${absolute}`);
+}
+
+function pacingSignal(label, medianMs, minMs, maxMs) {
+  const value = Number.isFinite(medianMs) ? Math.max(0, medianMs) : 0;
+  if (value < minMs) return `[WATCH] ${label} p50 is ${duration(value)}, faster than the ${duration(minMs)}–${duration(maxMs)} target.`;
+  if (value > maxMs) return `[WATCH] ${label} p50 is ${duration(value)}, slower than the ${duration(minMs)}–${duration(maxMs)} target.`;
+  return `[ON TARGET] ${label} p50 is ${duration(value)} within the ${duration(minMs)}–${duration(maxMs)} target.`;
+}
+
+function sessionAgeCoverage(summary) {
+  if (Number.isFinite(summary.sessionAgeCoverageRate)) return clampRate(summary.sessionAgeCoverageRate);
+  const bucketTotal = Object.values(summary.returnAgeBuckets ?? {}).reduce((sum, value) => sum + finiteCount(value), 0);
+  return summary.sessions > 0 ? clampRate(bucketTotal / summary.sessions) : 0;
+}
+
+function finiteCount(value) {
+  return Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+}
+
+function clampRate(value) {
+  return Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
 }
 
 function percent(value) {
