@@ -4,7 +4,7 @@
 
 Expand replayability without enlarging the authored 60-item atlas, changing the save schema or adding another heavyweight combat subsystem. This wave deliberately spends content budget on systems that already multiply each other: perk choices, deterministic run events, stacked Corrupted Loop mutations and enemy-family rotation.
 
-The base four-world campaign remains structurally unchanged so the 20–25 minute pacing target and existing first-campaign learning curve stay comparable to earlier telemetry.
+Wave 5 was implemented first as a combinatorial content expansion. A subsequent long-session expansion then extended the base campaign from four to six worlds. The two changes are compatible but intentionally separate: Wave 5 owns the new perks/events/deep-loop anomalies, while the campaign extension owns Worlds 5–6 and the longer 32–42 minute first-clear target.
 
 ## Perk expansion
 
@@ -32,11 +32,11 @@ Six events extend the deterministic pool from **9 to 15**:
 
 Each event still has exactly two choices and uses only the existing `coins / item / gamble` reward contract. Every item reward points to a real base/shop definition, so event rewards cannot leak fusion-only content and require no save migration.
 
-At four event opportunities per campaign/loop cycle, the larger pool sharply reduces repeated event sequences across successive deep cycles while preserving the same decision cadence.
+With the later six-world campaign, there are now six event opportunities during the campaign and four during each Corrupted Loop. The larger 15-event pool sharply reduces repeated sequences without increasing event frequency inside an individual world.
 
 ## Deep-loop mutations
 
-The launch campaign keeps its original six world mutations. Loop 2 also keeps that six-modifier pool for continuity with the existing first-loop balance target.
+The six-world campaign uses the original six launch world mutations, one seeded identity per world. Loop 2 also keeps that six-modifier pool for continuity with the first-loop balance target.
 
 From **Loop 3 onward**, the mutation pool expands to twelve with six new anomaly rules:
 
@@ -47,11 +47,11 @@ From **Loop 3 onward**, the mutation pool expands to twelve with six new anomaly
 - **Unsafe Coupon** — glass-cannon enemies with very high damage.
 - **Warranty Void** — broad HP/damage pressure with a larger reward.
 
-Loop 3 still stacks three mutations and Loop 4+ stacks up to four; only the candidate pool grows. This increases combination count without extending the 12-encounter cycle or adding downtime.
+Loop 3 still stacks three mutations and Loop 4+ stacks up to four; only the candidate pool grows. Corrupted Loops remain 12 encounters even after the campaign grows to 18.
 
 ## Corrupted enemy-family rotation
 
-From **Loop 3 onward**, the eight non-boss campaign templates receive alternate corrupted families with their own pre-loop stat profiles:
+From **Loop 3 onward**, the eight non-boss templates used by the four-world loop receive alternate corrupted families with their own pre-loop stat profiles:
 
 - Static Rat Swarm → **Receipt Wasps**
 - Trash Brute → **Dumpster Oracle**
@@ -62,7 +62,16 @@ From **Loop 3 onward**, the eight non-boss campaign templates receive alternate 
 - Grinning Fridge → **Expired Freezer**
 - Rubber Duck Choir → **Invoice Geese**
 
-These variants deliberately reuse the existing generic enemy presentation path. They change names and stat shapes rather than requiring eight new bespoke boss mechanics or portrait assets. Boss-family rotation remains unchanged, so the six authored boss mechanics retain their visual and mechanical identity.
+These variants deliberately reuse the existing generic enemy presentation path. They change names and stat shapes rather than requiring eight new bespoke boss mechanics or portrait assets.
+
+## Subsequent campaign extension
+
+After Wave 5, the base run was extended to **6 worlds / 18 encounters** so all six authored boss families appear in the first successful campaign:
+
+- World 5: Carbon Copy Clerks → Mirror Mule → **Copycat Auditor**;
+- World 6: Edge Eel Syndicate → Rent Collector Crab → **Border Shark**.
+
+The campaign now targets **32–42 minutes p50** while first boss remains 3–5 minutes. Corrupted Loops stay **4 worlds / 12 encounters** to prevent every deep cycle from ballooning with the first-run extension.
 
 ## Compatibility rules
 
@@ -73,10 +82,11 @@ These variants deliberately reuse the existing generic enemy presentation path. 
 - Deep-loop anomaly variants are derived from loop depth and encounter template; no extra persisted field is needed.
 - New perks persist through the existing selected-perk ID array.
 - New events persist through the existing pending-event ID/choice flow.
+- The campaign uses an 18-encounter progression range; loops use a separate 12-encounter range so the two structures cannot drift together accidentally.
 
 ## Regression coverage
 
-Wave 5 tests verify:
+The combined expansion tests verify:
 
 - 27 total perks with six unique Wave 5 IDs;
 - the new perk effects flow through existing tagged `ItemBonuses` logic;
@@ -85,16 +95,22 @@ Wave 5 tests verify:
 - campaign modifier pool remains six while deep-loop pool grows to twelve;
 - Loop 2 uses only launch modifiers;
 - deep-loop selection can reach the new anomaly modifiers;
-- Loop 3 swaps non-boss templates to the new anomaly enemy families while Loop 2 remains unchanged.
+- Loop 3 swaps non-boss templates to the new anomaly enemy families while Loop 2 remains unchanged;
+- campaign length is 18 encounters / six bosses while loops stay 12 encounters;
+- campaign telemetry completes only on the World 6 Border Shark victory;
+- structural pacing stays inside the 32–42 / 55–75 / 80+ minute target envelopes across seeded QA runs.
 
 ## Result
 
-This wave expands the amount of distinct decision material without increasing atlas size or campaign length:
+The combined expansion increases both decision variety and meaningful first-run length without increasing atlas size:
 
 - perks: **21 → 27**;
 - run events: **9 → 15**;
 - deep-loop mutation candidates: **6 → 12**;
 - non-boss deep-loop enemy families: **8 new variants**;
+- base campaign: **12 → 18 encounters**;
+- campaign boss families encountered: **4 → 6**;
+- Corrupted Loop length: unchanged at **12 encounters**;
 - authored item/recipe catalog: unchanged at **60 / 24**.
 
-Further content should continue to favor systems that multiply existing build decisions over raw level count or HP-only padding.
+Further content should continue to favor systems that multiply existing build decisions over raw HP-only padding.
