@@ -12,8 +12,8 @@
     "dev": "npm run assets:prepare && vite",
     "build": "npm run assets:prepare && tsc --noEmit && vite build && npm run bundle:check",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "test": "vitest run --exclude 'tests/e2e/**'",
+    "test:watch": "vitest --exclude 'tests/e2e/**'",
     "test:e2e": "playwright test",
     "preview": "vite preview"
   },
