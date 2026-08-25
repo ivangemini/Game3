@@ -1,6 +1,6 @@
 import type { ItemDefinition } from '../domain/types';
 
-export const PROTOTYPE_ITEMS: readonly ItemDefinition[] = [
+export const PROTOTYPE_BASE_ITEMS: readonly ItemDefinition[] = [
   {
     id: 'laser-cat',
     name: 'Laser Cat',
@@ -66,5 +66,63 @@ export const PROTOTYPE_ITEMS: readonly ItemDefinition[] = [
     description: 'Metal loves it. Inventory planners do not always agree.',
   },
 ];
+
+export const PROTOTYPE_FUSION_ITEMS: readonly ItemDefinition[] = [
+  {
+    id: 'shock-toaster',
+    name: 'Shock Toaster',
+    shape: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }],
+    tags: ['device', 'metal', 'laser', 'chaos'],
+    rarity: 'legendary',
+    description: 'Toast has become a high-voltage combat doctrine.',
+  },
+  {
+    id: 'cyber-cat',
+    name: 'Cyber Cat',
+    shape: [{ x: 0, y: 0 }, { x: 1, y: 0 }],
+    tags: ['pet', 'cat', 'laser', 'device', 'metal'],
+    rarity: 'legendary',
+    description: 'The battery was installed where common sense used to be.',
+  },
+  {
+    id: 'biohazard-turbine',
+    name: 'Biohazard Turbine',
+    shape: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }],
+    tags: ['device', 'poison', 'metal'],
+    rarity: 'legendary',
+    description: 'Industrial ventilation for people who hate breathable air.',
+  },
+  {
+    id: 'polarity-duck',
+    name: 'Polarity Duck',
+    shape: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }],
+    tags: ['pet', 'duck', 'chaos', 'magnet', 'metal'],
+    rarity: 'legendary',
+    description: 'Quacks north. Bites south. Attracts cutlery.',
+  },
+  {
+    id: 'toxic-fish-cannon',
+    name: 'Toxic Fish Cannon',
+    shape: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }, { x: 2, y: 1 }],
+    tags: ['weapon', 'laser', 'poison', 'chaos'],
+    rarity: 'legendary',
+    description: 'A fish weapon that now violates several environmental treaties.',
+  },
+  {
+    id: 'gravity-toaster',
+    name: 'Gravity Toaster',
+    shape: [{ x: 0, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 }],
+    tags: ['device', 'metal', 'magnet', 'chaos'],
+    rarity: 'legendary',
+    description: 'Breakfast bends nearby metal and occasionally local spacetime.',
+  },
+];
+
+export const PROTOTYPE_ITEMS: readonly ItemDefinition[] = [
+  ...PROTOTYPE_BASE_ITEMS,
+  ...PROTOTYPE_FUSION_ITEMS,
+];
+
+export const PROTOTYPE_SHOP_ITEMS = PROTOTYPE_BASE_ITEMS;
 
 export const PROTOTYPE_ITEM_MAP = new Map(PROTOTYPE_ITEMS.map((item) => [item.id, item]));
