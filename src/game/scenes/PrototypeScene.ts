@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { GameAudio } from '../audio/GameAudio';
 import { PROTOTYPE_FUSION_RECIPES, SECOND_STAGE_FUSION_RECIPE_IDS } from '../data/fusionRecipes';
 import { PROTOTYPE_HEROES, PROTOTYPE_HERO_MAP } from '../data/heroes';
 import { PROTOTYPE_ITEM_MAP, PROTOTYPE_ITEMS, PROTOTYPE_SHOP_ITEMS } from '../data/items';
@@ -22,6 +23,7 @@ import {
 } from '../domain/runProgression';
 import { BackpackBoard } from '../ui/BackpackBoard';
 import { CollectionOverlay } from '../ui/CollectionOverlay';
+import { CombatFeedback } from '../ui/CombatFeedback';
 import { CombatPanel } from '../ui/CombatPanel';
 import { FusionPanel } from '../ui/FusionPanel';
 import { HeroChoiceOverlay } from '../ui/HeroChoiceOverlay';
@@ -41,6 +43,7 @@ import {
 } from '../../persistence/save';
 
 const PROTOTYPE_RUN_SEED = 'prototype-run-001';
+const AUDIO_REGISTRY_KEY = 'junkpack.game-audio';
 const COLORS = { background: 0x0b0d13, text: '#f7f2e8', muted: '#aaa5b2' } as const;
 
 function createFreshRun(runSeed: string): ActiveRunSave {
@@ -72,6 +75,23 @@ export class PrototypeScene extends Phaser.Scene {
     this.drawHeader();
 
     let save: SaveV8 = loadSave();
+    let audio = this.registry.get(AUDIO_REGISTRY_KEY) as GameAudio | undefined;
+    if (!audio) {
+      audio = new GameAudio(save.settings);
+      this.registry.set(AUDIO_REGISTRY_KEY, audio);
+    } else {
+      audio.setVolumes(save.settings);
+    }
+    const requestAudioUnlock = (): void => {
+      if (!audio.isUnlocked()) void audio.unlock();
+    };
+    this.input.on('pointerdown', requestAudioUnlock);
+    this.input.keyboard?.on('keydown', requestAudioUnlock);
+    this.events.once('shutdown', () => {
+      this.input.off('pointerdown', requestAudioUnlock);
+      this.input.keyboard?.off('keydown', requestAudioUnlock);
+    });
+
     const hadActiveRun = save.activeRun !== null;
     const autoShowTutorial = shouldAutoShowOnboarding({
       hadActiveRun,
@@ -129,6 +149,15 @@ export class PrototypeScene extends Phaser.Scene {
     const boardSnapshot = board.getSnapshot();
     activeRun = { ...activeRun, backpackItems: boardSnapshot.items, nextLootSequence: boardSnapshot.nextLootSequence };
     this.drawSynergies();
+
+    const combatFeedback = new CombatFeedback(this, {
+      getBackpackItems: () => board.getSnapshot().items,
+      itemDefinitions: PROTOTYPE_ITEM_MAP,
+      reducedMotion: save.settings.reducedMotion,
+      backpackGrid: { left: 90, top: 225, cellSize: 76 },
+      enemyPoint: { x: 1225, y: 403 },
+      playerPoint: { x: 845, y: 287 },
+    });
 
     const shop = new ShopPanel(
       this,
@@ -197,6 +226,10 @@ export class PrototypeScene extends Phaser.Scene {
       getSelectedPerkIds: () => activeRun.selectedPerkIds,
       getHeroDefinition: () => activeRun.heroId ? PROTOTYPE_HERO_MAP.get(activeRun.heroId) : undefined,
       reducedMotion: save.settings.reducedMotion,
+      onAudioCue: (cue) => {
+        audio.playCue(cue);
+        combatFeedback.play(cue);
+      },
       onVictoryReward: ({ encounterId, coins }) => {
         if (activeRun.claimedEncounterIds.includes(encounterId)) return false;
         activeRun = { ...activeRun, claimedEncounterIds: [...activeRun.claimedEncounterIds, encounterId].sort() };
