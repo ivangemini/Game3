@@ -1,77 +1,77 @@
-# Junkpack: Boss Rush — Game Design v0.11
+# Junkpack: Boss Rush — Game Design v0.12
 
 ## Elevator pitch
-A compact roguelite inventory autobattler where the player picks a light rule-bending junk pilot, packs absurd junk into a constrained backpack, discovers synergies and fusion recipes, then fights surreal bosses that directly interfere with the backpack's rules.
+A compact roguelite inventory autobattler where the player chooses a light rule-bending junk pilot, packs absurd junk into a constrained backpack, discovers spatial synergies and fusion recipes, then fights surreal bosses that directly interfere with build valuation and backpack rules.
 
 ## Target
 Web-first: Yandex Games, CrazyGames and compatible HTML5 portals. Short onboarding, landscape presentation, desktop + touch.
 
 ## Core loop
-1. Choose one of four light rule-bender heroes for the run.
-2. Receive/shop for junk items.
-3. Place and rotate them in a constrained backpack with locked pocket cells.
-4. Form adjacency and tag synergies.
-5. Fight a short automatic battle with readable item triggers.
-6. Earn currency and hit occasional surreal choice-events.
+1. Choose one of four light rule-bender heroes.
+2. Receive/shop for junk.
+3. Place and rotate it in the backpack.
+4. Form adjacency/tag synergies.
+5. Fight a short automatic battle.
+6. Earn currency and resolve occasional surreal events.
 7. Rearrange, buy or fuse junk to pivot the build.
-8. Defeat a boss, open more backpack space and choose one of three perks.
+8. Defeat a boss, unlock backpack space and choose a perk.
 9. Continue through four compact worlds.
-10. After the campaign finale, Escape/Cash Out or take the same build into a full Corrupted Loop.
-11. Repeat deeper loops while mutations and boss-family rotations force new build adaptations.
+10. After the campaign finale, Escape/Cash Out or enter a full Corrupted Loop with the same build.
+11. Repeat deeper loops while mutations and boss-family rotations force new adaptations.
 
 ## Pacing target
-- Meaningful decision or payoff roughly every 20–45 seconds.
-- First normal fight: within ~1–2 minutes including setup.
-- First boss: ~3–5 minutes from run start.
-- Campaign: 4 worlds × 3 encounters = 12 encounters total.
-- Target first full campaign: ~20–25 minutes.
-- Target strong session: ~30–50 minutes if the player enters Loop 2.
+- Meaningful decision/payoff roughly every 20–45 seconds.
+- First normal fight within ~1–2 minutes including setup.
+- First boss ~3–5 minutes from run start.
+- Base campaign: 4 worlds × 3 encounters = 12 encounters.
+- First full campaign target: ~20–25 minutes.
+- Strong session: ~30–50 minutes through Loop 2.
 - Deep session: 60+ minutes through additional corrupted loops.
-- Do not extend session length with HP sponges alone. Length must come from repacking, purchases, perks, events, fusions, mutations, pocket growth and repeated build pivots.
+- Never pad with HP sponges alone; session length comes from repacking, purchases, perks, events, fusions, mutations, pocket growth and build pivots.
 
-The first boss is a checkpoint, not the end of the run. A player should understand the fantasy quickly, then spend the rest of the session making the backpack increasingly powerful and increasingly strange.
+## Backpack
+Prototype board: 6×5. Three lower pocket cells start locked; Boss 1, Boss 2 and Boss 3 each unlock one. World 4 therefore begins with the full normal backpack.
 
-## Core differentiator
-Bosses attack inventory rules and build structure, not only player HP. Current families interfere with cells/rows/items, delay a hyper-fast carry, punish isolated junk, eclipse a dominant tag, fine exact duplicates and charge rent for perimeter-heavy packing.
+Shapes, rotations, blocked cells, placement legality, physical side-contact and fusion placement are deterministic domain rules. UI coordinates never decide gameplay legality.
 
-## Launch systems
-### Backpack
-The prototype board is 6×5, but three lower pocket cells start locked. Boss 1, Boss 2 and Boss 3 each unlock one cell. World 4 therefore begins with the full normal backpack.
+## Items
+Launch target: 35–45 base/shop items. Current prototype: **24 base/shop items + 21 fusion-only results = 45 total item definitions**.
 
-Newly opened space changes placement possibilities, synergy geometry and purchase value, forcing the player to reconsider an already-functioning build during the same long run. Later loops may introduce cursed or conditional pocket variants, but launch should avoid permanently growing the grid beyond a readable mobile-friendly footprint.
+Current content deliberately reuses the same tag vocabulary rather than creating isolated one-off subsystems. The latest cross-family wave adds:
+- Alarm Hamster — Pet / Battery / Chaos;
+- Toxic Umbrella — Weapon / Poison / Metal;
+- Satellite Fork — Weapon / Metal / Antenna;
+- Canned Lightning — Battery / Laser / Chaos;
+- Slime Donut — Food / Slime / Poison;
+- Catellite Dish — Pet / Cat / Antenna / Metal;
+- Emergency Microwave — Device / Food / Metal;
+- Laser Mop — Weapon / Laser / Metal.
 
-### Items
-Launch target: 35–45 base items across weapons, devices, materials/potions, defensive junk and pets/creatures. Each item has stable ID, shape, tags, rarity and effects.
+These items are designed to create multiple existing interactions each: spatial synergies, hero/perk tag bonuses, fusion decisions and boss-specific valuation changes.
 
-The prototype currently has **16 base/shop items plus 12 fusion-only results**. The second content wave adds tactical food, antenna electronics and slime junk so early shop choices can cross-link with existing pet/device/poison/weapon/laser families. Fusion results intentionally do not enter the normal shop pool; their value comes from discovery, sacrificing ingredients and changing the build's spatial geometry.
+## Synergies
+Implemented spatial synergy family uses **orthogonal side contact** between occupied item cells. Diagonal proximity does not count.
 
-### Synergies
-The implemented synergy family uses **orthogonal side contact** between occupied item cells. Diagonal proximity does not count. This makes placement itself part of build power rather than treating the backpack as passive storage.
+Current 10 rules:
+- `CAT → LASER`: Cat fires +1 laser shot.
+- `BATTERY → DEVICE`: Device triggers 25% faster.
+- `POISON → WEAPON`: Weapon applies +2 poison.
+- `DUCK → CHAOS`: Duck gains +1 chaos power.
+- `MAGNET → METAL`: Magnet gains +1 scrap armor per adjacent Metal item.
+- `FOOD → PET`: Pet triggers 20% faster.
+- `ANTENNA → DEVICE`: Device triggers 15% faster.
+- `SLIME → POISON`: Slime gains +2 poison-on-hit.
+- `METAL → WEAPON`: Weapon gains +1 scrap armor.
+- `CHAOS → LASER`: Laser gains +1 unstable bonus shot.
 
-Current rules:
-- `CAT → LASER`: adjacent Laser grants the Cat +1 laser shot.
-- `BATTERY → DEVICE`: adjacent Device triggers 25% faster.
-- `POISON → WEAPON`: adjacent Weapon applies +2 poison.
-- `DUCK → CHAOS`: touching Chaos grants the Duck +1 chaos power.
-- `MAGNET → METAL`: each adjacent Metal item grants the Magnet +1 scrap armor.
-- `FOOD → PET`: adjacent Pet triggers 20% faster.
-- `ANTENNA → DEVICE`: adjacent Device triggers 15% faster.
-- `SLIME → POISON`: Slime gains +2 poison-on-hit from touching Poison.
-- `METAL → WEAPON`: adjacent Weapon contributes +1 scrap armor.
-- `CHAOS → LASER`: adjacent Laser fires +1 unstable bonus shot.
+A single contact may activate multiple rules in opposite directions. Example: Alarm Hamster beside Emergency Microwave activates `BATTERY → DEVICE` on the microwave and `FOOD → PET` on the hamster.
 
-Rules resolve deterministically from stable item instance IDs. Multiple valid contacts may stack where the rule is designed to stack. The families deliberately reuse the existing combat bonus vocabulary, so content depth grows without creating a bespoke combat subsystem for every item.
+Physical contact can also matter independently of tag synergy: Closet Monster uses contact for anchoring, while Border Shark values perimeter occupancy.
 
-A single contact may activate multiple readable rules when tags justify it. Tactical Banana next to Laser Cat, for example, can activate both `FOOD → PET` and `CHAOS → LASER`.
+## Fusion and discovery
+Launch target: 20–30 recipes. Current prototype: **21 recipes**, so the lower launch target is reached.
 
-Physical contact is also allowed to matter independently of a tag synergy. Closet Monster uses orthogonal contact as an anchoring rule: unrelated items can protect each other from Clutter Crush simply by being packed together. Border Shark independently values perimeter occupancy, so shape and rotation remain relevant even when two layouts produce identical synergy links.
-
-Future synergy families may add directional arcs or row/column rules, but they must stay visually readable and testable without Phaser.
-
-### Fusion/discovery
-Launch target remains 20–30 recipes. Fusion is a build pivot, not a linear `Item I + Item I = Item II` ladder.
-
-Implemented recipes:
+First-stage recipes:
 - Angry Battery + Cursed Toaster → **Shock Toaster**
 - Laser Cat + Angry Battery → **Cyber Cat**
 - Suspicious Flask + Toxic Fan → **Biohazard Turbine**
@@ -84,112 +84,118 @@ Implemented recipes:
 - Pocket Radio + Mutant Duck → **Radio Duck**
 - Panic Noodles + Toxic Fan → **Noodle Fan**
 - Battery Snail + Disco Orb → **Disco Snail**
+- Alarm Hamster + Angry Battery → **Reactor Hamster**
+- Toxic Umbrella + Slime Can → **Acid Parasol**
+- Satellite Fork + Pocket Radio → **Broadcast Trident**
+- Canned Lightning + Disco Orb → **Storm Disco**
+- Slime Donut + Tactical Banana → **Bio Snack Pack**
+- Catellite Dish + Feral Router → **Orbital Cat**
+- Emergency Microwave + Panic Noodles → **Apocalypse Microwave**
+- Laser Mop + Scrap Magnet → **Rail Mop**
 
-Fusion unlocks after Boss 1. Both ingredients are consumed only when the resulting item has a legal placement in the current backpack. Locked pocket cells still count as blocked, so fusion cannot bypass spatial progression. If the result cannot fit, the original items remain untouched.
+### Second-stage evolution
+The first late-run transformation is implemented:
 
-The result has its own definition, tags and combat profile, so a fusion may destroy one synergy, create another, change backpack geometry or push the player into a different build family. Successful recipes/results are recorded in persistent discovery state for the future Recipe Book and Itemdex.
+**Gravity Toaster + Shock Toaster → Singularity Toaster**.
 
-Fusion now also creates boss counterplay. Copycat Auditor fines exact repeated definitions, so sacrificing repeated ingredients to create a different fusion definition can reduce Duplicate Debt while changing the build's combat identity.
+Both ingredients are fusion-only results. The inventory itself is therefore the prerequisite: the player must first assemble two independent first-stage fusions before this recipe can become actionable. No extra save flag or gating subsystem is required.
 
-Later-run transformations may add second-stage or secret recipes tied to perks/loop conditions, but they should remain sparse and memorable rather than forming a large linear upgrade tree.
+Second-stage recipes should stay sparse and memorable. They are discovery payoffs, not a linear upgrade tree.
 
-### Run events
-A long session needs short decisions that are not all combat/shop screens. The prototype schedules one deterministic event after the first combat of each world: four in the base campaign and four more in every Corrupted Loop.
+Fusion unlocks after Boss 1. Ingredients are consumed only if the resulting item has a legal placement in the current backpack. Locked cells still count as blocked. Successful recipes/results are recorded in persistent discovery state.
 
-Events are seeded from `runSeed + eventIndex`, persisted before presentation and cannot be rerolled by reloading. A pending event blocks the next encounter until one choice resolves. Choices spend or award real run currency and may add real items to the backpack; an item-reward choice cannot complete if there is no legal backpack space.
+Fusion also creates boss counterplay: Copycat Auditor fines exact duplicates, so transforming repeated base items into distinct fusion definitions can reduce Duplicate Debt while changing the build identity.
 
-Implemented prototype event pool:
-- **Cursed Vending Machine** — mystery purchase or coin gamble.
-- **Cat Courier** — expensive guaranteed Laser Cat or cheaper random parcel.
-- **Duck Tax Office** — buy into duck bureaucracy or file a risky appeal.
-- **Microwave Oracle** — purchase appliance junk or harvest free static coins.
-- **Slime Pawnshop** — mystery crate or sell fabricated advice.
-- **Shrine of the Armed Fish** — buy a Fish Blaster or take a free Suspicious Flask.
+## Run events
+One deterministic event occurs after the first combat of each world: four in campaign and four more per Corrupted Loop. Events are seeded from run seed + event index, persisted before presentation and cannot be rerolled by reload.
 
-Immediate repeats are suppressed when alternatives exist. Events should resolve in seconds, create a build/economy decision, then return the player to packing rather than becoming a dialogue-heavy subsystem.
+Current pool:
+- Cursed Vending Machine;
+- Cat Courier;
+- Duck Tax Office;
+- Microwave Oracle;
+- Slime Pawnshop;
+- Shrine of the Armed Fish.
 
-### Heroes
-Four prototype heroes are implemented as **light rule-benders rather than hard classes**. Hero choice happens once per run and is persisted.
+Choices affect real currency and/or backpack items. Item rewards fail safely if there is no legal space.
 
-- **Scrapster — The Scavenger:** starts with +25 coins. Pure flexibility/economy; no combat tag requirement.
-- **Socket — The Engineer:** Device-tag junk triggers 12% faster.
-- **Moldwitch — The Alchemist:** Poison-tag junk applies +1 poison when it triggers.
-- **Snacklord — The Beastfriend:** Pet-tag junk triggers 15% faster.
+## Heroes
+Four prototype heroes are implemented as light rule-benders rather than classes:
+- **Scrapster / Scavenger** — +25 starting coins.
+- **Socket / Engineer** — Device junk triggers 12% faster.
+- **Moldwitch / Alchemist** — Poison junk applies +1 poison.
+- **Snacklord / Beastfriend** — Pet junk triggers 15% faster.
 
-The combat build resolves spatial synergies first, hero bonus second and run perks third. Because all bonuses use the same deterministic stat vocabulary, heroes multiply existing item decisions instead of creating four separate content silos.
+Build resolution order: spatial synergy → hero bonus → run perks → immutable combat snapshot. A hero must never make off-tag items unusable.
 
-A hero must never make non-matching items unusable. The player should still be able to pivot from Engineer into pets, from Beastfriend into poison, or from Scavenger into any tag family when the shop/recipes demand it.
+## Perks
+Launch target: 20–25. Current prototype: **16 perks**.
 
-### Bosses
-Launch target: 6 major boss families plus modifiers. **All six prototype families are implemented.** Each changes item valuation, tempo, geometry or composition and has readable telegraphs plus multiple viable counters.
+Existing families cover devices, pets, weapons, chaos, metal, antenna, slime, food and global speed. The latest wave adds:
+- Battery Rage — Battery trigger speed;
+- Catnip Optics — Cat bonus laser shot;
+- Poison Pension — Poison-tag poison output;
+- Duck Tape Doctrine — Duck-tag scrap armor;
+- Antenna Afterlife — Antenna speed + armor hybrid;
+- Magnet School — Magnet-tag scrap armor.
 
-Base campaign families:
-- **TV Tyrant** attacks spatial reliability with Channel Jam, Slime Signal and Magnet Scramble.
-- **Deadline Snail** attacks tempo concentration with **Time Tax**. It targets the fastest meaningful combat item, telegraphs its footprint, then shifts only that item's next queued trigger by +1.2s.
-- **Closet Monster** attacks loose geometry with **Clutter Crush**. Items that touch no other item orthogonally are telegraphed; impact deals 3 pressure per loose item, with shield absorbing pressure first. Any side contact anchors the item even when no tag synergy exists.
-- **Baby Moon** attacks build concentration with **Tag Eclipse**. It telegraphs the most represented tag family and temporarily suppresses triggers from matching items while other families remain live.
+Perks should reinforce build identity more often than generic percentages, while still allowing pivots.
 
-Corrupted-loop alternate families:
-- **Copycat Auditor** attacks exact-definition repetition with **Duplicate Debt**. It groups the immutable build by definition ID, targets the most repeated exact item and deals 4 shield-aware pressure for each copy beyond the first. No exact duplicates means a readable zero-damage audit. Counterplay includes varying exact item definitions, fusing duplicates into a new definition, preserving shield or deliberately accepting the cost of a high-output duplicate engine.
-- **Border Shark** attacks perimeter-heavy packing with **Edge Rent**. Every item touching the 6×5 outer border is telegraphed; impact deals 2 shield-aware pressure per affected item. The mechanic counts items rather than occupied border cells, so large shapes can act as efficient perimeter buffers. Counterplay includes moving the productive core inward, rotating/fusing small edge clutter, using larger edge pieces or intentionally paying part of the rent with shield.
+## Bosses
+Launch target: 6 major boss families plus modifiers. **All six prototype families are implemented.**
 
-Deadline Snail's counterplay is to distribute trigger-speed investment across multiple productive items, preserve a slower secondary engine or deliberately accept the tax when one carry is still efficient enough. Corrupted variants shorten tax cadence while keeping the +1.2s delay stable.
+Base campaign:
+1. **TV Tyrant** — Channel Jam, Slime Signal, Magnet Scramble; attacks spatial reliability.
+2. **Deadline Snail** — Time Tax; delays the next trigger of the fastest meaningful item.
+3. **Closet Monster** — Clutter Crush; damages geometrically loose items that touch nothing.
+4. **Baby Moon** — Tag Eclipse; suppresses the most represented build tag temporarily.
 
-Closet Monster's counterplay is spatial: pack items into connected clusters, use multi-cell junk as bridges and rotate/fuse around isolated pockets. A player may still leave a high-value item loose, but that becomes an explicit recurring HP/shield cost. Corrupted variants increase cadence without raising the per-item damage rule.
+Corrupted-loop alternates:
+5. **Copycat Auditor** — Duplicate Debt; fines exact-definition copies beyond the first.
+6. **Border Shark** — Edge Rent; charges pressure per item touching the backpack perimeter.
 
-Tag Eclipse uses stable tie-breaking and shows the affected item count before impact. Its counterplay is to diversify damage/poison/shield families or pivot tags through shop/fusion choices before World 4. Corrupted Baby Moon shortens Eclipse cadence rather than inheriting unrelated boss attacks, preserving boss-family identity.
+Even Corrupted Loops use TV Tyrant → Copycat Auditor → Border Shark → Baby Moon. Odd loops use TV Tyrant → Deadline Snail → Closet Monster → Baby Moon. This exposes all six families without increasing the 12-encounter cycle.
 
-The base campaign therefore teaches four adaptation lessons in order: survive spatial disruption, avoid a single hyper-fast carry, pack into defensible geometry, then avoid over-concentrating the entire build in one tag family.
+Every boss must have readable telegraphing and multiple viable counters. Boss damage/disruption must never require one specific item to survive.
 
-Corrupted Loops add two more mastery lessons without increasing encounter count. In **even loops**, World 2 swaps Deadline Snail for Copycat Auditor and World 3 swaps Closet Monster for Border Shark. In **odd loops**, Deadline Snail and Closet Monster return. World 1 stays TV Tyrant and World 4 stays Baby Moon. This alternating rotation exposes all six families across long sessions while preserving a compact 12-encounter cycle.
+## World mutations
+Current six seeded risk/reward rules:
+- Greedy Signal;
+- Glass Reality;
+- Rage Network;
+- Thick Slime;
+- Bad Reception;
+- Coupon Apocalypse.
 
-### Perks
-Launch target: 20–25 run perks. The prototype currently has **10** perks covering devices, pets, weapons, chaos, metal, antenna, slime, food and global trigger speed. Perks should modify build identity more often than provide generic flat percentages, but lightweight tag bonuses remain useful while the content pool is still being validated.
+Campaign gets one stable mutation per world. Corrupted loops stack 2 mutations in Loop 2, 3 in Loop 3 and up to 4 deeper.
 
-### World mutations
-Campaign mutations are seeded per run and stay stable across a world so the player can adapt instead of facing arbitrary per-fight noise. They alter real enemy/reward values and therefore create risk/reward decisions cheaply.
-
-Implemented pool:
-- Greedy Signal — enemies gain HP, payout rises strongly.
-- Glass Reality — enemies lose HP but hit much harder.
-- Rage Network — enemies attack faster for higher rewards.
-- Thick Slime — enemies gain substantial HP for a reward premium.
-- Bad Reception — enemy damage rises for a smaller premium.
-- Coupon Apocalypse — small enemy HP increase for a large payout increase.
-
-The four campaign worlds receive deterministic non-repeating mutations from the seed. Corrupted loops stack multiple different mutations simultaneously: 2 in Loop 2, 3 in Loop 3 and up to 4 in deeper loops.
-
-### Campaign and Corrupted Loops
-Campaign is four worlds with three encounters each. Bosses sit at the end of each world and can grant a three-choice perk. Between encounters the player can repack, spend rewards, resolve scheduled events and fuse compatible junk.
+## Campaign and Corrupted Loops
+Campaign = four worlds × three encounters. Bosses end each world and can grant a three-choice perk.
 
 After encounter 12:
-- **Escape / Cash Out** — end the run and lock the score; or
-- **Go Deeper** — keep the exact hero, backpack, items and perks for another four-world cycle.
+- **Escape / Cash Out** ends the run and locks score;
+- **Go Deeper** preserves hero, backpack, items and perks for another 12-encounter cycle.
 
-Going deeper is a commitment. The next safe cash-out appears only after all 12 encounters of that corrupted loop are cleared. Quitting the app does not destroy the run; persistence allows the committed loop to resume later.
+Entering a loop commits the player until the next cycle boundary. Loop depth scales enemy HP/damage/speed and payouts, stacks more mutations, adds four more deterministic events and rotates boss families. Quitting the app does not destroy the run; persistence resumes the committed loop.
 
-Each deeper loop increases enemy pressure and payouts, stacks more world mutations, inserts four additional deterministic events and preserves fusion/discovery/perk opportunities. Boss slots also rotate deterministically: even loops introduce Copycat Auditor and Border Shark in Worlds 2–3, while odd loops restore Deadline Snail and Closet Monster. This gives long sessions new counter-build pressure without adding bespoke stages or more than 12 encounters per cycle.
+## Persistence and discovery
+Current save schema: **v8**. Active run persists run seed, hero ID, economy/shop state, backpack placements/rotations, generated sequence, progression/loop state, claim-once encounter rewards, selected perks and deterministic event state.
 
-### Persistence and discovery
-Active-run persistence is schema-versioned. **Save v8** stores backpack/shop/perks/progression/events plus the selected hero ID. Legacy v1–v7 saves migrate forward; a migrated active v7 run receives `heroId: null`, then asks for one hero choice without resetting the existing backpack, coins, events or progression.
+Legacy v1–v7 saves migrate forward. Discovery persists item IDs and successful recipe IDs. Boss cadence/targeting and second-stage fusion availability require no new save fields; they derive from current inventory, immutable combat snapshot and stable enemy/loop IDs.
 
-Persistent discovery records item IDs and successful fusion recipe IDs. The UI for Itemdex/Recipe Book is future work, but discovery state is already generated by real gameplay rather than being retrofitted later.
-
-Boss-family cadence and targeting require no new save fields. They derive from the immutable combat-start build and stable enemy/loop IDs, so save schema remains v8.
-
-### Meta
-Itemdex/Recipe Book, achievements, Daily seeded run, deepest completed Corrupted Loop and score. Keep permanent power creep limited.
+## Meta
+Planned/partial meta: Itemdex, Recipe Book, achievements, Daily seeded run, deepest completed Corrupted Loop and score. Permanent power creep should remain limited.
 
 ## Visual identity
-Original absurd junk-surrealism: laser cats, cursed appliances, mutant ducks, tactical food, junk monsters, slime electronics, grinning refrigerators and impossible celestial creatures. Avoid direct copies of existing meme characters or branded objects.
+Original absurd junk-surrealism: laser cats, cursed appliances, mutant ducks, tactical food, junk monsters, slime electronics, grinning refrigerators and impossible celestial creatures. Avoid direct copies of branded or recognizable third-party meme IP.
 
 ## Monetization hooks
-Rewarded: revive, post-boss reward multiplier, reroll, bonus chest/attempt. Interstitial: only natural transitions subject to platform policy. No forced interruption during active combat or backpack manipulation.
+Rewarded: revive, post-boss reward multiplier, reroll, bonus chest/attempt. Interstitials only at natural transitions and subject to portal policy. Never interrupt active combat or backpack manipulation.
 
-For long sessions, ad pacing must respect the run rhythm. Boss clear / world transition / voluntary reward moments are preferred over arbitrary timers. Run events themselves should not silently become ad prompts.
+For long sessions, preferred ad moments are boss clears, world transitions and voluntary reward moments rather than arbitrary timers.
 
 ## Non-goals for launch
-Real-time PvP, guilds/chat, open world, large story campaign, server-heavy economy, battle pass, dozens of heroes, hundreds of handmade stages.
+Real-time PvP, guilds/chat, open world, large story campaign, server-heavy economy, battle pass, dozens of heroes or hundreds of handmade stages.
 
 ## Success criterion for MVP
-A player can choose a hero without being class-locked, complete materially different runs using the same compact content pool, understand why a build works, experience six mechanically distinct boss families changing backpack valuation or rules, reach the first boss quickly, keep modifying the build after 15–20 minutes through events/fusions/pocket growth, and have a credible reason to risk the same successful build for a 30–60+ minute session through Corrupted Loops.
+A player can choose a hero without class lock-in, complete materially different runs from a compact content pool, understand why a build works, discover first- and second-stage fusions, experience six mechanically distinct boss families, reach the first boss quickly, keep modifying the build after 15–20 minutes and have a credible reason to risk the same successful build for a 30–60+ minute Corrupted Loop session.
