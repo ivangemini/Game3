@@ -109,6 +109,28 @@ test('suppresses the system context menu inside the game surface', async ({ page
   expect(prevented).toBe(true);
 });
 
+test('first launch reaches the run with one hero-selection click', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop', 'first-launch contract runs once in Chromium desktop');
+  await page.goto('/');
+  const canvas = page.locator('canvas');
+  await expect(canvas).toBeVisible({ timeout: 15_000 });
+  const box = await canvas.boundingBox();
+  if (!box) throw new Error('Canvas bounds unavailable');
+
+  // First hero card center in the 1600×900 Phaser design space, projected into
+  // the responsive canvas. A blocking tutorial modal would consume this click.
+  await page.mouse.click(
+    box.x + box.width * (365 / 1600),
+    box.y + box.height * (480 / 900),
+  );
+
+  await expect.poll(() => page.evaluate(() => {
+    const raw = localStorage.getItem('junkpack.save');
+    if (!raw) return null;
+    try { return JSON.parse(raw)?.activeRun?.heroId ?? null; } catch { return null; }
+  })).not.toBeNull();
+});
+
 test('viewport profile flips portrait gate on resize and recovers', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium-desktop', 'resize sequence runs once in Chromium desktop');
 
