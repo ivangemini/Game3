@@ -1,5 +1,6 @@
 import * as Phaser from 'phaser';
 import {
+  audioCueForClutterCrushEvent,
   audioCueForCombatEvent,
   audioCueForTimeTaxEvent,
   combatStartAudioCue,
@@ -10,7 +11,9 @@ import { PROTOTYPE_ITEM_MAP } from '../data/items';
 import { PROTOTYPE_PERK_MAP } from '../data/perks';
 import {
   advanceCombatWithBossRules,
+  clutterCrushDefinitionForEnemyId,
   isBossRuleEnemy,
+  isClutterCrushPresentationEvent,
   isTimeTaxPresentationEvent,
   timeTaxDefinitionForEnemyId,
   type BossCombatPresentationEvent,
@@ -223,6 +226,24 @@ export class CombatPanel {
       return;
     }
 
+    if (isClutterCrushPresentationEvent(event)) {
+      this.onAudioCue?.(audioCueForClutterCrushEvent(event));
+      if (event.kind === 'boss-clutter-telegraph') {
+        const label = event.affectedItemCount > 0 ? `${event.affectedItemCount} LOOSE ITEMS` : 'ALL JUNK ANCHORED';
+        this.bossStatusText.setText(`CLUTTER CRUSH → ${label} • IMPACT IN ${((event.impactAtMs - event.atMs) / 1000).toFixed(1)}s`);
+        this.showBackpackItems(event.itemInstanceIds, 0x7de6ff, Math.max(120, event.impactAtMs - event.atMs), true);
+        this.pushLog(`${this.seconds(event.atMs)} • closet scans ${event.affectedItemCount} loose items`);
+        return;
+      }
+      this.bossStatusText.setText(`CLUTTER CRUSH → ${event.totalDamage} pressure • ${event.absorbedByShield} shielded`);
+      this.showBackpackItems(event.itemInstanceIds, 0x42b8ff, 520, false);
+      this.pushLog(`${this.seconds(event.atMs)} • loose-junk crush ${event.healthDamage} HP`);
+      if (!this.reducedMotion && event.healthDamage > 0) {
+        this.scene.tweens.add({ targets: [this.playerText, this.barGraphics], alpha: 0.45, yoyo: true, duration: 95 });
+      }
+      return;
+    }
+
     this.onAudioCue?.(audioCueForCombatEvent(event));
     if (event.kind === 'item-triggered') { this.pushLog(`${this.seconds(event.atMs)} • ${event.itemInstanceId} triggered`); return; }
     if (event.kind === 'item-jammed') { this.pushLog(`${this.seconds(event.atMs)} • ${event.itemInstanceId} JAMMED — trigger lost`); return; }
@@ -321,6 +342,10 @@ export class CombatPanel {
     for (const cell of item.occupiedCells) this.showBackpackCell(cell, color, durationMs, telegraph);
   }
 
+  private showBackpackItems(itemInstanceIds: readonly string[], color: number, durationMs: number, telegraph: boolean): void {
+    for (const itemInstanceId of itemInstanceIds) this.showBackpackItem(itemInstanceId, color, durationMs, telegraph);
+  }
+
   private showBackpackRow(row: number, color: number, durationMs: number, telegraph: boolean): void {
     const { left, top, cellSize } = this.backpackGrid;
     const width = cellSize * 6;
@@ -356,11 +381,8 @@ export class CombatPanel {
     if (!state || state.outcome !== 'active') { this.nextActionText.setText(''); return; }
     const entries: string[] = [];
     const labels: Array<[string, string]> = [
-      ['enemy-attack', 'HIT'],
-      ['boss-interference', 'JAM'],
-      ['boss-cell-interference', 'SLIME'],
-      ['boss-row-interference', 'MAGNET'],
-      ['boss-tag-interference', 'ECLIPSE'],
+      ['enemy-attack', 'HIT'], ['boss-interference', 'JAM'], ['boss-cell-interference', 'SLIME'],
+      ['boss-row-interference', 'MAGNET'], ['boss-tag-interference', 'ECLIPSE'],
     ];
     for (const [kind, label] of labels) {
       const effect = state.queue.find((candidate) => candidate.kind === kind);
@@ -371,6 +393,11 @@ export class CombatPanel {
       const nextImpact = (Math.floor(state.timeMs / timeTax.intervalMs) + 1) * timeTax.intervalMs;
       entries.push(`TAX ${Math.max(0, (nextImpact - state.timeMs) / 1000).toFixed(1)}s`);
     }
+    const clutter = clutterCrushDefinitionForEnemyId(enemy.id);
+    if (clutter) {
+      const nextImpact = (Math.floor(state.timeMs / clutter.intervalMs) + 1) * clutter.intervalMs;
+      entries.push(`CRUSH ${Math.max(0, (nextImpact - state.timeMs) / 1000).toFixed(1)}s`);
+    }
     this.nextActionText.setText(entries.join(' • '));
   }
 
@@ -379,11 +406,7 @@ export class CombatPanel {
     this.barGraphics.fillStyle(color, 1); this.barGraphics.fillRoundedRect(x, y, width * Math.max(0, Math.min(1, ratio)), 14, 6);
   }
   private isBoss(enemy: EnemyCombatDefinition): boolean {
-    return !!enemy.interference
-      || !!enemy.cellInterference
-      || !!enemy.rowInterference
-      || !!enemy.tagInterference
-      || isBossRuleEnemy(enemy.id);
+    return !!enemy.interference || !!enemy.cellInterference || !!enemy.rowInterference || !!enemy.tagInterference || isBossRuleEnemy(enemy.id);
   }
   private bossSystems(enemy: EnemyCombatDefinition): string[] {
     const systems: string[] = [];
@@ -391,7 +414,8 @@ export class CombatPanel {
     if (enemy.cellInterference) systems.push('SLIME SIGNAL');
     if (enemy.rowInterference) systems.push('MAGNET SCRAMBLE');
     if (enemy.tagInterference) systems.push('TAG ECLIPSE');
-    if (isBossRuleEnemy(enemy.id)) systems.push('TIME TAX');
+    if (timeTaxDefinitionForEnemyId(enemy.id)) systems.push('TIME TAX');
+    if (clutterCrushDefinitionForEnemyId(enemy.id)) systems.push('CLUTTER CRUSH');
     return systems;
   }
   private punchEnemy(scale: number): void {
