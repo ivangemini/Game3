@@ -47,4 +47,10 @@ export const TV_TYRANT: EnemyCombatDefinition = {
     telegraphMs: 1000,
     durationMs: 2600,
   },
+  rowInterference: {
+    kind: 'magnet-row',
+    intervalMs: 6800,
+    telegraphMs: 1200,
+    durationMs: 2400,
+  },
 };

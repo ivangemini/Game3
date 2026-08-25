@@ -42,6 +42,9 @@ const channelJam = (intervalMs: number, telegraphMs: number, durationMs: number)
 const slimeCell = (intervalMs: number, telegraphMs: number, durationMs: number) => ({
   kind: 'slime-cell' as const, intervalMs, telegraphMs, durationMs,
 });
+const magnetRow = (intervalMs: number, telegraphMs: number, durationMs: number) => ({
+  kind: 'magnet-row' as const, intervalMs, telegraphMs, durationMs,
+});
 
 export const WORLD_MODIFIERS: readonly RunWorldModifier[] = [
   { id: 'greedy-signal', name: 'Greedy Signal', description: 'Enemies +20% HP • rewards +30%.', enemyHpPct: 20, enemyDamagePct: 0, enemyAttackSpeedPct: 0, rewardPct: 30 },
@@ -60,10 +63,10 @@ const BASE_CAMPAIGN_ENCOUNTERS: readonly BaseEncounterDefinition[] = [
   { encounterId: 'w1-tv-tyrant', world: 1, slot: 3, kind: 'boss', title: 'TV Tyrant', subtitle: 'Boss • Channel Jam + Slime Signal.', rewardCoins: 25, scoreValue: 300, enemy: { id: 'tv-tyrant', name: 'TV Tyrant', maxHp: 145, attackIntervalMs: 2200, attackDamage: 9, interference: channelJam(4200, 800, 2300), cellInterference: slimeCell(5500, 1000, 2600) } },
   { encounterId: 'w2-microwave-brute', world: 2, slot: 1, kind: 'fight', title: 'Microwave Brute', subtitle: 'World 2 • sturdier junk, less forgiving hits.', rewardCoins: 14, scoreValue: 180, enemy: { id: 'microwave-brute', name: 'Microwave Brute', maxHp: 148, attackIntervalMs: 1950, attackDamage: 10 } },
   { encounterId: 'w2-scrap-collector', world: 2, slot: 2, kind: 'elite', title: 'Scrap Collector', subtitle: 'Elite • punishes weak damage curves.', rewardCoins: 18, scoreValue: 230, enemy: { id: 'scrap-collector', name: 'Scrap Collector', maxHp: 186, attackIntervalMs: 1750, attackDamage: 11 } },
-  { encounterId: 'w2-tv-pirate-signal', world: 2, slot: 3, kind: 'boss', title: 'TV Tyrant: Pirate Signal', subtitle: 'Boss remix • faster interference, higher pressure.', rewardCoins: 32, scoreValue: 420, enemy: { id: 'tv-tyrant-pirate', name: 'TV Tyrant // Pirate Signal', maxHp: 218, attackIntervalMs: 2050, attackDamage: 12, interference: channelJam(3700, 750, 2500), cellInterference: slimeCell(5000, 900, 2800) } },
+  { encounterId: 'w2-tv-pirate-signal', world: 2, slot: 3, kind: 'boss', title: 'TV Tyrant: Pirate Signal', subtitle: 'Boss remix • Magnet Scramble now hunts metal-heavy rows.', rewardCoins: 32, scoreValue: 420, enemy: { id: 'tv-tyrant-pirate', name: 'TV Tyrant // Pirate Signal', maxHp: 218, attackIntervalMs: 2050, attackDamage: 12, interference: channelJam(3700, 750, 2500), cellInterference: slimeCell(5000, 900, 2800), rowInterference: magnetRow(7200, 1200, 2300) } },
   { encounterId: 'w3-mutant-conveyor', world: 3, slot: 1, kind: 'fight', title: 'Mutant Conveyor', subtitle: 'World 3 • the backpack should be becoming a real machine now.', rewardCoins: 18, scoreValue: 260, enemy: { id: 'mutant-conveyor', name: 'Mutant Conveyor', maxHp: 214, attackIntervalMs: 1800, attackDamage: 13 } },
   { encounterId: 'w3-signal-golem', world: 3, slot: 2, kind: 'elite', title: 'Signal Golem', subtitle: 'Elite • checks whether the build has a coherent damage engine.', rewardCoins: 24, scoreValue: 340, enemy: { id: 'signal-golem', name: 'Signal Golem', maxHp: 264, attackIntervalMs: 1650, attackDamage: 14 } },
-  { encounterId: 'w3-final-broadcast', world: 3, slot: 3, kind: 'boss', title: 'TV Tyrant: Final Broadcast', subtitle: 'Third boss • stronger signal attacks and the last normal pocket unlock.', rewardCoins: 42, scoreValue: 650, enemy: { id: 'tv-tyrant-final', name: 'TV Tyrant // Final Broadcast', maxHp: 332, attackIntervalMs: 1900, attackDamage: 16, interference: channelJam(3300, 700, 2700), cellInterference: slimeCell(4400, 850, 3000) } },
+  { encounterId: 'w3-final-broadcast', world: 3, slot: 3, kind: 'boss', title: 'TV Tyrant: Final Broadcast', subtitle: 'Third boss • all three signal attacks are active.', rewardCoins: 42, scoreValue: 650, enemy: { id: 'tv-tyrant-final', name: 'TV Tyrant // Final Broadcast', maxHp: 332, attackIntervalMs: 1900, attackDamage: 16, interference: channelJam(3300, 700, 2700), cellInterference: slimeCell(4400, 850, 3000), rowInterference: magnetRow(6100, 1050, 2700) } },
   { encounterId: 'w4-grinning-fridge', world: 4, slot: 1, kind: 'fight', title: 'Grinning Fridge', subtitle: 'World 4 • full backpack, no excuses.', rewardCoins: 24, scoreValue: 360, enemy: { id: 'grinning-fridge', name: 'Grinning Fridge', maxHp: 310, attackIntervalMs: 1725, attackDamage: 16 } },
   { encounterId: 'w4-duck-cult', world: 4, slot: 2, kind: 'elite', title: 'Rubber Duck Choir', subtitle: 'Elite • a final pressure test before reality breaks.', rewardCoins: 31, scoreValue: 470, enemy: { id: 'rubber-duck-choir', name: 'Rubber Duck Choir', maxHp: 382, attackIntervalMs: 1550, attackDamage: 18 } },
   { encounterId: 'w4-baby-moon', world: 4, slot: 3, kind: 'boss', title: 'Baby Moon', subtitle: 'Final campaign boss • reality is already starting to corrupt.', rewardCoins: 55, scoreValue: 850, enemy: { id: 'baby-moon', name: 'Baby Moon', maxHp: 475, attackIntervalMs: 1825, attackDamage: 20, interference: channelJam(3000, 650, 2900), cellInterference: slimeCell(3900, 800, 3200) } },
@@ -151,6 +154,12 @@ export function createLoopEncounter(
         cellInterference: {
           ...template.enemy.cellInterference,
           intervalMs: Math.max(3200, Math.round(template.enemy.cellInterference.intervalMs / speedScale)),
+        },
+      } : {}),
+      ...(template.enemy.rowInterference ? {
+        rowInterference: {
+          ...template.enemy.rowInterference,
+          intervalMs: Math.max(3900, Math.round(template.enemy.rowInterference.intervalMs / speedScale)),
         },
       } : {}),
     },
