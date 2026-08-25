@@ -14,6 +14,7 @@ export interface RunProgressPanelOptions {
   readonly onStartEncounter: (encounter: RunEncounterDefinition) => boolean;
   readonly onEnterCorruptedLoop: () => void;
   readonly onCashOut: () => void;
+  readonly onStartNewRun: () => void;
 }
 
 export class RunProgressPanel {
@@ -101,8 +102,10 @@ export class RunProgressPanel {
       this.stageText.setText('SCORE LOCKED');
       this.encounterText.setText('REALITY SURVIVED YOU.');
       this.subtitleText.setText('Start a new run for a different backpack, mutation and perk path.');
-      this.rewardText.setText('');
-      this.mutationText.setText('');
+      this.rewardText.setText('FINAL SCORE SAVED');
+      this.mutationText.setText('NEW RUN = NEW STANDARD SEED • META PROGRESS STAYS');
+      this.statusText.setText('RUN ARCHIVED • READY TO REPACK REALITY');
+      this.createActionButton(this.left + 100, this.top + 302, '↻ START NEW RUN', 0x33432a, 0xb5ff4d, () => this.options.onStartNewRun());
       return;
     }
 
