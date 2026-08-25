@@ -7,6 +7,13 @@ interface FrameProfile {
   readonly longFrames: number;
 }
 
+const STANDALONE_ART_PREFIXES = [
+  '/assets/art/items/',
+  '/assets/art/heroes/',
+  '/assets/art/bosses/',
+  '/assets/art/ui/',
+] as const;
+
 async function sampleFrameTimes(page: import('@playwright/test').Page, durationMs = 2200): Promise<FrameProfile> {
   return page.evaluate(async (duration) => new Promise<FrameProfile>((resolve) => {
     const deltas: number[] = [];
@@ -82,10 +89,10 @@ test('keeps the initial production network waterfall compact', async ({ page }) 
     })));
 
   const runtimeAssets = resources.filter((entry) => entry.path.includes('/assets/'));
-  const atlasResources = runtimeAssets.filter((entry) => /junk-(items|portraits|ui)\.(png|json)$/.test(entry.path));
-  const standaloneSvg = runtimeAssets.filter((entry) => entry.path.endsWith('.svg'));
+  const atlasResources = runtimeAssets.filter((entry) => /junk-(items|portraits|ui)\.(svg|json)$/.test(entry.path));
+  const standaloneArt = runtimeAssets.filter((entry) => STANDALONE_ART_PREFIXES.some((prefix) => entry.path.includes(prefix)));
 
   expect(resources.length).toBeLessThanOrEqual(24);
-  expect(atlasResources.length).toBeGreaterThanOrEqual(3);
-  expect(standaloneSvg).toHaveLength(0);
+  expect(atlasResources.length).toBeGreaterThanOrEqual(6);
+  expect(standaloneArt).toHaveLength(0);
 });
