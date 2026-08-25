@@ -1,19 +1,22 @@
-# Architecture v0.3
+# Architecture v0.4
 
 ## Stack
 - Phaser 4.2.1
 - TypeScript (strict)
 - Vite 8
-- Vitest for deterministic domain tests
+- Vitest for deterministic domain and simulation tests
 
 Phaser 4 uses namespace imports from npm (`import * as Phaser from 'phaser'`).
 
 ## Layers
 ### `src/game/domain/`
-Pure TypeScript simulation and rules. No Phaser imports. Inventory geometry, seeded shop generation, synergies, RNG, combat/effect ordering and run state belong here.
+Pure TypeScript simulation and rules. No Phaser imports. Inventory geometry, seeded shop generation, synergies, RNG, combat/effect ordering, fusions, events, perks and run state belong here.
 
 ### `src/game/data/`
-Declarative content: items, combat profiles, enemies, bosses, perks and balance tables. Stable IDs only.
+Declarative content: items, combat profiles, encounters, bosses, perks, events, fusion recipes and balance tables. Stable IDs only.
+
+### `src/game/simulation/`
+Offline/QA simulation that may compose domain rules with declarative game data. It is not a presentation layer and must remain deterministic. Pacing/balance reports belong here rather than inside Phaser scenes.
 
 ### `src/game/scenes/`
 Phaser presentation/orchestration. Scenes translate domain state into visuals/input and coordinate persistence without making presentation the source of gameplay rules.
@@ -28,42 +31,33 @@ Portal abstraction and implementations. Game logic calls one adapter API.
 Versioned local save schema, serialization, validation and migrations.
 
 ## Determinism
-All run-affecting randomness comes from a seeded RNG instance passed to systems. `Math.random()` is prohibited in domain run logic. Shop offers are derived from `runSeed + shopIndex`, and definitions are sorted before weighted selection so source-array order cannot change a Daily Run.
+All run-affecting randomness comes from seeded RNG. `Math.random()` is prohibited in domain run logic. Shops, mutations, events and other generated choices derive from stable seed namespaces so reloads cannot reroll outcomes.
+
+QA simulations also use explicit seed namespaces. A pacing or balance regression must therefore be reproducible from its seed.
 
 ## Inventory rules
-Backpack geometry and synergy evaluation are deterministic domain rules. UI coordinates never determine whether an item fits or whether a synergy is active. Purchased prototype junk uses deterministic first-fit placement until a dedicated staging tray is promoted.
+Backpack geometry, blocked pocket cells, fusion placement and synergy evaluation are deterministic domain rules. UI coordinates never determine whether an item fits or whether a synergy is active. Purchased prototype junk uses deterministic legal placement until a dedicated staging tray is promoted.
 
 ## Combat
 `src/game/domain/combat.ts` owns the combat clock and ordered effect queue. The queue resolves by `dueAtMs`, then stable `sequence`, so equal-time effects have a documented deterministic order.
 
 The render loop passes explicit elapsed milliseconds to `advanceCombat`; render FPS never determines trigger count, damage or outcome. A single large advance and many smaller advances over the same simulated duration must converge to the same state.
 
-Backpack effects are converted into combat stats before simulation:
-- Battery synergy modifies trigger interval;
-- Poison adds poison-on-hit;
-- Cat/Laser adds additional laser shots;
-- Duck/Chaos adds provisional chaos damage;
-- Magnet/Metal scrap armor becomes opening shield.
+Backpack effects are converted into combat stats before simulation. Current examples include trigger speed, poison, laser shots, chaos damage and scrap armor. Boss interference can jam item triggers, slime occupied cells or temporarily scramble crossing rows. Phaser consumes presentation events for animation/audio/UI but cannot modify the combat result through presentation timing.
 
-Combat emits presentation events (`item-triggered`, damage, poison, shield, player hit, outcome). Phaser consumes those events for animation/audio/UI but cannot modify the combat result through presentation timing.
+## Time and pacing QA
+Combat simulation receives explicit elapsed time. Human decision pacing is modeled separately in `src/game/simulation/pacing.ts` so design-duration assumptions never leak into combat rules.
 
-## Time
-Simulation receives explicit delta/ticks. Do not encode damage or trigger counts directly from render FPS.
+The seeded pacing model composes the real 12-encounter campaign/loop structure with target human decision-time ranges and produces first-boss, campaign, Loop 2 and Loop 3 percentile checkpoints. It is a regression guard, not a substitute for real play telemetry.
 
 ## Saves
-Current schema: **v2**.
+Current schema: **v7**.
 
-Persist IDs and values, never scene object references. Active-run persistence currently stores:
-- run seed;
-- shop index;
-- run coins;
-- sold offer IDs for the current shop step;
-- placed item IDs, origins and rotations;
-- next generated loot-instance sequence.
+Persist IDs and values, never scene object references. Active-run persistence includes the run seed, shop/economy state, backpack placements/rotations, generated-instance sequence, run progression/loop state, claim-once encounter rewards, selected perks, deterministic event cursor/history/pending event and discovery state needed by the current run.
 
-`v1` meta saves migrate to `v2` with no active run. Malformed save payloads fall back safely. Restored backpack items are also sanitized against current item definitions, blocked cells, duplicates and placement collisions before scene objects are created.
+Legacy versions migrate forward. Malformed save payloads fall back safely, and restored backpack items are sanitized against current definitions, blocked cells, duplicates and collisions before scene objects are created.
 
-Content removal must continue to tolerate legacy IDs safely. Future save changes require a migration in the same change.
+Meta persistence also tracks durable discovery and deepest completed corrupted-loop progress. Content removal must continue to tolerate legacy IDs safely. Every future schema change requires migration coverage in the same change.
 
 ## Platform adapter outline
 Capabilities may include init, player identity when available, locale, storage/cloud save, interstitial, rewarded ad, gameplay start/stop signals and leaderboard hooks. Every capability requires a graceful unsupported fallback.
@@ -72,4 +66,4 @@ Capabilities may include init, player identity when available, locale, storage/c
 Use generated/source art → reviewed final exports → atlases where beneficial. Keep source assets separate from runtime-optimized assets. Never bind gameplay rules to filename semantics.
 
 ## Quality gates
-Typecheck + unit tests + production build on every main-branch push. Browser smoke verification is required once a connected/runnable browser environment is available.
+Typecheck + unit tests + production build on every main-branch push. Deterministic pacing/balance simulations should run in tests once promoted to a regression gate. Browser smoke verification is required once a connected/runnable browser environment is available.

@@ -68,7 +68,7 @@
 - [x] Event choices consume/award the real run currency and can grant real backpack items
 - [x] Six prototype fusion recipes with deterministic ingredient/result handling
 - [x] Fusion unlocks after Boss 1 and respects currently locked backpack cells
-- [ ] target pacing validation: first boss 3–5 min, base campaign 20–25 min, strong session 30–50 min, deep session 60+ min
+- [ ] Runtime pacing validation: first boss 3–5 min, base campaign 20–25 min, strong session 30–50 min, deep session 60+ min. Seeded target-model regression coverage is implemented; real play telemetry remains required.
 
 ## P4 — Content-efficient depth
 - [ ] 35–45 launch base items
@@ -106,7 +106,8 @@
 
 ## P8 — QA, balance & performance
 - [x] Automated deterministic tests for core run/fusion/event domains
-- [ ] seeded simulation/balance reports
+- [x] Seeded pacing target simulation with percentile bands and target hit rates
+- [ ] Seeded combat/build simulation balance reports
 - [ ] mobile/browser matrix
 - [ ] save migrations/recovery UX
 - [ ] performance profiling and asset budgets
