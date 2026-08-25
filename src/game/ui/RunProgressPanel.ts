@@ -4,6 +4,7 @@ import { AdBreakPolicy } from '../../platform/AdBreakPolicy';
 import type { PlatformAdapter } from '../../platform/PlatformAdapter';
 import { campaignLabel, loopLabel, type RunEncounterDefinition } from '../data/runEncounters';
 import { loopRewardMultiplier, type RunProgressState } from '../domain/runProgression';
+import { REQUEST_NEW_RUN_EVENT } from './runUiEvents';
 import { PANEL_VISUALS } from './visualTokens';
 
 const PLATFORM_REGISTRY_KEY = 'junkpack.platform-adapter';
@@ -14,7 +15,6 @@ export interface RunProgressPanelOptions {
   readonly onStartEncounter: (encounter: RunEncounterDefinition) => boolean;
   readonly onEnterCorruptedLoop: () => void;
   readonly onCashOut: () => void;
-  readonly onStartNewRun: () => void;
 }
 
 export class RunProgressPanel {
@@ -105,7 +105,9 @@ export class RunProgressPanel {
       this.rewardText.setText('FINAL SCORE SAVED');
       this.mutationText.setText('NEW RUN = NEW STANDARD SEED • META PROGRESS STAYS');
       this.statusText.setText('RUN ARCHIVED • READY TO REPACK REALITY');
-      this.createActionButton(this.left + 100, this.top + 302, '↻ START NEW RUN', 0x33432a, 0xb5ff4d, () => this.options.onStartNewRun());
+      this.createActionButton(this.left + 100, this.top + 302, '↻ START NEW RUN', 0x33432a, 0xb5ff4d, () => {
+        this.scene.events.emit(REQUEST_NEW_RUN_EVENT);
+      });
       return;
     }
 
