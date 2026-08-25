@@ -96,14 +96,15 @@
 - [x] Responsive top action chrome (**wide/compact layouts, collision-tested 6-action hit targets, resize switching, protected reset/daily/settings actions**)
 - [x] Settings UI (**persisted Music/SFX 0–100% controls + Reduced Motion toggle; volume changes apply live, motion refreshes presentation consistently**)
 - [x] Tactile core gameplay UI foundation (**leather/scrap backpack shell, explicit locked pockets, silhouette item glyphs, rarity frames, restyled junk shop/fusion lab/run panel and stronger logical typography**)
-- [ ] Full in-game HUD reflow / small-text legibility on real mobile landscape (**logical hierarchy pass implemented; real-device/browser acceptance still required**)
+- [ ] Full in-game HUD reflow / small-text legibility on real mobile landscape (**logical hierarchy + automated 844×390 Chromium/WebKit browser acceptance pass; physical-device human legibility/touch review remains**)
 - [x] Item art replacement pipeline foundation (**stable `junk-items` atlas + `item.<definitionId>` frame contract with automatic procedural fallback**)
 - [x] Authored art wave 1 (**12 high-frequency item SVGs + all 4 hero portraits + TV Tyrant combat portrait; lazy TextureManager adoption with fallback and atlas-compatible keys**)
 - [x] Authored boss art wave 2 (**all 6 boss-family SVG portraits + corrupted-ID mapping + family-specific idle/telegraph/impact motion with Reduced Motion fallback**)
 - [x] Authored item art wave 2 (**20 additional item SVGs: remaining original shop/base set + 8 high-salience first-stage fusion results; total item-art coverage reached 32/60**)
 - [x] Complete authored item catalog (**60/60 items: 36/36 shop/base + 24/24 fusion, including all 4 second-stage evolutions; exact catalog parity enforced by CI**)
-- [x] Packed production item + portrait atlases (**deterministic build creates 60-frame 1280×1280 `junk-items` + 10-frame 1280×720 `junk-portraits`; 70 standalone sources collapse to 2 runtime atlas requests**)
-- [ ] Final UI atlas / art review refinements (**UI chrome/material atlas, final visual review and browser/mobile acceptance remain**)
+- [x] Packed production item + portrait atlases (**deterministic build creates 60-frame 1280×1280 `junk-items` + 10-frame 1280×720 `junk-portraits`**)
+- [x] Core UI atlas + authored HUD symbols (**10-frame 640×256 `junk-ui`; daily/archive/trophies/help/settings/reset + coin/fusion/pocket/logo sources; total authored runtime sources collapse from 80 standalone files to 3 atlas groups**)
+- [ ] Final physical-device visual review refinements (**automated Chromium/Firefox/WebKit matrix is green; physical iOS/Android small-text/touch/crop review remains**)
 - [x] Combat semantic feedback foundation (**30-object particle pool, item/status rings, hit bursts, boss-frame pulses, outcome flashes, restrained shake, reduced-motion fallback**)
 - [x] Non-combat run feedback foundation (**shop purchase/reward/reroll/error SFX hooks, fusion reveal, event-drop toast, pocket-unlock feedback**)
 - [x] Final animation/VFX implementation across backpack and rewards (**drag lift/drop/snap/invalid feedback, reward cards, coin staging, event drops, fusion anticipation/reveal/settle and directional synergy trails; runtime acceptance remains in P8**)
@@ -113,7 +114,7 @@
 - [x] First-run onboarding flow (**5-step hero → pack → synergy → fight → fusion tutorial, reduced-motion support and persistent Help entry point**)
 - [x] Final onboarding presentation implementation (**Field Manual layout, five step-specific visual diagrams, progress rail, step accents, transitions and Reduced Motion path**)
 - [x] Branded runtime loading screen (**atlas progress, current-file status, asset-error fallback messaging and portal-ready signal gated until preload completes**)
-- [ ] portal thumbnail/store art
+- [x] Portal thumbnail/store art pipeline (**editable original compositions + generated/validated 512×512 icon, 800×470 cover and 1560×520 hero PNG; measured outputs 28.2/32.8/48.3 KiB**)
 
 ## P7 — Monetization & platform adapters [DONE]
 - [x] Generic `PlatformAdapter` (**loading/gameplay lifecycle, interstitial/rewarded result contracts, destroy + pause/resume hooks and local fallback**)
@@ -129,9 +130,9 @@
 - [x] Seeded pacing target simulation with percentile bands and target hit rates
 - [x] Seeded combat/build simulation reports across weak/typical/strong power bands and boss checkpoints, including boss-rule wrappers
 - [x] Campaign balance sampling excludes second-stage fusion results; loop checkpoints may sample them
-- [x] Static asset + bundle budget gates (**86.2 KiB generated art payload, 9.77 MiB estimated atlas texture memory, 57.1 KiB game/app JS gzip, 404.8 KiB total JS gzip; CI ceilings enforced**)
+- [x] Static asset + bundle budget gates (**94.7 KiB generated runtime art payload, 10.39 MiB estimated atlas texture memory, 3 atlas groups; JS gzip budgets remain CI-enforced**)
 - [x] Portal adapter contract tests (**platform detection, Yandex/CrazyGames initialization and rewarded lifecycle semantics, natural-break policy**)
-- [ ] mobile/browser matrix
+- [x] Automated mobile/browser matrix (**Playwright production smoke across Chromium desktop/compact/mobile/portrait, WebKit mobile landscape and Firefox desktop; first baseline 37 passed + 5 intentional project skips, 0 failures; viewport/overflow/save recovery/console/network/atlas-first checks**)
 - [x] Save migrations/recovery UX (**v1–v7 → v8 migrations, previous-valid backup slot, corrupt-primary recovery, safe reset fallback and visible web-shell recovery/write warnings**)
 - [ ] real-device performance profiling (**frame time, peak WebGL memory, portal network waterfall, low-memory lifecycle**)
 - [ ] portal-specific compliance checks (**repository integration contract implemented; real Yandex debug panel / CrazyGames SDK tester acceptance still required**)
