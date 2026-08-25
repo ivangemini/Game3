@@ -73,8 +73,10 @@ async function collectFiles(directory, prefix = '') {
 function shouldPackageRuntimeFile(relative) {
   const normalized = toPosix(relative);
   if (normalized.endsWith('.map')) return false;
+  if (normalized === 'assets/atlas/asset-report.json') return false;
   if (normalized.startsWith('assets/art/')) return false;
   if (normalized.startsWith('assets/store/')) return false;
+  if (normalized.startsWith('assets/store-src/')) return false;
   return true;
 }
 
