@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import { PROTOTYPE_FUSION_RECIPES } from '../data/fusionRecipes';
 import { PROTOTYPE_HEROES, PROTOTYPE_HERO_MAP } from '../data/heroes';
-import { PROTOTYPE_ITEM_MAP, PROTOTYPE_SHOP_ITEMS } from '../data/items';
+import { PROTOTYPE_ITEM_MAP, PROTOTYPE_ITEMS, PROTOTYPE_SHOP_ITEMS } from '../data/items';
 import { PROTOTYPE_PERKS, PROTOTYPE_PERK_MAP } from '../data/perks';
 import { getRunEncounter } from '../data/runEncounters';
 import { PROTOTYPE_RUN_EVENT_MAP, PROTOTYPE_RUN_EVENTS } from '../data/runEvents';
@@ -19,6 +19,7 @@ import {
   registerRunVictory,
 } from '../domain/runProgression';
 import { BackpackBoard } from '../ui/BackpackBoard';
+import { CollectionOverlay } from '../ui/CollectionOverlay';
 import { CombatPanel } from '../ui/CombatPanel';
 import { FusionPanel } from '../ui/FusionPanel';
 import { HeroChoiceOverlay } from '../ui/HeroChoiceOverlay';
@@ -77,6 +78,17 @@ export class PrototypeScene extends Phaser.Scene {
       if (save.discoveredRecipeIds.includes(recipeId)) return;
       save = { ...save, discoveredRecipeIds: [...save.discoveredRecipeIds, recipeId].sort() };
     };
+
+    const collectionOverlay = new CollectionOverlay(
+      this,
+      PROTOTYPE_ITEMS,
+      PROTOTYPE_SHOP_ITEMS,
+      PROTOTYPE_FUSION_RECIPES,
+      () => ({
+        discoveredItemIds: save.discoveredItemIds,
+        discoveredRecipeIds: save.discoveredRecipeIds,
+      }),
+    );
 
     const board = new BackpackBoard(this, PROTOTYPE_ITEM_MAP, 90, 225, {
       initialItems: hadActiveRun ? activeRun.backpackItems : undefined,
@@ -227,19 +239,22 @@ export class PrototypeScene extends Phaser.Scene {
           || activeRun.pendingPerkOfferIds.length > 0
           || activeRun.pendingEventId !== null
           || eventOverlay.isVisible()
+          || collectionOverlay.isVisible()
           || combatPanel.isRunning()) return false;
         const current = getRunEncounter(activeRun.progress, activeRun.runSeed);
         if (!current || current.encounterId !== encounter.encounterId) return false;
         return combatPanel.startEncounter(encounter.encounterId, encounter.enemy, encounter.rewardCoins);
       },
       onEnterCorruptedLoop: () => {
-        if (activeRun.heroId === null || combatPanel.isRunning() || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return;
+        if (activeRun.heroId === null || combatPanel.isRunning() || collectionOverlay.isVisible()
+          || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return;
         activeRun = { ...activeRun, progress: enterCorruptedLoop(activeRun.progress) };
         persistRun();
         runPanel.refresh(`LOOP ${activeRun.progress.loopNumber} started. Mutations now stack.`);
       },
       onCashOut: () => {
-        if (activeRun.heroId === null || combatPanel.isRunning() || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return;
+        if (activeRun.heroId === null || combatPanel.isRunning() || collectionOverlay.isVisible()
+          || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return;
         activeRun = { ...activeRun, progress: cashOutRun(activeRun.progress) };
         persistRun();
         runPanel.refresh('Run complete. Score and deepest completed loop are saved.');
@@ -251,10 +266,12 @@ export class PrototypeScene extends Phaser.Scene {
       isUnlocked: () => {
         const campaignUnlocked = activeRun.progress.mode !== 'campaign' || activeRun.progress.campaignEncounterIndex >= 3;
         return activeRun.heroId !== null && campaignUnlocked && !combatPanel.isRunning()
+          && !collectionOverlay.isVisible()
           && activeRun.pendingPerkOfferIds.length === 0 && activeRun.pendingEventId === null;
       },
       onFuse: (recipe: FusionRecipe) => {
-        if (activeRun.heroId === null || combatPanel.isRunning() || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return false;
+        if (activeRun.heroId === null || combatPanel.isRunning() || collectionOverlay.isVisible()
+          || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return false;
         const snapshot = board.getSnapshot();
         const inventory: InventoryState = {
           width: BACKPACK_WIDTH,
@@ -286,6 +303,11 @@ export class PrototypeScene extends Phaser.Scene {
 
     persistRun();
     this.createNewRunButton();
+    this.createCollectionButton(() => {
+      if (activeRun.heroId === null || combatPanel.isRunning() || eventOverlay.isVisible()
+        || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return;
+      collectionOverlay.show();
+    });
     if (activeRun.heroId === null) {
       heroOverlay.show();
     } else {
@@ -312,6 +334,22 @@ export class PrototypeScene extends Phaser.Scene {
     this.add.text(48, 73, '♥ 96 / 100', { fontSize: '22px', color: '#ff6578' });
     this.add.text(1190, 48, '4 WORLDS  •  HEROES  •  FUSIONS  •  CORRUPTED LOOPS', {
       fontSize: '16px', color: '#ff91e6', fontStyle: 'bold',
+    });
+  }
+
+  private createCollectionButton(onOpen: () => void): void {
+    const x = 1244; const y = 104;
+    const button = this.add.rectangle(x, y, 208, 34, 0x33243f, 1)
+      .setStrokeStyle(2, 0xb26bd0)
+      .setInteractive({ useHandCursor: true });
+    const label = this.add.text(x, y, 'JUNK ARCHIVE  ◆', {
+      fontSize: '12px', color: '#f4dfff', fontStyle: 'bold',
+    }).setOrigin(0.5);
+    button.on('pointerover', () => button.setFillStyle(0x493258));
+    button.on('pointerout', () => button.setFillStyle(0x33243f));
+    button.on('pointerdown', () => { button.setScale(0.97); label.setScale(0.97); });
+    button.on('pointerup', () => {
+      button.setScale(1); label.setScale(1); onOpen();
     });
   }
 
