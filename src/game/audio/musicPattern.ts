@@ -3,7 +3,6 @@ export type MusicMode = 'menu' | 'combat' | 'boss';
 export interface MusicStep {
   readonly rootHz: number;
   readonly accentHz: number | null;
-  readonly bassHz: number | null;
   readonly durationMs: number;
   readonly intervalMs: number;
   readonly gain: number;
@@ -19,12 +18,10 @@ export function musicStepFor(mode: MusicMode, stepIndex: number): MusicStep {
   const semitone = pattern[index % pattern.length]!;
   const baseHz = mode === 'boss' ? 82.41 : mode === 'combat' ? 98 : 110;
   const rootHz = baseHz * 2 ** (semitone / 12);
-  const accentCadence = mode === 'boss' ? 2 : mode === 'combat' ? 4 : 4;
+  const accentCadence = mode === 'boss' ? 2 : 4;
   const accent = index % accentCadence === 0
-    ? rootHz * (mode === 'boss' ? 1.5 : 2)
+    ? rootHz * (index % 8 === 0 ? 0.5 : mode === 'boss' ? 1.5 : 2)
     : null;
-  const bassCadence = mode === 'boss' ? 2 : mode === 'combat' ? 4 : 8;
-  const bass = index % bassCadence === 0 ? Math.max(32, rootHz / 2) : null;
   const baseIntervalMs = mode === 'boss' ? 300 : mode === 'combat' ? 360 : 520;
   const swingMs = mode === 'menu' ? 0 : mode === 'boss' ? 10 : 14;
   const intervalMs = baseIntervalMs + (index % 2 === 0 ? -swingMs : swingMs);
@@ -33,7 +30,6 @@ export function musicStepFor(mode: MusicMode, stepIndex: number): MusicStep {
   return {
     rootHz: finitePositive(rootHz),
     accentHz: accent === null ? null : finitePositive(accent),
-    bassHz: bass === null ? null : finitePositive(bass),
     durationMs,
     intervalMs,
     gain,
