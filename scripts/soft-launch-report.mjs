@@ -9,8 +9,8 @@ const FIRST_BOSS_PACING_SAMPLE = 20;
 const FIRST_BOSS_MIN_MS = 3 * 60_000;
 const FIRST_BOSS_MAX_MS = 5 * 60_000;
 const BASE_CAMPAIGN_PACING_SAMPLE = 15;
-const BASE_CAMPAIGN_MIN_MS = 20 * 60_000;
-const BASE_CAMPAIGN_MAX_MS = 25 * 60_000;
+const BASE_CAMPAIGN_MIN_MS = 32 * 60_000;
+const BASE_CAMPAIGN_MAX_MS = 42 * 60_000;
 
 export function parseTelemetryText(text) {
   const trimmed = text.trim();
@@ -104,7 +104,7 @@ export function renderMarkdown(summary) {
     `- Hero selection reach: **${percent(summary.heroSelectionSessionRate)}** (${summary.sessionsWithHeroSelection}/${summary.sessions}); p50 ${duration(summary.medianTimeToHeroMs)}, p90 ${duration(summary.p90TimeToHeroMs)}.`,
     `- First combat reach: **${percent(summary.firstCombatSessionRate)}** (${summary.sessionsWithFirstCombat}/${summary.sessions}); p50 ${duration(summary.medianTimeToFirstCombatMs)}, p90 ${duration(summary.p90TimeToFirstCombatMs)}.`,
     `- First boss reach: **${percent(summary.firstBossSessionRate)}** (${summary.sessionsWithFirstBoss}/${summary.sessions}); p50 ${duration(summary.medianTimeToFirstBossMs)}, p90 ${duration(summary.p90TimeToFirstBossMs)}. Target p50: **3–5 min**.`,
-    `- Base campaign completion: **${percent(summary.baseCampaignCompletionRate)}** (${summary.sessionsCompletingBaseCampaign}/${summary.sessions}); p50 ${duration(summary.medianBaseCampaignDurationMs)}, p90 ${duration(summary.p90BaseCampaignDurationMs)}. Target p50: **20–25 min**.`,
+    `- Base campaign completion: **${percent(summary.baseCampaignCompletionRate)}** (${summary.sessionsCompletingBaseCampaign}/${summary.sessions}); p50 ${duration(summary.medianBaseCampaignDurationMs)}, p90 ${duration(summary.p90BaseCampaignDurationMs)}. Target p50: **32–42 min**.`,
     `- Field Manual opened/completed/skipped: **${summary.tutorialOpened}/${summary.tutorialCompleted}/${summary.tutorialSkipped}**; completion ${percent(summary.tutorialCompletionRate)}.`,
     '',
     '## Run systems',
