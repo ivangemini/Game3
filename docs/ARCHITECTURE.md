@@ -1,4 +1,4 @@
-# Architecture v0.8
+# Architecture v0.9
 
 ## Stack
 - Phaser 4.2.1
@@ -10,13 +10,13 @@ Phaser 4 uses namespace imports from npm (`import * as Phaser from 'phaser'`).
 
 ## Layers
 ### `src/game/domain/`
-Pure TypeScript simulation and rules. No Phaser imports. Inventory geometry, seeded shop generation, synergies, RNG, combat/effect ordering, fusions, events, perks, heroes and run state belong here.
+Pure TypeScript simulation and rules. No Phaser imports. Inventory geometry, seeded shop generation, synergies, RNG, combat/effect ordering, boss-rule composition, fusions, events, perks, heroes and run state belong here.
 
 ### `src/game/data/`
 Declarative content: items, combat profiles, encounters, bosses, perks, heroes, events, fusion recipes and balance tables. Stable IDs only.
 
 ### `src/game/simulation/`
-Offline/QA simulation that composes domain rules with declarative game data. It remains deterministic and outside Phaser. Pacing reports protect session structure; combat/build reports generate legal seeded backpacks across weak/typical/strong power bands and execute the real combat engine against progression checkpoints.
+Offline/QA simulation that composes domain rules with declarative game data. It remains deterministic and outside Phaser. Pacing reports protect session structure; combat/build reports generate legal seeded backpacks across weak/typical/strong power bands and execute the same combat + boss-rule wrapper used by runtime encounters.
 
 ### `src/game/audio/`
 Asset-agnostic semantic audio cues derived from presentation events. Cue IDs/priorities/cooldowns are presentation contracts only: sound loading, WebAudio lifecycle, mixing and music remain outside the combat domain.
@@ -54,22 +54,26 @@ Combat items also retain a stable copy of their gameplay tags. This lets boss ru
 The Scavenger's starting-coin bonus is an economy effect applied once when the hero is chosen; combat-oriented heroes never mutate the backpack or combat state directly.
 
 ## Combat
-`src/game/domain/combat.ts` owns the combat clock and ordered effect queue. The queue resolves by `dueAtMs`, then stable `sequence`, so equal-time effects have a documented deterministic order.
+`src/game/domain/combat.ts` owns the generic combat clock and ordered effect queue. The queue resolves by `dueAtMs`, then stable `sequence`, so equal-time effects have a documented deterministic order.
 
-The render loop passes explicit elapsed milliseconds to `advanceCombat`; render FPS never determines trigger count, damage or outcome. A single large advance and many smaller advances over the same simulated duration must converge to the same state.
+The render loop passes explicit elapsed milliseconds to combat advancement; render FPS never determines trigger count, damage or outcome. A single large advance and many smaller advances over the same simulated duration must converge to the same state.
 
-Backpack effects are converted into combat stats before simulation. Current examples include trigger speed, poison, laser shots, chaos damage and scrap armor. Boss interference can jam item triggers, slime occupied cells, scramble crossing rows or temporarily eclipse a dominant item tag. Phaser consumes presentation events for animation/audio/UI but cannot modify the combat result through presentation timing.
+Backpack effects are converted into combat stats before simulation. Current examples include trigger speed, poison, laser shots, chaos damage and scrap armor. Core interference can jam item triggers, slime occupied cells, scramble crossing rows or temporarily eclipse a dominant item tag. Phaser consumes presentation events for animation/audio/UI but cannot modify the combat result through presentation timing.
 
-TV Tyrant owns item/cell/row interference primitives. Baby Moon owns `tagInterference`: the domain counts tags in the immutable combat snapshot, deterministically selects the most represented family, telegraphs it and suppresses matching item triggers for the eclipse window. Corrupted-loop scaling changes cadence without mixing boss-family rules.
+TV Tyrant owns item/cell/row interference primitives. Baby Moon owns `tagInterference`: the domain counts tags in the immutable combat snapshot, deterministically selects the most represented family, telegraphs it and suppresses matching item triggers for the eclipse window.
 
-`CombatPanel` maps each presentation event to a semantic `AudioCue` and exposes it through an optional callback. This is one-way presentation output: muting, throttling or failing to play audio cannot influence combat state.
+`src/game/domain/bossCombat.ts` composes boss-family rules that operate around the generic queue without making `combat.ts` depend on boss IDs. Deadline Snail's Time Tax is the first wrapper rule: it resolves the fastest meaningful combat item, inserts deterministic telegraph/impact boundaries, then shifts only that item's next queued trigger by a fixed amount. The wrapper advances generic combat exactly to each boss boundary before applying the queue transform, preserving chunk-size invariance.
+
+Boss identity for wrapper rules is resolved from stable enemy IDs. Corrupted Deadline Snail IDs encode loop number, allowing cadence scaling to remain deterministic without storing extra runtime-only state in saves.
+
+`CombatPanel` maps generic and boss-wrapper presentation events to semantic `AudioCue`s and exposes them through an optional callback. Muting, throttling or failing to play audio cannot influence combat state.
 
 ## Time, pacing and balance QA
 Combat simulation receives explicit elapsed time. Human decision pacing is modeled separately in `src/game/simulation/pacing.ts` so design-duration assumptions never leak into combat rules.
 
 The seeded pacing model composes the real 12-encounter campaign/loop structure with target human decision-time ranges and produces first-boss, campaign, Loop 2 and Loop 3 percentile checkpoints. It is a regression guard, not a substitute for real play telemetry.
 
-The seeded combat/build model generates legal backpacks against the current pocket constraints, samples perk/fusion exposure by power band, feeds those builds through the real synergy/perk/hero/combat pipeline and reports outcomes plus item correlations. Synthetic build reports diagnose balance; soft-launch telemetry remains the authority for player behavior.
+The seeded combat/build model generates legal backpacks against the current pocket constraints, samples perk/fusion exposure by power band, feeds those builds through the real synergy/perk/hero/combat pipeline and reports outcomes plus item correlations. It now advances through the boss-rule wrapper too, so Deadline Snail is represented in Boss 2 balance reports. Synthetic build reports diagnose balance; soft-launch telemetry remains the authority for player behavior.
 
 ## Saves
 Current schema: **v8**.
