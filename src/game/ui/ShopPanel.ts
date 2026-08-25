@@ -127,7 +127,7 @@ export class ShopPanel {
   private createRerollButtons(): void {
     this.createPaidRerollButton();
     const platform = this.platformAdapter();
-    if (platform?.id !== 'local') this.createRewardedRerollButton(platform);
+    if (platform && platform.id !== 'local') this.createRewardedRerollButton(platform);
   }
 
   private createPaidRerollButton(): void {
