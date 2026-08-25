@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { ONBOARDING_STEPS, shouldAutoShowOnboarding } from '../src/game/domain/onboarding';
 
-describe('first-run onboarding', () => {
-  it('keeps the tutorial compact and ordered around the actual run loop', () => {
+describe('field manual onboarding', () => {
+  it('keeps the manual compact and ordered around the actual run loop', () => {
     expect(ONBOARDING_STEPS.map((step) => step.id)).toEqual(['hero', 'pack', 'synergy', 'fight', 'fusion']);
     expect(new Set(ONBOARDING_STEPS.map((step) => step.id)).size).toBe(ONBOARDING_STEPS.length);
     expect(ONBOARDING_STEPS).toHaveLength(5);
@@ -13,8 +13,8 @@ describe('first-run onboarding', () => {
     }
   });
 
-  it('auto-shows only for a truly empty profile without a resumable run', () => {
-    expect(shouldAutoShowOnboarding({ hadActiveRun: false, discoveredItemCount: 0, discoveredRecipeCount: 0 })).toBe(true);
+  it('keeps the full manual opt-in so first launch reaches the run after hero selection', () => {
+    expect(shouldAutoShowOnboarding({ hadActiveRun: false, discoveredItemCount: 0, discoveredRecipeCount: 0 })).toBe(false);
     expect(shouldAutoShowOnboarding({ hadActiveRun: true, discoveredItemCount: 0, discoveredRecipeCount: 0 })).toBe(false);
     expect(shouldAutoShowOnboarding({ hadActiveRun: false, discoveredItemCount: 1, discoveredRecipeCount: 0 })).toBe(false);
     expect(shouldAutoShowOnboarding({ hadActiveRun: false, discoveredItemCount: 0, discoveredRecipeCount: 1 })).toBe(false);
