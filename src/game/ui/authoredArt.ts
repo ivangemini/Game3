@@ -22,11 +22,19 @@ const ITEM_IDS = [
 ] as const;
 
 const HERO_IDS = ['scavenger', 'engineer', 'alchemist', 'beastfriend'] as const;
+const BOSS_IDS = [
+  'tv-tyrant',
+  'deadline-snail',
+  'closet-monster',
+  'baby-moon',
+  'copycat-auditor',
+  'border-shark',
+] as const;
 
 export const AUTHORED_ART_ASSETS: readonly AuthoredArtAsset[] = [
   ...ITEM_IDS.map((id) => ({ key: `item.${id}`, url: `/assets/art/items/${id}.svg`, kind: 'item' as const })),
   ...HERO_IDS.map((id) => ({ key: `hero.${id}`, url: `/assets/art/heroes/${id}.svg`, kind: 'hero' as const })),
-  { key: 'boss.tv-tyrant', url: '/assets/art/bosses/tv-tyrant.svg', kind: 'boss' },
+  ...BOSS_IDS.map((id) => ({ key: `boss.${id}`, url: `/assets/art/bosses/${id}.svg`, kind: 'boss' as const })),
 ];
 
 const ASSET_BY_KEY = new Map(AUTHORED_ART_ASSETS.map((asset) => [asset.key, asset]));
@@ -37,7 +45,9 @@ export function heroArtKey(heroId: string): string {
 }
 
 export function bossArtKeyForEnemyId(enemyId: string): string | null {
-  if (enemyId === 'tv-tyrant' || enemyId.endsWith('-tv-tyrant')) return 'boss.tv-tyrant';
+  for (const bossId of BOSS_IDS) {
+    if (enemyId === bossId || enemyId.endsWith(`-${bossId}`)) return `boss.${bossId}`;
+  }
   return null;
 }
 
