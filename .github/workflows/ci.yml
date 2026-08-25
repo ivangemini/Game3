@@ -19,6 +19,14 @@ jobs:
       - run: npm run test
       - run: npm run build
       - run: npm run release:check
+      - run: npm run release:archive
+      - name: Upload portal candidate
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: junkpack-portal-candidate
+          path: release/
+          retention-days: 14
 
   browser-matrix:
     runs-on: ubuntu-latest
