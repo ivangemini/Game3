@@ -33,10 +33,14 @@ export function normalizeTelemetryValue(value) {
 }
 
 export function renderMarkdown(summary) {
+  const returnBuckets = Object.entries(summary.returnAgeBuckets ?? {});
   const lines = [
     '# Junkpack Soft-launch Report',
     '',
     `Sessions: **${summary.sessions}** · returning **${percent(summary.returningRate)}**`,
+    returnBuckets.length > 0
+      ? `Return age buckets: ${returnBuckets.map(([bucket, count]) => `${bucket} **${count}**`).join(' · ')}`
+      : 'Return age buckets: no session-age events in this export.',
     '',
     '## First-session funnel',
     '',
