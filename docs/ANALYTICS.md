@@ -32,6 +32,33 @@ The browser prefers `navigator.sendBeacon()` and falls back to `fetch(..., { kee
 
 The receiver should return any 2xx response after accepting the batch. It should enforce a small request-size ceiling, reject unknown content types, rate-limit abuse and avoid enriching requests with fingerprinting data.
 
+## Reference receiver
+
+The repository includes a dependency-free Node 22 reference receiver in `services/telemetry-receiver.mjs`. It is **not** included in the portal ZIP and does not add a backend dependency to gameplay. Use it when a separate analytics service is not already available.
+
+```bash
+TELEMETRY_FILE=telemetry/telemetry.ndjson \
+HOST=127.0.0.1 \
+PORT=8787 \
+npm run analytics:receiver
+```
+
+Endpoints:
+
+- `GET /health` — readiness probe;
+- `POST /v1/events` — versioned telemetry batches;
+- `OPTIONS /v1/events` — CORS preflight.
+
+The receiver enforces a 128 KiB request ceiling, at most 100 events per batch, the current event-name allowlist, bounded ephemeral session IDs and bounded payloads. It writes only event envelopes to append-only NDJSON. It does not persist IP addresses, user agents or cookies. `TELEMETRY_ALLOW_ORIGIN` defaults to `*`; for a known hosting setup it may be restricted to the required origin. Put TLS/reverse-proxy/rate limiting in front of the Node process for internet exposure.
+
+For a production soft-launch build, point the client at the public HTTPS route, for example:
+
+```bash
+VITE_ANALYTICS_ENDPOINT=https://telemetry.example.com/v1/events npm run release:soft-launch
+```
+
+The `telemetry/` and `reports/` directories are gitignored so raw session exports and generated reports are not committed accidentally.
+
 ## Event vocabulary
 
 - `session_start` — new/returning boolean, platform adapter and viewport mode.
