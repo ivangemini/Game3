@@ -10,6 +10,7 @@ import { createDailyRunIdentity, dailyKeyFromSeed } from '../domain/dailyRun';
 import { applyFusion, type FusionRecipe } from '../domain/fusions';
 import type { HeroId } from '../domain/heroes';
 import type { InventoryState } from '../domain/inventory';
+import { shouldAutoShowOnboarding } from '../domain/onboarding';
 import { generatePerkChoices } from '../domain/perks';
 import { resolveRunEventChoice, selectRunEvent } from '../domain/runEvents';
 import {
@@ -29,6 +30,8 @@ import { PerkChoiceOverlay } from '../ui/PerkChoiceOverlay';
 import { RunEventOverlay } from '../ui/RunEventOverlay';
 import { RunProgressPanel } from '../ui/RunProgressPanel';
 import { ShopPanel } from '../ui/ShopPanel';
+import { TopHudActions } from '../ui/TopHudActions';
+import { TutorialOverlay } from '../ui/TutorialOverlay';
 import {
   clearActiveRun,
   loadSave,
@@ -70,6 +73,11 @@ export class PrototypeScene extends Phaser.Scene {
 
     let save: SaveV8 = loadSave();
     const hadActiveRun = save.activeRun !== null;
+    const autoShowTutorial = shouldAutoShowOnboarding({
+      hadActiveRun,
+      discoveredItemCount: save.discoveredItemIds.length,
+      discoveredRecipeCount: save.discoveredRecipeIds.length,
+    });
     let activeRun: ActiveRunSave = save.activeRun ?? createFreshRun(PROTOTYPE_RUN_SEED);
     const todayDaily = createDailyRunIdentity();
 
@@ -107,6 +115,7 @@ export class PrototypeScene extends Phaser.Scene {
         bestCorruptedLoop: save.bestCorruptedLoop,
       }),
     );
+    const tutorialOverlay = new TutorialOverlay(this, save.settings.reducedMotion);
 
     const board = new BackpackBoard(this, PROTOTYPE_ITEM_MAP, 90, 225, {
       initialItems: hadActiveRun ? activeRun.backpackItems : undefined,
@@ -249,6 +258,10 @@ export class PrototypeScene extends Phaser.Scene {
       },
     });
 
+    const metaBlocked = (): boolean => collectionOverlay.isVisible()
+      || metaOverlay.isVisible()
+      || tutorialOverlay.isVisible();
+
     runPanel = new RunProgressPanel(this, 570, 225, {
       getProgress: () => activeRun.progress,
       getEncounter: () => getRunEncounter(activeRun.progress, activeRun.runSeed),
@@ -257,22 +270,21 @@ export class PrototypeScene extends Phaser.Scene {
           || activeRun.pendingPerkOfferIds.length > 0
           || activeRun.pendingEventId !== null
           || eventOverlay.isVisible()
-          || collectionOverlay.isVisible()
-          || metaOverlay.isVisible()
+          || metaBlocked()
           || combatPanel.isRunning()) return false;
         const current = getRunEncounter(activeRun.progress, activeRun.runSeed);
         if (!current || current.encounterId !== encounter.encounterId) return false;
         return combatPanel.startEncounter(encounter.encounterId, encounter.enemy, encounter.rewardCoins);
       },
       onEnterCorruptedLoop: () => {
-        if (activeRun.heroId === null || combatPanel.isRunning() || collectionOverlay.isVisible() || metaOverlay.isVisible()
+        if (activeRun.heroId === null || combatPanel.isRunning() || metaBlocked()
           || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return;
         activeRun = { ...activeRun, progress: enterCorruptedLoop(activeRun.progress) };
         persistRun();
         runPanel.refresh(`LOOP ${activeRun.progress.loopNumber} started. Mutations now stack.`);
       },
       onCashOut: () => {
-        if (activeRun.heroId === null || combatPanel.isRunning() || collectionOverlay.isVisible() || metaOverlay.isVisible()
+        if (activeRun.heroId === null || combatPanel.isRunning() || metaBlocked()
           || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return;
         activeRun = { ...activeRun, progress: cashOutRun(activeRun.progress) };
         persistRun();
@@ -285,11 +297,11 @@ export class PrototypeScene extends Phaser.Scene {
       isUnlocked: () => {
         const campaignUnlocked = activeRun.progress.mode !== 'campaign' || activeRun.progress.campaignEncounterIndex >= 3;
         return activeRun.heroId !== null && campaignUnlocked && !combatPanel.isRunning()
-          && !collectionOverlay.isVisible() && !metaOverlay.isVisible()
+          && !metaBlocked()
           && activeRun.pendingPerkOfferIds.length === 0 && activeRun.pendingEventId === null;
       },
       onFuse: (recipe: FusionRecipe) => {
-        if (activeRun.heroId === null || combatPanel.isRunning() || collectionOverlay.isVisible() || metaOverlay.isVisible()
+        if (activeRun.heroId === null || combatPanel.isRunning() || metaBlocked()
           || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return false;
         const snapshot = board.getSnapshot();
         const inventory: InventoryState = {
@@ -321,24 +333,41 @@ export class PrototypeScene extends Phaser.Scene {
     });
 
     persistRun();
-    this.createNewRunButton();
-    this.createDailyRunButton(todayDaily.key, dailyKeyFromSeed(activeRun.runSeed) === todayDaily.key, () => {
-      if (combatPanel.isRunning() || eventOverlay.isVisible() || collectionOverlay.isVisible() || metaOverlay.isVisible()
-        || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return;
-      activeRun = createFreshRun(todayDaily.seed);
-      persistRun();
-      this.scene.restart();
+    new TopHudActions(this, {
+      dailyKey: todayDaily.key,
+      dailyActive: dailyKeyFromSeed(activeRun.runSeed) === todayDaily.key,
+      onDaily: () => {
+        if (combatPanel.isRunning() || eventOverlay.isVisible() || metaBlocked()
+          || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return;
+        activeRun = createFreshRun(todayDaily.seed);
+        persistRun();
+        this.scene.restart();
+      },
+      onArchive: () => {
+        if (activeRun.heroId === null || combatPanel.isRunning() || eventOverlay.isVisible()
+          || metaOverlay.isVisible() || tutorialOverlay.isVisible()
+          || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return;
+        collectionOverlay.show();
+      },
+      onTrophies: () => {
+        if (activeRun.heroId === null || combatPanel.isRunning() || eventOverlay.isVisible()
+          || collectionOverlay.isVisible() || tutorialOverlay.isVisible()
+          || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return;
+        metaOverlay.show();
+      },
+      onHelp: () => {
+        if (combatPanel.isRunning() || eventOverlay.isVisible() || collectionOverlay.isVisible() || metaOverlay.isVisible()
+          || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return;
+        tutorialOverlay.show();
+      },
+      onReset: () => {
+        if (combatPanel.isRunning() || eventOverlay.isVisible() || metaBlocked()
+          || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return;
+        writeSave(clearActiveRun(loadSave()));
+        this.scene.restart();
+      },
     });
-    this.createCollectionButton(() => {
-      if (activeRun.heroId === null || combatPanel.isRunning() || eventOverlay.isVisible() || metaOverlay.isVisible()
-        || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return;
-      collectionOverlay.show();
-    });
-    this.createMetaButton(() => {
-      if (activeRun.heroId === null || combatPanel.isRunning() || eventOverlay.isVisible() || collectionOverlay.isVisible()
-        || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return;
-      metaOverlay.show();
-    });
+
     if (activeRun.heroId === null) {
       heroOverlay.show();
     } else {
@@ -349,6 +378,7 @@ export class PrototypeScene extends Phaser.Scene {
         else { activeRun = { ...activeRun, pendingEventId: null }; persistRun(); }
       }
     }
+    if (autoShowTutorial) tutorialOverlay.show();
     this.drawRunIdentity(() => activeRun.selectedPerkIds, () => activeRun.heroId, () => activeRun.runSeed);
   }
 
@@ -365,68 +395,6 @@ export class PrototypeScene extends Phaser.Scene {
     this.add.text(48, 73, '♥ 96 / 100', { fontSize: '22px', color: '#ff6578' });
     this.add.text(1190, 48, '4 WORLDS  •  HEROES  •  FUSIONS  •  CORRUPTED LOOPS', {
       fontSize: '16px', color: '#ff91e6', fontStyle: 'bold',
-    });
-  }
-
-  private createDailyRunButton(key: string, active: boolean, onStart: () => void): void {
-    const x = 365; const y = 104;
-    const button = this.add.rectangle(x, y, 250, 34, active ? 0x314421 : 0x263224, 1)
-      .setStrokeStyle(2, active ? 0xb5ff4d : 0x71994a)
-      .setInteractive({ useHandCursor: true });
-    const label = this.add.text(x, y, active ? `DAILY ${key}  •  ACTIVE` : `DAILY RUN  •  ${key}`, {
-      fontSize: '11px', color: active ? '#dfffba' : '#c8e6a8', fontStyle: 'bold',
-    }).setOrigin(0.5);
-    button.on('pointerover', () => button.setFillStyle(active ? 0x415b2b : 0x354630));
-    button.on('pointerout', () => button.setFillStyle(active ? 0x314421 : 0x263224));
-    button.on('pointerdown', () => { button.setScale(0.97); label.setScale(0.97); });
-    button.on('pointerup', () => {
-      button.setScale(1); label.setScale(1); onStart();
-    });
-  }
-
-  private createCollectionButton(onOpen: () => void): void {
-    const x = 1244; const y = 104;
-    const button = this.add.rectangle(x, y, 208, 34, 0x33243f, 1)
-      .setStrokeStyle(2, 0xb26bd0)
-      .setInteractive({ useHandCursor: true });
-    const label = this.add.text(x, y, 'JUNK ARCHIVE  ◆', {
-      fontSize: '12px', color: '#f4dfff', fontStyle: 'bold',
-    }).setOrigin(0.5);
-    button.on('pointerover', () => button.setFillStyle(0x493258));
-    button.on('pointerout', () => button.setFillStyle(0x33243f));
-    button.on('pointerdown', () => { button.setScale(0.97); label.setScale(0.97); });
-    button.on('pointerup', () => {
-      button.setScale(1); label.setScale(1); onOpen();
-    });
-  }
-
-  private createMetaButton(onOpen: () => void): void {
-    const x = 1348; const y = 145;
-    const button = this.add.rectangle(x, y, 284, 30, 0x2a2233, 1)
-      .setStrokeStyle(2, 0x8b6aa2)
-      .setInteractive({ useHandCursor: true });
-    const label = this.add.text(x, y, 'TROPHY SHELF  ✦  ARCHIVE RANKS', {
-      fontSize: '10px', color: '#e7c8f5', fontStyle: 'bold',
-    }).setOrigin(0.5);
-    button.on('pointerover', () => button.setFillStyle(0x3b2e48));
-    button.on('pointerout', () => button.setFillStyle(0x2a2233));
-    button.on('pointerdown', () => { button.setScale(0.97); label.setScale(0.97); });
-    button.on('pointerup', () => {
-      button.setScale(1); label.setScale(1); onOpen();
-    });
-  }
-
-  private createNewRunButton(): void {
-    const x = 1454; const y = 104;
-    const button = this.add.rectangle(x, y, 168, 34, 0x252631, 1).setStrokeStyle(2, 0x777381).setInteractive({ useHandCursor: true });
-    const label = this.add.text(x, y, 'NEW RUN / RESET', { fontSize: '12px', color: '#d2ced7', fontStyle: 'bold' }).setOrigin(0.5);
-    button.on('pointerover', () => button.setFillStyle(0x363843));
-    button.on('pointerout', () => button.setFillStyle(0x252631));
-    button.on('pointerdown', () => { button.setScale(0.97); label.setScale(0.97); });
-    button.on('pointerup', () => {
-      button.setScale(1); label.setScale(1);
-      writeSave(clearActiveRun(loadSave()));
-      this.scene.restart();
     });
   }
 
