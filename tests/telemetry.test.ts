@@ -67,7 +67,7 @@ describe('TelemetryClient', () => {
 
 describe('BrowserTelemetryTransport', () => {
   it('falls back to fetch keepalive when beacon is unavailable', async () => {
-    const fetchMock = vi.fn(async () => ({ ok: true }));
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit): Promise<{ ok: boolean }> => ({ ok: true }));
     vi.stubGlobal('navigator', {});
     vi.stubGlobal('fetch', fetchMock);
     const transport = new BrowserTelemetryTransport();
