@@ -105,13 +105,23 @@ async function bootstrap(): Promise<void> {
     return;
   }
 
-  game = new Phaser.Game(gameConfig);
-  game.registry.set(PLATFORM_REGISTRY_KEY, platform);
+  const activePlatform = platform;
+  const runtimeConfig: Phaser.Types.Core.GameConfig = {
+    ...gameConfig,
+    callbacks: {
+      ...gameConfig.callbacks,
+      preBoot: (bootGame) => {
+        gameConfig.callbacks?.preBoot?.(bootGame);
+        bootGame.registry.set(PLATFORM_REGISTRY_KEY, activePlatform);
+      },
+    },
+  };
+  game = new Phaser.Game(runtimeConfig);
 
   try {
-    await platform.ready();
+    await activePlatform.ready();
   } catch (error) {
-    console.warn(`[platform] ${platform.id} ready signal failed.`, error);
+    console.warn(`[platform] ${activePlatform.id} ready signal failed.`, error);
   }
 }
 
