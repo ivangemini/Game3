@@ -18,10 +18,10 @@ export function detectPlatform(input: PlatformDetectionInput): PlatformId {
   if (input.hasYandexSdk) return 'yandex';
   if (input.hasCrazyGamesSdk) return 'crazygames';
 
-  const host = input.hostname.toLowerCase();
-  const referrer = input.referrer.toLowerCase();
-  if (host.includes('yandex.') || host.endsWith('yandex.net') || referrer.includes('yandex.')) return 'yandex';
-  if (host.includes('crazygames.') || referrer.includes('crazygames.')) return 'crazygames';
+  const host = normalizeHostname(input.hostname);
+  const referrerHost = hostnameFromReferrer(input.referrer);
+  if (isYandexHostname(host) || isYandexHostname(referrerHost)) return 'yandex';
+  if (isCrazyGamesHostname(host) || isCrazyGamesHostname(referrerHost)) return 'crazygames';
   return 'local';
 }
 
@@ -32,9 +32,11 @@ export function createPlatformAdapter(
   const detection = input ?? browserDetectionInput();
   const platform = detectPlatform(detection);
   if (platform === 'yandex') {
+    const host = normalizeHostname(detection.hostname);
+    const referrerHost = hostnameFromReferrer(detection.referrer);
     return new YandexPlatformAdapter({
       hooks,
-      hostedByYandex: detection.hostname.includes('yandex') || detection.referrer.includes('yandex'),
+      hostedByYandex: isYandexHostname(host) || isYandexHostname(referrerHost),
     });
   }
   if (platform === 'crazygames') return new CrazyGamesPlatformAdapter({ hooks });
@@ -52,4 +54,25 @@ function browserDetectionInput(): PlatformDetectionInput {
     hasYandexSdk: Boolean(window.YaGames),
     hasCrazyGamesSdk: Boolean(window.CrazyGames?.SDK),
   };
+}
+
+function hostnameFromReferrer(referrer: string): string {
+  if (!referrer) return '';
+  try {
+    return normalizeHostname(new URL(referrer).hostname);
+  } catch {
+    return '';
+  }
+}
+
+function normalizeHostname(hostname: string): string {
+  return hostname.trim().toLowerCase().replace(/\.$/, '');
+}
+
+function isYandexHostname(hostname: string): boolean {
+  return /(^|\.)yandex\.[a-z0-9.-]+$/i.test(hostname);
+}
+
+function isCrazyGamesHostname(hostname: string): boolean {
+  return hostname === 'crazygames.com' || hostname.endsWith('.crazygames.com');
 }
