@@ -88,6 +88,7 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
   const loopEntries: Record<string, number> = {};
   const combats = new Map<string, CombatAccumulator>();
   const sessionStartedAt = new Map<string, number>();
+  const runStartedAt = new Map<string, number>();
   const firstHeroAt = new Map<string, number>();
   const firstCombatAt = new Map<string, number>();
   const firstBossAt = new Map<string, number>();
@@ -106,6 +107,7 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
         const payload = event.payload as { mode: 'standard' | 'daily' };
         if (payload.mode === 'daily') dailyRunsStarted += 1;
         else standardRunsStarted += 1;
+        rememberEarliest(runStartedAt, event.sessionId, event.timestampMs);
         break;
       }
       case 'tutorial_opened': tutorialOpened += 1; break;
@@ -179,8 +181,8 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
 
   const timeToHero = sessionLatencies(sessionStartedAt, firstHeroAt);
   const timeToFirstCombat = sessionLatencies(sessionStartedAt, firstCombatAt);
-  const timeToFirstBoss = sessionLatencies(sessionStartedAt, firstBossAt);
-  const baseCampaignDurations = sessionLatencies(sessionStartedAt, baseCampaignCompletedAt);
+  const timeToFirstBoss = milestoneLatencies(runStartedAt, sessionStartedAt, firstBossAt);
+  const baseCampaignDurations = milestoneLatencies(runStartedAt, sessionStartedAt, baseCampaignCompletedAt);
 
   return {
     sessions,
@@ -246,6 +248,24 @@ function rememberEarliest(target: Map<string, number>, sessionId: string, timest
 }
 
 function sessionLatencies(starts: ReadonlyMap<string, number>, milestones: ReadonlyMap<string, number>): number[] {
+  return latencies(starts, milestones);
+}
+
+function milestoneLatencies(
+  preferredStarts: ReadonlyMap<string, number>,
+  fallbackStarts: ReadonlyMap<string, number>,
+  milestones: ReadonlyMap<string, number>,
+): number[] {
+  const values: number[] = [];
+  for (const [sessionId, milestoneAt] of milestones) {
+    const startAt = preferredStarts.get(sessionId) ?? fallbackStarts.get(sessionId);
+    if (startAt === undefined || milestoneAt < startAt) continue;
+    values.push(milestoneAt - startAt);
+  }
+  return values;
+}
+
+function latencies(starts: ReadonlyMap<string, number>, milestones: ReadonlyMap<string, number>): number[] {
   const values: number[] = [];
   for (const [sessionId, milestoneAt] of milestones) {
     const startAt = starts.get(sessionId);
