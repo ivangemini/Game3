@@ -39,13 +39,14 @@ if (rootIndexCount !== 1) failures.push(`archive must contain exactly one index.
 if (archivedPaths.length > CRAZY_FILE_COUNT_LIMIT) failures.push(`CrazyGames file-count limit exceeded: ${archivedPaths.length} > ${CRAZY_FILE_COUNT_LIMIT}`);
 if (uncompressedBytes > YANDEX_UNCOMPRESSED_LIMIT) failures.push(`Yandex uncompressed archive limit exceeded: ${formatMiB(uncompressedBytes)} > 100 MiB`);
 if (uncompressedBytes > CRAZY_TOTAL_LIMIT) failures.push(`CrazyGames total size limit exceeded: ${formatMiB(uncompressedBytes)} > 250 MiB`);
-// Junkpack explicitly targets mobile portal traffic, so enforce the stricter
-// CrazyGames mobile-homepage initial-download recommendation as a product gate.
 if (uncompressedBytes > CRAZY_MOBILE_INITIAL_TARGET) failures.push(`mobile initial-download target exceeded: ${formatMiB(uncompressedBytes)} > 20 MiB`);
 
 for (const archivedPath of archivedPaths) {
   if (/\s/u.test(archivedPath)) failures.push(`archive path contains whitespace: ${archivedPath}`);
   if (/[^\x20-\x7E]/u.test(archivedPath)) failures.push(`archive path contains non-ASCII characters: ${archivedPath}`);
+  if (archivedPath.endsWith('.map')) failures.push(`source map must not ship in portal archive: ${archivedPath}`);
+  if (archivedPath.startsWith('assets/art/')) failures.push(`authored source art must not ship in portal archive: ${archivedPath}`);
+  if (archivedPath.startsWith('assets/store/')) failures.push(`store metadata art must remain outside runtime archive: ${archivedPath}`);
 }
 
 for (const entry of manifest.files ?? []) {
