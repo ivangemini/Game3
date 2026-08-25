@@ -1,5 +1,6 @@
 import * as Phaser from 'phaser';
 import type { ItemDefinition, ItemTag } from '../domain/types';
+import { requestAuthoredTexture } from './authoredArt';
 import {
   ITEM_ATLAS_TEXTURE_KEY,
   PANEL_VISUALS,
@@ -19,8 +20,9 @@ export interface ItemGlyphOptions {
  * Gameplay-size item renderer.
  *
  * Reviewed atlas art wins automatically when `junk-items` contains the stable
- * `item.<definitionId>` frame. Until then, the deterministic procedural glyph
- * preserves silhouette/readability and keeps layout work independent of art delivery.
+ * `item.<definitionId>` frame. Wave assets can also ship as standalone authored
+ * SVG textures under the exact same stable key; missing art keeps the procedural
+ * silhouette so content delivery never blocks gameplay rendering.
  */
 export function createItemGlyph(
   scene: Phaser.Scene,
@@ -46,15 +48,19 @@ export function createItemGlyph(
     ? scene.textures.get(ITEM_ATLAS_TEXTURE_KEY)
     : null;
   if (atlas?.has(frameKey)) {
-    const sprite = scene.add.image(0, -1, ITEM_ATLAS_TEXTURE_KEY, frameKey);
-    const maxSide = Math.max(1, sprite.width, sprite.height);
-    const scale = (size - 10) / maxSide;
-    sprite.setScale(scale);
-    root.add(sprite);
+    addSizedImage(scene, root, ITEM_ATLAS_TEXTURE_KEY, size, frameKey);
   } else {
     const graphics = scene.add.graphics();
     drawTagGlyph(graphics, primaryVisualTag(definition), size * 0.31, rarity.accent, accent);
     root.add(graphics);
+
+    const renderStandalone = (): void => {
+      if (!root.active || !scene.textures.exists(frameKey) || root.getByName('authored-art')) return;
+      const image = addSizedImage(scene, root, frameKey, size);
+      image.setName('authored-art');
+    };
+    if (scene.textures.exists(frameKey)) renderStandalone();
+    else requestAuthoredTexture(scene, frameKey, renderStandalone);
   }
 
   if (!options.compact) {
@@ -64,6 +70,21 @@ export function createItemGlyph(
   }
 
   return root;
+}
+
+function addSizedImage(
+  scene: Phaser.Scene,
+  root: Phaser.GameObjects.Container,
+  textureKey: string,
+  size: number,
+  frame?: string,
+): Phaser.GameObjects.Image {
+  const sprite = scene.add.image(0, -1, textureKey, frame);
+  const maxSide = Math.max(1, sprite.width, sprite.height);
+  const scale = (size - 8) / maxSide;
+  sprite.setScale(scale);
+  root.add(sprite);
+  return sprite;
 }
 
 function drawTagGlyph(
