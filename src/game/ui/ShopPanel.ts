@@ -119,7 +119,7 @@ export class ShopPanel {
     }).setOrigin(0.5);
 
     button.on('pointerover', () => button.setFillStyle(0x443454));
-    button.on('pointerout', () => button.setFillStyle(0x2f2940));
+    button.on('pointerout', () => button.setFillStyle(0x2c2638));
     button.on('pointerdown', () => {
       button.setScale(0.97);
       label.setScale(0.97);
