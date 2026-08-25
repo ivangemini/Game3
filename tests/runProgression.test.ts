@@ -1,79 +1,109 @@
 import { describe, expect, it } from 'vitest';
 import {
+  backpackUnlockedPocketCount,
   cashOutRun,
   createInitialRunProgress,
-  endlessRewardMultiplier,
-  enterEndless,
+  enterCorruptedLoop,
+  loopRewardMultiplier,
   registerRunVictory,
   worldForCampaignEncounter,
 } from '../src/game/domain/runProgression';
 import {
   CAMPAIGN_ENCOUNTERS,
-  createEndlessEncounter,
+  createLoopEncounter,
   getRunEncounter,
   modifierForWorld,
+  modifiersForLoopWorld,
 } from '../src/game/data/runEncounters';
 
-describe('run progression', () => {
-  it('uses three worlds with three encounters each', () => {
-    expect(CAMPAIGN_ENCOUNTERS).toHaveLength(9);
-    expect(CAMPAIGN_ENCOUNTERS.filter((encounter) => encounter.kind === 'boss')).toHaveLength(3);
+describe('long-session run progression', () => {
+  it('uses four worlds with three encounters each', () => {
+    expect(CAMPAIGN_ENCOUNTERS).toHaveLength(12);
+    expect(CAMPAIGN_ENCOUNTERS.filter((encounter) => encounter.kind === 'boss')).toHaveLength(4);
     expect(worldForCampaignEncounter(0)).toBe(1);
     expect(worldForCampaignEncounter(3)).toBe(2);
     expect(worldForCampaignEncounter(8)).toBe(3);
+    expect(worldForCampaignEncounter(11)).toBe(4);
   });
 
-  it('reaches the cashout decision only after the ninth campaign victory', () => {
+  it('reaches the safe exit only after the twelfth campaign victory', () => {
     let progress = createInitialRunProgress();
-    for (let index = 0; index < 8; index += 1) {
+    for (let index = 0; index < 11; index += 1) {
       const encounter = getRunEncounter(progress, 'route-seed');
       expect(encounter).not.toBeNull();
       progress = registerRunVictory(progress, encounter?.scoreValue ?? 0);
       expect(progress.mode).toBe('campaign');
     }
     const finale = getRunEncounter(progress, 'route-seed');
-    expect(finale?.encounterId).toBe('w3-final-broadcast');
+    expect(finale?.encounterId).toBe('w4-baby-moon');
     progress = registerRunVictory(progress, finale?.scoreValue ?? 0);
-    expect(progress.mode).toBe('cashout');
+    expect(progress.mode).toBe('deep-choice');
+    expect(progress.loopNumber).toBe(1);
   });
 
-  it('keeps one deterministic mutation for every encounter in the same world', () => {
-    const worldOneMutation = modifierForWorld('same-seed', 1);
-    expect(modifierForWorld('same-seed', 1)).toEqual(worldOneMutation);
+  it('opens one extra backpack pocket after each of the first three bosses', () => {
+    let progress = createInitialRunProgress();
+    expect(backpackUnlockedPocketCount(progress)).toBe(0);
 
-    const first = getRunEncounter(createInitialRunProgress(), 'same-seed');
-    const secondProgress = registerRunVictory(createInitialRunProgress(), 0);
-    const second = getRunEncounter(secondProgress, 'same-seed');
-    expect(first?.modifier.id).toBe(worldOneMutation.id);
-    expect(second?.modifier.id).toBe(worldOneMutation.id);
+    for (let index = 0; index < 3; index += 1) progress = registerRunVictory(progress, 0);
+    expect(backpackUnlockedPocketCount(progress)).toBe(1);
+
+    for (let index = 0; index < 3; index += 1) progress = registerRunVictory(progress, 0);
+    expect(backpackUnlockedPocketCount(progress)).toBe(2);
+
+    for (let index = 0; index < 3; index += 1) progress = registerRunVictory(progress, 0);
+    expect(backpackUnlockedPocketCount(progress)).toBe(3);
   });
 
-  it('applies mutation risk and reward to actual encounter values', () => {
-    const encounter = getRunEncounter(createInitialRunProgress(), 'mutation-test');
-    expect(encounter).not.toBeNull();
-    expect(encounter?.modifier.name.length).toBeGreaterThan(0);
-    expect(encounter?.rewardCoins).toBeGreaterThan(0);
-    expect(encounter?.enemy.maxHp).toBeGreaterThan(0);
+  it('uses deterministic non-repeating campaign mutations across the four worlds', () => {
+    const mutations = [1, 2, 3, 4].map((world) => modifierForWorld('same-seed', world).id);
+    expect(new Set(mutations).size).toBe(4);
+    expect(modifierForWorld('same-seed', 1)).toEqual(modifierForWorld('same-seed', 1));
   });
 
-  it('enters endless at wave one and scales difficulty/rewards', () => {
+  it('stacks more deterministic mutations in deeper loops', () => {
+    const loop2 = modifiersForLoopWorld('loop-seed', 2, 1);
+    const loop3 = modifiersForLoopWorld('loop-seed', 3, 1);
+    const loop4 = modifiersForLoopWorld('loop-seed', 4, 1);
+    expect(loop2).toHaveLength(2);
+    expect(loop3).toHaveLength(3);
+    expect(loop4).toHaveLength(4);
+    expect(new Set(loop4.map((modifier) => modifier.id)).size).toBe(4);
+    expect(modifiersForLoopWorld('loop-seed', 3, 1)).toEqual(loop3);
+  });
+
+  it('commits the player to a full corrupted loop before the next safe exit', () => {
     let progress = createInitialRunProgress();
     for (const encounter of CAMPAIGN_ENCOUNTERS) progress = registerRunVictory(progress, encounter.scoreValue);
-    progress = enterEndless(progress);
-    expect(progress.mode).toBe('endless');
-    expect(progress.endlessWave).toBe(1);
+    expect(progress.mode).toBe('deep-choice');
 
-    const wave1 = createEndlessEncounter(1, 'endless-seed');
-    const wave10 = createEndlessEncounter(10, 'endless-seed');
-    expect(wave10.enemy.maxHp).toBeGreaterThan(wave1.enemy.maxHp);
-    expect(wave10.rewardCoins).toBeGreaterThan(wave1.rewardCoins);
-    expect(wave10.kind).toBe('boss');
-    expect(endlessRewardMultiplier(10)).toBeGreaterThan(endlessRewardMultiplier(1));
+    progress = enterCorruptedLoop(progress);
+    expect(progress.mode).toBe('loop');
+    expect(progress.loopNumber).toBe(2);
+    expect(progress.loopEncounterIndex).toBe(0);
+    expect(cashOutRun(progress)).toEqual(progress);
+
+    for (let index = 0; index < 12; index += 1) {
+      const encounter = getRunEncounter(progress, 'loop-seed');
+      expect(encounter).not.toBeNull();
+      progress = registerRunVictory(progress, encounter?.scoreValue ?? 0);
+    }
+    expect(progress.mode).toBe('deep-choice');
+    expect(progress.loopNumber).toBe(2);
+    expect(cashOutRun(progress).mode).toBe('complete');
+
+    progress = enterCorruptedLoop(progress);
+    expect(progress.mode).toBe('loop');
+    expect(progress.loopNumber).toBe(3);
   });
 
-  it('allows cashing out from either campaign clear or endless', () => {
-    const cashout = { ...createInitialRunProgress(), mode: 'cashout' as const };
-    expect(cashOutRun(cashout).mode).toBe('complete');
-    expect(cashOutRun(enterEndless(cashout)).mode).toBe('complete');
+  it('scales corrupted loop enemies and rewards with depth', () => {
+    const loop2 = createLoopEncounter(2, 0, 'depth-seed');
+    const loop4 = createLoopEncounter(4, 0, 'depth-seed');
+    expect(loop4.enemy.maxHp).toBeGreaterThan(loop2.enemy.maxHp);
+    expect(loop4.enemy.attackDamage).toBeGreaterThan(loop2.enemy.attackDamage);
+    expect(loop4.rewardCoins).toBeGreaterThan(loop2.rewardCoins);
+    expect(loop4.modifiers.length).toBeGreaterThan(loop2.modifiers.length);
+    expect(loopRewardMultiplier(4)).toBeGreaterThan(loopRewardMultiplier(2));
   });
 });
