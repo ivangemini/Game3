@@ -106,10 +106,12 @@ export function loopRewardMultiplier(loopNumber: number): number {
 }
 
 export function completedCampaignWorldCount(state: RunProgressState): number {
-  if (state.mode !== 'campaign') return CAMPAIGN_WORLDS;
+  const completedEncounterCount = state.mode === 'campaign'
+    ? state.campaignEncounterIndex
+    : state.campaignEncounterIndex + 1;
   return Math.min(
     CAMPAIGN_WORLDS,
-    Math.floor(state.campaignEncounterIndex / ENCOUNTERS_PER_WORLD),
+    Math.floor(completedEncounterCount / ENCOUNTERS_PER_WORLD),
   );
 }
 
