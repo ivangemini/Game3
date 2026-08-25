@@ -4,9 +4,10 @@ import { PROTOTYPE_PERKS, PROTOTYPE_PERK_MAP } from '../data/perks';
 import { getRunEncounter } from '../data/runEncounters';
 import { generatePerkChoices } from '../domain/perks';
 import {
+  backpackUnlockedPocketCount,
   cashOutRun,
   createInitialRunProgress,
-  enterEndless,
+  enterCorruptedLoop,
   registerRunVictory,
 } from '../domain/runProgression';
 import { BackpackBoard } from '../ui/BackpackBoard';
@@ -19,7 +20,7 @@ import {
   loadSave,
   writeSave,
   type ActiveRunSave,
-  type SaveV5,
+  type SaveV6,
 } from '../../persistence/save';
 
 const PROTOTYPE_RUN_SEED = 'prototype-run-001';
@@ -39,7 +40,7 @@ export class PrototypeScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(COLORS.background);
     this.drawHeader();
 
-    let save: SaveV5 = loadSave();
+    let save: SaveV6 = loadSave();
     const hadActiveRun = save.activeRun !== null;
     let activeRun: ActiveRunSave = save.activeRun ?? {
       runSeed: PROTOTYPE_RUN_SEED,
@@ -64,6 +65,7 @@ export class PrototypeScene extends Phaser.Scene {
     const board = new BackpackBoard(this, PROTOTYPE_ITEM_MAP, 90, 225, {
       initialItems: hadActiveRun ? activeRun.backpackItems : undefined,
       nextLootSequence: activeRun.nextLootSequence,
+      unlockedPocketCount: backpackUnlockedPocketCount(activeRun.progress),
       onStateChanged: (snapshot) => {
         activeRun = { ...activeRun, backpackItems: snapshot.items, nextLootSequence: snapshot.nextLootSequence };
         persistRun();
@@ -94,6 +96,7 @@ export class PrototypeScene extends Phaser.Scene {
     const shopSnapshot = shop.getSnapshot();
     activeRun = { ...activeRun, coins: shopSnapshot.coins, shopIndex: shopSnapshot.shopIndex, soldOfferIds: shopSnapshot.soldOfferIds };
 
+    let runPanel!: RunProgressPanel;
     const perkOverlay = new PerkChoiceOverlay(this, PROTOTYPE_PERK_MAP, (perkId) => {
       if (!activeRun.pendingPerkOfferIds.includes(perkId) || activeRun.selectedPerkIds.includes(perkId)) return;
       activeRun = {
@@ -107,7 +110,6 @@ export class PrototypeScene extends Phaser.Scene {
       runPanel.refresh('Perk locked in. Repack, shop, then continue.');
     });
 
-    let runPanel!: RunProgressPanel;
     const combatPanel = new CombatPanel(this, 1140, 445, {
       getBackpackItems: () => board.getSnapshot().items,
       getSelectedPerkIds: () => activeRun.selectedPerkIds,
@@ -145,20 +147,42 @@ export class PrototypeScene extends Phaser.Scene {
           runPanel.refresh('Defeat. Repack or shop, then retry the same encounter.');
           return;
         }
+
         const current = getRunEncounter(activeRun.progress, activeRun.runSeed);
         if (!current || current.encounterId !== encounterId) return;
-        const completedEndlessWave = activeRun.progress.mode === 'endless' ? activeRun.progress.endlessWave : 0;
-        activeRun = {
-          ...activeRun,
-          progress: registerRunVictory(activeRun.progress, current.scoreValue),
-        };
-        if (completedEndlessWave > 0) {
-          save = { ...save, bestEndlessWave: Math.max(save.bestEndlessWave, completedEndlessWave) };
+
+        const previousProgress = activeRun.progress;
+        const previousPocketCount = backpackUnlockedPocketCount(previousProgress);
+        const nextProgress = registerRunVictory(previousProgress, current.scoreValue);
+        const nextPocketCount = backpackUnlockedPocketCount(nextProgress);
+        activeRun = { ...activeRun, progress: nextProgress };
+
+        if (previousProgress.mode === 'loop' && nextProgress.mode === 'deep-choice') {
+          save = {
+            ...save,
+            bestCorruptedLoop: Math.max(save.bestCorruptedLoop, previousProgress.loopNumber),
+          };
         }
+
+        const expanded = nextPocketCount > previousPocketCount
+          ? board.setUnlockedPocketCount(nextPocketCount)
+          : false;
         persistRun();
-        runPanel.refresh(activeRun.progress.mode === 'cashout'
-          ? 'Campaign cleared. Cash out or risk the build in Endless.'
-          : 'Victory. Repack and spend your reward before the next encounter.');
+
+        if (nextProgress.mode === 'deep-choice') {
+          runPanel.refresh(
+            nextProgress.loopNumber === 1
+              ? 'Four worlds cleared. Escape now or take this build into a corrupted loop.'
+              : `Loop ${nextProgress.loopNumber} cleared. Escape now or go deeper again.`,
+          );
+          return;
+        }
+
+        runPanel.refresh(
+          expanded
+            ? 'BOSS DOWN • a new backpack pocket opened. Rebuild before continuing.'
+            : 'Victory. Repack and spend your reward before the next encounter.',
+        );
       },
     });
 
@@ -171,17 +195,17 @@ export class PrototypeScene extends Phaser.Scene {
         if (!current || current.encounterId !== encounter.encounterId) return false;
         return combatPanel.startEncounter(encounter.encounterId, encounter.enemy, encounter.rewardCoins);
       },
-      onEnterEndless: () => {
+      onEnterCorruptedLoop: () => {
         if (combatPanel.isRunning() || activeRun.pendingPerkOfferIds.length > 0) return;
-        activeRun = { ...activeRun, progress: enterEndless(activeRun.progress) };
+        activeRun = { ...activeRun, progress: enterCorruptedLoop(activeRun.progress) };
         persistRun();
-        runPanel.refresh('Endless started. Every fifth wave is a corrupted boss.');
+        runPanel.refresh(`LOOP ${activeRun.progress.loopNumber} started. Mutations now stack.`);
       },
       onCashOut: () => {
-        if (combatPanel.isRunning()) return;
+        if (combatPanel.isRunning() || activeRun.pendingPerkOfferIds.length > 0) return;
         activeRun = { ...activeRun, progress: cashOutRun(activeRun.progress) };
         persistRun();
-        runPanel.refresh('Run complete. Score and best Endless wave are saved.');
+        runPanel.refresh('Run complete. Score and deepest completed loop are saved.');
       },
     });
 
@@ -202,7 +226,9 @@ export class PrototypeScene extends Phaser.Scene {
     }).setOrigin(0.5, 0);
     this.add.text(48, 38, 'SCRAPSTER', { fontSize: '25px', color: COLORS.text, fontStyle: 'bold' });
     this.add.text(48, 73, '♥ 96 / 100', { fontSize: '22px', color: '#ff6578' });
-    this.add.text(1320, 48, '3 WORLDS  •  9 ENCOUNTERS  •  ENDLESS', { fontSize: '18px', color: '#ff91e6', fontStyle: 'bold' });
+    this.add.text(1250, 48, '4 WORLDS  •  12 ENCOUNTERS  •  CORRUPTED LOOPS', {
+      fontSize: '17px', color: '#ff91e6', fontStyle: 'bold',
+    });
   }
 
   private createNewRunButton(): void {
@@ -224,8 +250,8 @@ export class PrototypeScene extends Phaser.Scene {
   }
 
   private drawSynergies(): void {
-    this.add.text(90, 165, 'BACKPACK 6×5  •  DRAG + ROTATE  •  SIDE-CONTACT BUILDS', {
-      fontSize: '21px', color: COLORS.text, fontStyle: 'bold',
+    this.add.text(90, 165, 'BACKPACK 6×5  •  BOSS POCKET UNLOCKS  •  SIDE-CONTACT BUILDS', {
+      fontSize: '20px', color: COLORS.text, fontStyle: 'bold',
     });
     this.add.text(90, 660, 'LIVE SYNERGIES — MOVE JUNK TO BREAK / REBUILD LINKS', {
       fontSize: '18px', color: '#ffcf69', fontStyle: 'bold',
