@@ -53,13 +53,13 @@ function legacyFourWorldBreakpoint(): SaveV8 {
 }
 
 describe('six-world save compatibility', () => {
-  it('resumes a pre-expansion v8 campaign breakpoint at World 5 without losing the build', () => {
+  it('resumes a pre-expansion v8 campaign breakpoint at World 5 without losing the build through v10', () => {
     const storage = new MemoryStorage();
     const oldSave = legacyFourWorldBreakpoint();
     storage.setItem('junkpack.save', JSON.stringify(oldSave));
 
     const loaded = loadSave(storage);
-    expect(loaded.version).toBe(9);
+    expect(loaded.version).toBe(10);
     expect(loaded.activeRun?.progress).toEqual({
       mode: 'campaign',
       campaignEncounterIndex: 12,
@@ -73,9 +73,10 @@ describe('six-world save compatibility', () => {
     expect(loaded.activeRun?.pendingPerkOfferIds).toEqual(['laser-pet']);
     expect(loaded.activeRun?.backpackItems).toHaveLength(1);
     expect(loaded.dailyRetention).toEqual(DEFAULT_DAILY_RETENTION);
+    expect(loaded.completedBossChallengeIds).toEqual([]);
   });
 
-  it('leaves a genuine six-world v8 campaign breakpoint unchanged while migrating the envelope', () => {
+  it('leaves a genuine six-world v8 campaign breakpoint unchanged while migrating the envelope to v10', () => {
     const storage = new MemoryStorage();
     const old = legacyFourWorldBreakpoint();
     const current: SaveV8 = {
@@ -93,8 +94,9 @@ describe('six-world save compatibility', () => {
     };
     storage.setItem('junkpack.save', JSON.stringify(current));
     const loaded = loadSave(storage);
-    expect(loaded.version).toBe(9);
+    expect(loaded.version).toBe(10);
     expect(loaded.activeRun).toEqual(current.activeRun);
     expect(loaded.dailyRetention).toEqual(DEFAULT_DAILY_RETENTION);
+    expect(loaded.completedBossChallengeIds).toEqual([]);
   });
 });
