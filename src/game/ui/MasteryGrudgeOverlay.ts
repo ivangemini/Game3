@@ -1,5 +1,10 @@
 import * as Phaser from 'phaser';
 import { PROTOTYPE_HERO_MAP } from '../data/heroes';
+import {
+  bossMasteryChallengesForBoss,
+  bossMasteryChallengeStarCount,
+  normalizeBossMasteryChallengeIds,
+} from '../domain/bossMasteryChallenges';
 import { createBossGrudgeSnapshots, type BossHistoryState } from '../domain/bossGrudges';
 import { createHeroMasterySnapshot, type HeroMasteryXpState } from '../domain/heroMastery';
 import type { HeroId } from '../domain/heroes';
@@ -13,6 +18,7 @@ type Tab = 'heroes' | 'bosses';
 export interface MasteryGrudgeOverlayOptions {
   readonly getHeroMasteryXp: () => HeroMasteryXpState;
   readonly getBossHistory: () => readonly BossHistoryState[];
+  readonly getCompletedBossChallengeIds: () => readonly string[];
   readonly reducedMotion: boolean;
   readonly onOpenArchiveTrophies?: () => void;
 }
@@ -52,11 +58,11 @@ export class MasteryGrudgeOverlay {
     this.content.add(this.scene.add.text(92, 65, 'MASTERY & GRUDGES', {
       fontFamily: 'Arial Black, Impact, sans-serif', fontSize: '34px', color: '#f7f2e8', stroke: '#090a0d', strokeThickness: 7,
     }));
-    this.content.add(this.scene.add.text(94, 108, 'LONG-TERM GOALS • COSMETIC REWARDS • NO PERMANENT COMBAT STATS', {
+    this.content.add(this.scene.add.text(94, 108, 'LONG-TERM GOALS • COUNTERPLAY STARS • COSMETIC REWARDS • NO PERMANENT COMBAT STATS', {
       fontSize: '11px', color: '#aaa5b2', fontStyle: 'bold',
     }));
     this.addTab(98, 'HERO MASTERY', 'heroes');
-    this.addTab(326, 'BOSS GRUDGES', 'bosses');
+    this.addTab(326, 'BOSS MASTERY', 'bosses');
     if (this.options.onOpenArchiveTrophies) this.addArchiveButton(554);
     const close = this.scene.add.rectangle(1450, 93, 116, 40, 0x2b2e3a, 1).setStrokeStyle(2, 0x7f8496).setInteractive({ useHandCursor: true });
     const label = this.scene.add.text(1450, 93, 'CLOSE  ×', { fontSize: '13px', color: '#f7f2e8', fontStyle: 'bold' }).setOrigin(0.5);
@@ -128,11 +134,15 @@ export class MasteryGrudgeOverlay {
   }
 
   private drawBosses(): void {
+    const completed = new Set(normalizeBossMasteryChallengeIds(this.options.getCompletedBossChallengeIds()));
     createBossGrudgeSnapshots(this.options.getBossHistory()).forEach((boss, index) => {
       const x = 92 + (index % 3) * 475;
       const y = 202 + Math.floor(index / 3) * 300;
       const revenge = boss.revengePending;
-      const stroke = revenge ? 0xff6f61 : boss.masteryTier >= 3 ? 0xffd56e : 0x5f6472;
+      const counterplayStars = bossMasteryChallengeStarCount([...completed], boss.bossId);
+      const challenges = bossMasteryChallengesForBoss(boss.bossId);
+      const nextChallenge = challenges.find((challenge) => !completed.has(challenge.id));
+      const stroke = revenge ? 0xff6f61 : counterplayStars >= 3 ? 0xffd56e : boss.masteryTier >= 3 ? 0xd494ff : 0x5f6472;
       const card = this.scene.add.rectangle(x + 220, y + 130, 440, 260, revenge ? 0x2c1d23 : 0x1b1d24, 1).setStrokeStyle(revenge ? 4 : 3, stroke);
       this.content.add(card);
       const key = bossArtKeyForEnemyId(boss.bossId);
@@ -147,20 +157,27 @@ export class MasteryGrudgeOverlay {
         boss.fastestVictoryMs === null ? 'FASTEST • —' : `FASTEST • ${formatDuration(boss.fastestVictoryMs)}`,
         { fontSize: '9px', color: '#8ceeff', fontStyle: 'bold' },
       ));
-      const stars = '★'.repeat(boss.masteryTier) + '☆'.repeat(3 - boss.masteryTier);
-      this.content.add(this.scene.add.text(x + 25, y + 172, `BOSS MASTERY  ${stars}`, {
-        fontSize: '13px', color: boss.masteryTier >= 3 ? '#ffd56e' : '#ff91e6', fontStyle: 'bold',
+      const recordStars = stars(boss.masteryTier);
+      const counterStars = stars(counterplayStars);
+      this.content.add(this.scene.add.text(x + 25, y + 147, `BOSS RECORD      ${recordStars}`, {
+        fontSize: '10px', color: boss.masteryTier >= 3 ? '#d9b4ff' : '#b995d0', fontStyle: 'bold',
       }));
-      this.content.add(this.scene.add.text(x + 25, y + 207, boss.nextGoal, {
-        fontSize: '10px', color: revenge ? '#ff9c91' : '#aeb4c0', fontStyle: 'bold', wordWrap: { width: 385 },
+      this.content.add(this.scene.add.text(x + 25, y + 171, `COUNTERPLAY   ${counterStars}`, {
+        fontSize: '12px', color: counterplayStars >= 3 ? '#ffd56e' : '#ffcf69', fontStyle: 'bold',
       }));
-      if (revenge) this.addRevengePulse(x + 335, y + 174);
+      const nextText = nextChallenge
+        ? `NEXT ★${nextChallenge.star} ${nextChallenge.name.toUpperCase()} — ${nextChallenge.description}`
+        : 'ALL 3 COUNTERPLAY CHALLENGES CLEARED';
+      this.content.add(this.scene.add.text(x + 25, y + 198, nextText, {
+        fontSize: '8px', color: nextChallenge ? '#aeb4c0' : '#ffd56e', fontStyle: 'bold', wordWrap: { width: 385 }, lineSpacing: 2,
+      }));
+      if (revenge) this.addRevengePulse(x + 335, y + 236);
     });
   }
 
   private addRevengePulse(x: number, y: number): void {
-    const plate = this.scene.add.rectangle(x, y, 165, 34, 0x542630, 1).setStrokeStyle(2, 0xff6f61);
-    const text = this.scene.add.text(x, y, 'REVENGE ACTIVE', { fontSize: '10px', color: '#ffd8d0', fontStyle: 'bold' }).setOrigin(0.5);
+    const plate = this.scene.add.rectangle(x, y, 165, 28, 0x542630, 1).setStrokeStyle(2, 0xff6f61);
+    const text = this.scene.add.text(x, y, 'REVENGE ACTIVE', { fontSize: '9px', color: '#ffd8d0', fontStyle: 'bold' }).setOrigin(0.5);
     this.content.add([plate, text]);
     if (!this.options.reducedMotion) this.scene.tweens.add({ targets: [plate, text], alpha: { from: 0.72, to: 1 }, yoyo: true, repeat: -1, duration: 620, ease: 'Sine.InOut' });
   }
@@ -172,6 +189,7 @@ export class MasteryGrudgeOverlay {
   }
 }
 
+function stars(count: number): string { return '★'.repeat(Math.max(0, Math.min(3, count))) + '☆'.repeat(Math.max(0, 3 - count)); }
 function displayName(id: string): string { return id.split('-').map((part) => part[0]!.toUpperCase() + part.slice(1)).join(' '); }
 function formatDuration(ms: number): string {
   const seconds = Math.max(0, ms) / 1000;

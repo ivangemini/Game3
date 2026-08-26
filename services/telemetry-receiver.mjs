@@ -18,6 +18,7 @@ const EVENT_NAMES = new Set([
   'hero_selected',
   'hero_mastery_level_up',
   'boss_grudge_changed',
+  'boss_mastery_challenge_completed',
   'archive_tab_viewed',
   'shop_purchase',
   'shop_reroll',
@@ -35,6 +36,26 @@ const STREAK_BUCKETS = new Set(['0', '1-2', '3-6', '7-13', '14+']);
 const DAILY_ARCHETYPES = new Set(['boss', 'fusion', 'event', 'shop', 'perk', 'world', 'score', 'loop']);
 const HERO_IDS = new Set(['scavenger', 'engineer', 'alchemist', 'beastfriend']);
 const BOSS_IDS = new Set(['tv-tyrant', 'deadline-snail', 'closet-monster', 'baby-moon', 'copycat-auditor', 'border-shark']);
+const BOSS_CHALLENGES = new Map([
+  ['tv-backup-channel', ['tv-tyrant', 1]],
+  ['tv-split-signal', ['tv-tyrant', 2]],
+  ['tv-mesh-network', ['tv-tyrant', 3]],
+  ['snail-twin-clocks', ['deadline-snail', 1]],
+  ['snail-triple-shift', ['deadline-snail', 2]],
+  ['snail-clock-union', ['deadline-snail', 3]],
+  ['closet-tidy-enough', ['closet-monster', 1]],
+  ['closet-neat-freak', ['closet-monster', 2]],
+  ['closet-zero-clutter', ['closet-monster', 3]],
+  ['moon-mixed-sky', ['baby-moon', 1]],
+  ['moon-split-eclipse', ['baby-moon', 2]],
+  ['moon-no-majority', ['baby-moon', 3]],
+  ['auditor-light-paperwork', ['copycat-auditor', 1]],
+  ['auditor-single-copy', ['copycat-auditor', 2]],
+  ['auditor-originals-only', ['copycat-auditor', 3]],
+  ['shark-cheap-rent', ['border-shark', 1]],
+  ['shark-inner-district', ['border-shark', 2]],
+  ['shark-rent-control', ['border-shark', 3]],
+]);
 const SAFE_ID = /^[A-Za-z0-9._:-]+$/;
 const SAFE_SESSION_ID = /^[A-Za-z0-9._-]+$/;
 
@@ -179,6 +200,11 @@ function validatePayload(name, payload) {
       return onlyKeys(payload, ['bossId', 'state'])
         && BOSS_IDS.has(payload.bossId)
         && (payload.state === 'started' || payload.state === 'resolved');
+    case 'boss_mastery_challenge_completed': {
+      if (!onlyKeys(payload, ['bossId', 'challengeId', 'star']) || !BOSS_IDS.has(payload.bossId)) return false;
+      const challenge = BOSS_CHALLENGES.get(payload.challengeId);
+      return challenge !== undefined && challenge[0] === payload.bossId && challenge[1] === payload.star;
+    }
     case 'archive_tab_viewed':
       return onlyKeys(payload, ['tab', 'tracedRecipes', 'almostSolvedRecipes'])
         && (payload.tab === 'items' || payload.tab === 'recipes')

@@ -16,6 +16,7 @@ export interface TelemetryEventMap {
   readonly hero_selected: { readonly heroId: string };
   readonly hero_mastery_level_up: { readonly heroId: string; readonly level: number; readonly rewardCount: number };
   readonly boss_grudge_changed: { readonly bossId: string; readonly state: 'started' | 'resolved' };
+  readonly boss_mastery_challenge_completed: { readonly bossId: string; readonly challengeId: string; readonly star: 1 | 2 | 3 };
   readonly archive_tab_viewed: { readonly tab: 'items' | 'recipes'; readonly tracedRecipes: number; readonly almostSolvedRecipes: number };
   readonly shop_purchase: { readonly definitionId: string; readonly price: number };
   readonly shop_reroll: { readonly source: 'coins' | 'rewarded'; readonly shopIndex: number };

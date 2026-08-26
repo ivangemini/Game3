@@ -71,6 +71,15 @@ export interface BossGrudgeMetric {
   readonly resolutionsByBoss: Readonly<Record<string, number>>;
 }
 
+export interface BossCounterplayMetric {
+  readonly sessionsCompletingChallenge: number;
+  readonly challengeCompletionSessionRate: number;
+  readonly challengeCompletions: number;
+  readonly completionsByBoss: Readonly<Record<string, number>>;
+  readonly completionsByChallenge: Readonly<Record<string, number>>;
+  readonly maxStarObservedByBoss: Readonly<Record<string, number>>;
+}
+
 export interface ArchiveDiscoveryMetric {
   readonly sessionsViewingArchive: number;
   readonly archiveViewSessionRate: number;
@@ -116,6 +125,7 @@ export interface SoftLaunchSummary {
   readonly dailyRetention: DailyRetentionMetric;
   readonly heroMastery: HeroMasteryMetric;
   readonly bossGrudges: BossGrudgeMetric;
+  readonly bossCounterplay: BossCounterplayMetric;
   readonly archiveDiscovery: ArchiveDiscoveryMetric;
   readonly tutorialOpened: number;
   readonly tutorialCompleted: number;
@@ -157,6 +167,7 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
   let maxObservedMasteryLevel = 0;
   let bossGrudgeStarts = 0;
   let bossGrudgeResolutions = 0;
+  let bossChallengeCompletions = 0;
   let archiveRecipeTabViews = 0;
   let maxTracedRecipesObserved = 0;
   let maxAlmostSolvedRecipesObserved = 0;
@@ -178,6 +189,9 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
   const masteryMaxLevelByHero: Record<string, number> = {};
   const grudgeStartsByBoss: Record<string, number> = {};
   const grudgeResolutionsByBoss: Record<string, number> = {};
+  const challengeCompletionsByBoss: Record<string, number> = {};
+  const challengeCompletionsByChallenge: Record<string, number> = {};
+  const challengeMaxStarByBoss: Record<string, number> = {};
   const loopEntries: Record<string, number> = {};
   const combats = new Map<string, CombatAccumulator>();
   const sessionStartedAt = new Map<string, number>();
@@ -191,6 +205,7 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
   const masteryLevelUpSessions = new Set<string>();
   const grudgeStartSessions = new Set<string>();
   const grudgeResolveSessions = new Set<string>();
+  const bossChallengeSessions = new Set<string>();
   const archiveViewSessions = new Set<string>();
   const archiveRecipeViewSessions = new Set<string>();
   const archiveAlmostSolvedSessions = new Set<string>();
@@ -266,6 +281,16 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
           grudgeResolutionsByBoss[payload.bossId] = (grudgeResolutionsByBoss[payload.bossId] ?? 0) + 1;
           grudgeResolveSessions.add(event.sessionId);
         }
+        break;
+      }
+      case 'boss_mastery_challenge_completed': {
+        const payload = event.payload as { bossId: string; challengeId: string; star: number };
+        const star = Math.max(0, Math.min(3, Math.floor(finiteNonNegative(payload.star))));
+        bossChallengeCompletions += 1;
+        bossChallengeSessions.add(event.sessionId);
+        challengeCompletionsByBoss[payload.bossId] = (challengeCompletionsByBoss[payload.bossId] ?? 0) + 1;
+        challengeCompletionsByChallenge[payload.challengeId] = (challengeCompletionsByChallenge[payload.challengeId] ?? 0) + 1;
+        challengeMaxStarByBoss[payload.bossId] = Math.max(challengeMaxStarByBoss[payload.bossId] ?? 0, star);
         break;
       }
       case 'archive_tab_viewed': {
@@ -443,6 +468,14 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
       aggregateResolveToStartRatio: ratio(bossGrudgeResolutions, bossGrudgeStarts),
       startsByBoss: sortRecord(grudgeStartsByBoss),
       resolutionsByBoss: sortRecord(grudgeResolutionsByBoss),
+    },
+    bossCounterplay: {
+      sessionsCompletingChallenge: bossChallengeSessions.size,
+      challengeCompletionSessionRate: ratio(bossChallengeSessions.size, sessions),
+      challengeCompletions: bossChallengeCompletions,
+      completionsByBoss: sortRecord(challengeCompletionsByBoss),
+      completionsByChallenge: sortRecord(challengeCompletionsByChallenge),
+      maxStarObservedByBoss: sortRecord(challengeMaxStarByBoss),
     },
     archiveDiscovery: {
       sessionsViewingArchive: archiveViewSessions.size,

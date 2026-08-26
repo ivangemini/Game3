@@ -1,4 +1,8 @@
 import {
+  normalizeBossMasteryChallengeIds,
+  type BossMasteryChallengeId,
+} from '../game/domain/bossMasteryChallenges';
+import {
   DEFAULT_DAILY_RETENTION,
   isDailyRetentionState,
   type DailyRetentionState,
@@ -88,7 +92,21 @@ export interface SaveV9 {
   readonly activeRun: ActiveRunSave | null;
 }
 
-export type GameSave = SaveV9;
+export interface SaveV10 {
+  readonly version: 10;
+  readonly discoveredItemIds: readonly string[];
+  readonly discoveredRecipeIds: readonly string[];
+  readonly bestEndlessWave: number;
+  readonly bestCorruptedLoop: number;
+  readonly settings: SaveSettings;
+  readonly dailyRetention: DailyRetentionState;
+  readonly heroMasteryXp: HeroMasteryXpSave;
+  readonly bossHistory: readonly BossHistorySave[];
+  readonly completedBossChallengeIds: readonly BossMasteryChallengeId[];
+  readonly activeRun: ActiveRunSave | null;
+}
+
+export type GameSave = SaveV10;
 
 export const DEFAULT_HERO_MASTERY_XP: HeroMasteryXpSave = {
   scavenger: 0,
@@ -97,8 +115,8 @@ export const DEFAULT_HERO_MASTERY_XP: HeroMasteryXpSave = {
   beastfriend: 0,
 };
 
-export const DEFAULT_SAVE: SaveV9 = {
-  version: 9,
+export const DEFAULT_SAVE: SaveV10 = {
+  version: 10,
   discoveredItemIds: [],
   discoveredRecipeIds: [],
   bestEndlessWave: 0,
@@ -107,10 +125,11 @@ export const DEFAULT_SAVE: SaveV9 = {
   dailyRetention: DEFAULT_DAILY_RETENTION,
   heroMasteryXp: DEFAULT_HERO_MASTERY_XP,
   bossHistory: [],
+  completedBossChallengeIds: [],
   activeRun: null,
 };
 
-export function loadSave(storage: Storage = localStorage): SaveV9 {
+export function loadSave(storage: Storage = localStorage): SaveV10 {
   let raw: string | null = null;
   try {
     raw = storage.getItem(SAVE_KEY);
@@ -141,7 +160,7 @@ export function loadSave(storage: Storage = localStorage): SaveV9 {
   return DEFAULT_SAVE;
 }
 
-export function writeSave(save: SaveV9, storage: Storage = localStorage): void {
+export function writeSave(save: SaveV10, storage: Storage = localStorage): void {
   try {
     const currentRaw = storage.getItem(SAVE_KEY);
     if (currentRaw && decodePersistedSave(currentRaw)) storage.setItem(SAVE_BACKUP_KEY, currentRaw);
@@ -151,16 +170,17 @@ export function writeSave(save: SaveV9, storage: Storage = localStorage): void {
   }
 }
 
-export function clearActiveRun(save: SaveV9): SaveV9 {
+export function clearActiveRun(save: SaveV10): SaveV10 {
   return { ...save, activeRun: null };
 }
 
-function decodePersistedSave(raw: string): SaveV9 | null {
+function decodePersistedSave(raw: string): SaveV10 | null {
   try {
     const parsed: unknown = JSON.parse(raw);
-    if (isSaveV9(parsed)) return normalizeCurrentSave(parsed);
+    if (isSaveV10(parsed)) return normalizeCurrentSave(parsed);
+    if (isSaveV9(parsed)) return normalizeCurrentSave(migrateV9ToV10(parsed));
     const v8 = isSaveV8(parsed) ? parsed : migrateLegacySave(parsed);
-    return v8 ? normalizeCurrentSave(migrateV8ToV9(v8)) : null;
+    return v8 ? normalizeCurrentSave(migrateV9ToV10(migrateV8ToV9(v8))) : null;
   } catch {
     return null;
   }
@@ -181,9 +201,31 @@ function migrateV8ToV9(save: SaveV8): SaveV9 {
   };
 }
 
-function normalizeCurrentSave(save: SaveV9): SaveV9 {
-  const run = save.activeRun;
-  if (!run) return save;
+function migrateV9ToV10(save: SaveV9): SaveV10 {
+  return {
+    version: 10,
+    discoveredItemIds: save.discoveredItemIds,
+    discoveredRecipeIds: save.discoveredRecipeIds,
+    bestEndlessWave: save.bestEndlessWave,
+    bestCorruptedLoop: save.bestCorruptedLoop,
+    settings: save.settings,
+    dailyRetention: save.dailyRetention,
+    heroMasteryXp: save.heroMasteryXp,
+    bossHistory: save.bossHistory,
+    completedBossChallengeIds: [],
+    activeRun: save.activeRun,
+  };
+}
+
+function normalizeCurrentSave(save: SaveV10): SaveV10 {
+  const normalizedChallenges = normalizeBossMasteryChallengeIds(save.completedBossChallengeIds);
+  const normalizedSave: SaveV10 = normalizedChallenges.length === save.completedBossChallengeIds.length
+    && normalizedChallenges.every((id, index) => id === save.completedBossChallengeIds[index])
+    ? save
+    : { ...save, completedBossChallengeIds: normalizedChallenges };
+
+  const run = normalizedSave.activeRun;
+  if (!run) return normalizedSave;
   const progress = run.progress;
   const legacyFinalIndex = LEGACY_FOUR_WORLD_CAMPAIGN_ENCOUNTER_COUNT - 1;
   const resumeIndex = LEGACY_FOUR_WORLD_CAMPAIGN_ENCOUNTER_COUNT;
@@ -191,10 +233,10 @@ function normalizeCurrentSave(save: SaveV9): SaveV9 {
     && progress.mode === 'deep-choice'
     && progress.loopNumber === 1
     && progress.campaignEncounterIndex === legacyFinalIndex;
-  if (!isLegacyFourWorldBreakpoint) return save;
+  if (!isLegacyFourWorldBreakpoint) return normalizedSave;
 
   return {
-    ...save,
+    ...normalizedSave,
     activeRun: {
       ...run,
       progress: {
@@ -364,6 +406,22 @@ function migrateLegacyProgress(progress: LegacyProgressV5): RunProgressState {
 
 function deriveBestCorruptedLoop(bestEndlessWave: number): number {
   return bestEndlessWave > 0 ? 2 + Math.floor((Math.max(1, bestEndlessWave) - 1) / 12) : 0;
+}
+
+function isSaveV10(value: unknown): value is SaveV10 {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as Partial<SaveV10>;
+  return candidate.version === 10
+    && isStringArray(candidate.discoveredItemIds)
+    && isStringArray(candidate.discoveredRecipeIds)
+    && isNonNegativeFiniteNumber(candidate.bestEndlessWave)
+    && isNonNegativeInteger(candidate.bestCorruptedLoop)
+    && isSettings(candidate.settings)
+    && isDailyRetentionState(candidate.dailyRetention)
+    && isHeroMasteryXp(candidate.heroMasteryXp)
+    && isBossHistoryArray(candidate.bossHistory)
+    && isStringArray(candidate.completedBossChallengeIds)
+    && (candidate.activeRun === null || isActiveRunV8(candidate.activeRun));
 }
 
 function isSaveV9(value: unknown): value is SaveV9 {

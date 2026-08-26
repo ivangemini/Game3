@@ -1,7 +1,8 @@
 import * as Phaser from 'phaser';
 import { telemetry } from '../../analytics/Telemetry';
 import { PROTOTYPE_HEROES } from '../data/heroes';
-import { BOSS_FAMILY_IDS } from '../domain/bossGrudges';
+import { BOSS_MASTERY_CHALLENGES, type BossMasteryChallengeId, type BossMasteryStar } from '../domain/bossMasteryChallenges';
+import { BOSS_FAMILY_IDS, type BossFamilyId } from '../domain/bossGrudges';
 import { HERO_MASTERY_REWARDS } from '../domain/heroMastery';
 import { resolveAuthoredTexture, uiArtKey } from './authoredArt';
 
@@ -39,6 +40,18 @@ export class MetaProgressFeedback {
 
     const bossId = BOSS_FAMILY_IDS.find((id) => displayBossName(id) === bossName);
     if (bossId) telemetry.track('boss_grudge_changed', { bossId, state: resolved ? 'resolved' : 'started' });
+  }
+
+  bossChallenge(bossName: string, bossId: BossFamilyId, challengeId: BossMasteryChallengeId, star: BossMasteryStar): void {
+    const challenge = BOSS_MASTERY_CHALLENGES.find((entry) => entry.id === challengeId && entry.bossId === bossId && entry.star === star);
+    if (!challenge) return;
+    this.reveal(
+      'COUNTERPLAY MASTERED',
+      `${bossName.toUpperCase()} • ★${star} ${challenge.name.toUpperCase()}`,
+      0xffd56e,
+      'mastery',
+    );
+    telemetry.track('boss_mastery_challenge_completed', { bossId, challengeId, star });
   }
 
   private reveal(kicker: string, detail: string, color: number, iconId: 'mastery' | 'grudge'): void {
