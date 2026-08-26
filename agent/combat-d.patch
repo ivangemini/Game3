@@ -58,7 +58,7 @@ diff --git a/src/game/ui/CombatPanel.ts b/src/game/ui/CombatPanel.ts
 index 3630cd9..22da90a 100644
 --- a/src/game/ui/CombatPanel.ts
 +++ b/src/game/ui/CombatPanel.ts
-@@ -569,7 +789,7 @@ export class CombatPanel {
+@@ -569,6 +789,6 @@ export class CombatPanel {
  
    private pushLog(message: string): void {
      this.eventLog.unshift(message);
