@@ -25,6 +25,7 @@ export interface ShopPanelOptions {
   readonly initialCoins?: number;
   readonly initialShopIndex?: number;
   readonly initialSoldOfferIds?: readonly string[];
+  readonly rerollCost?: number;
   readonly onStateChanged?: (snapshot: ShopPanelSnapshot) => void;
   readonly onFeedback?: (event: ShopFeedbackEvent) => void;
 }
@@ -36,6 +37,7 @@ export class ShopPanel {
   private readonly coinText: Phaser.GameObjects.Text;
   private readonly statusText: Phaser.GameObjects.Text;
   private readonly runSeed: string | number;
+  private readonly rerollCost: number;
   private readonly onStateChanged?: (snapshot: ShopPanelSnapshot) => void;
   private readonly onFeedback?: (event: ShopFeedbackEvent) => void;
   private shopIndex: number;
@@ -52,6 +54,7 @@ export class ShopPanel {
   ) {
     this.definitionsById = new Map(definitions.map((definition) => [definition.id, definition]));
     this.runSeed = options.runSeed ?? 'prototype-run-001';
+    this.rerollCost = Math.max(1, Math.floor(options.rerollCost ?? 7));
     this.coins = Math.max(0, Math.floor(options.initialCoins ?? 110));
     this.shopIndex = Math.max(0, Math.floor(options.initialShopIndex ?? 0));
     this.soldOfferIds = new Set(options.initialSoldOfferIds ?? []);
@@ -138,7 +141,7 @@ export class ShopPanel {
     const button = this.scene.add.rectangle(x, y, 112, 35, 0x33253c, 1)
       .setStrokeStyle(2, PANEL_VISUALS.neonPurple)
       .setInteractive({ useHandCursor: true });
-    const label = this.scene.add.text(x, y, '↻ REROLL • 7', {
+    const label = this.scene.add.text(x, y, `↻ REROLL • ${this.rerollCost}`, {
       fontSize: '10px', color: '#f0d6ff', fontStyle: 'bold', stroke: '#17121b', strokeThickness: 3,
     }).setOrigin(0.5);
 
@@ -149,7 +152,7 @@ export class ShopPanel {
     button.on('pointerupoutside', restore);
     button.on('pointerup', () => {
       restore();
-      if (!this.spendCoins(7, 'Shop reroll')) return;
+      if (!this.spendCoins(this.rerollCost, 'Shop reroll')) return;
       this.advanceReroll('NEW CRATE OPENED', 'coins');
     });
   }
