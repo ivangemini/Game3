@@ -29,6 +29,10 @@ function batch(overrides = {}) {
   };
 }
 
+function event(name, payload) {
+  return { name, payload, sessionId: 'session-test', timestampMs: 1000 };
+}
+
 async function startServer() {
   const directory = await mkdtemp(path.join(tmpdir(), 'junkpack-telemetry-'));
   tempDirs.push(directory);
@@ -54,6 +58,17 @@ describe('telemetry receiver', () => {
         payload: { ...batch().events[0].payload, email: 'should-not-be-accepted@example.com' },
       }],
     }))).toMatchObject({ ok: false });
+  });
+
+  it('accepts bounded retention events and rejects free-form or impossible values', () => {
+    expect(validateTelemetryBatch(batch({ events: [event('daily_board_opened', { ruleId: 'duck-amnesty', streakBucket: '3-6' })] })).ok).toBe(true);
+    expect(validateTelemetryBatch(batch({ events: [event('daily_contract_completed', { archetype: 'fusion', target: 2 })] })).ok).toBe(true);
+    expect(validateTelemetryBatch(batch({ events: [event('daily_contract_claimed', { archetype: 'boss', streakBucket: '7-13', rewardTrackDay: 5 })] })).ok).toBe(true);
+    expect(validateTelemetryBatch(batch({ events: [event('daily_track_claimed', { milestone: 7, cycle: 2, stampReward: 5 })] })).ok).toBe(true);
+
+    expect(validateTelemetryBatch(batch({ events: [event('daily_board_opened', { ruleId: 'duck-amnesty', streakBucket: '999d' })] })).toMatchObject({ ok: false });
+    expect(validateTelemetryBatch(batch({ events: [event('daily_contract_completed', { archetype: 'email-address', target: 2 })] })).toMatchObject({ ok: false });
+    expect(validateTelemetryBatch(batch({ events: [event('daily_track_claimed', { milestone: 4, cycle: 0, stampReward: 99 })] })).toMatchObject({ ok: false });
   });
 
   it('accepts a valid batch, writes sanitized NDJSON and exposes health/CORS', async () => {
