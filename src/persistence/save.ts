@@ -1,3 +1,8 @@
+import {
+  DEFAULT_DAILY_RETENTION,
+  isDailyRetentionState,
+  type DailyRetentionState,
+} from '../game/domain/dailyRetention';
 import type { HeroId } from '../game/domain/heroes';
 import {
   CAMPAIGN_ENCOUNTER_COUNT,
@@ -53,19 +58,59 @@ export interface SaveV8 {
   readonly activeRun: ActiveRunSave | null;
 }
 
-export type GameSave = SaveV8;
+export interface HeroMasteryXpSave {
+  readonly scavenger: number;
+  readonly engineer: number;
+  readonly alchemist: number;
+  readonly beastfriend: number;
+}
 
-export const DEFAULT_SAVE: SaveV8 = {
-  version: 8,
+export interface BossHistorySave {
+  readonly bossId: string;
+  readonly wins: number;
+  readonly losses: number;
+  readonly fastestVictoryMs: number | null;
+  readonly currentWinStreak: number;
+  readonly bestWinStreak: number;
+  readonly revengePending: boolean;
+}
+
+export interface SaveV9 {
+  readonly version: 9;
+  readonly discoveredItemIds: readonly string[];
+  readonly discoveredRecipeIds: readonly string[];
+  readonly bestEndlessWave: number;
+  readonly bestCorruptedLoop: number;
+  readonly settings: SaveSettings;
+  readonly dailyRetention: DailyRetentionState;
+  readonly heroMasteryXp: HeroMasteryXpSave;
+  readonly bossHistory: readonly BossHistorySave[];
+  readonly activeRun: ActiveRunSave | null;
+}
+
+export type GameSave = SaveV9;
+
+export const DEFAULT_HERO_MASTERY_XP: HeroMasteryXpSave = {
+  scavenger: 0,
+  engineer: 0,
+  alchemist: 0,
+  beastfriend: 0,
+};
+
+export const DEFAULT_SAVE: SaveV9 = {
+  version: 9,
   discoveredItemIds: [],
   discoveredRecipeIds: [],
   bestEndlessWave: 0,
   bestCorruptedLoop: 0,
   settings: { musicVolume: 0.8, sfxVolume: 0.9, reducedMotion: false },
+  dailyRetention: DEFAULT_DAILY_RETENTION,
+  heroMasteryXp: DEFAULT_HERO_MASTERY_XP,
+  bossHistory: [],
   activeRun: null,
 };
 
-export function loadSave(storage: Storage = localStorage): SaveV8 {
+export function loadSave(storage: Storage = localStorage): SaveV9 {
   let raw: string | null = null;
   try {
     raw = storage.getItem(SAVE_KEY);
@@ -96,7 +141,7 @@ export function loadSave(storage: Storage = localStorage): SaveV8 {
   return DEFAULT_SAVE;
 }
 
-export function writeSave(save: SaveV8, storage: Storage = localStorage): void {
+export function writeSave(save: SaveV9, storage: Storage = localStorage): void {
   try {
     const currentRaw = storage.getItem(SAVE_KEY);
     if (currentRaw && decodePersistedSave(currentRaw)) storage.setItem(SAVE_BACKUP_KEY, currentRaw);
@@ -106,21 +151,37 @@ export function writeSave(save: SaveV8, storage: Storage = localStorage): void {
   }
 }
 
-export function clearActiveRun(save: SaveV8): SaveV8 {
+export function clearActiveRun(save: SaveV9): SaveV9 {
   return { ...save, activeRun: null };
 }
 
-function decodePersistedSave(raw: string): SaveV8 | null {
+function decodePersistedSave(raw: string): SaveV9 | null {
   try {
     const parsed: unknown = JSON.parse(raw);
-    const decoded = isSaveV8(parsed) ? parsed : migrateLegacySave(parsed);
-    return decoded ? normalizeCurrentSave(decoded) : null;
+    if (isSaveV9(parsed)) return normalizeCurrentSave(parsed);
+    const v8 = isSaveV8(parsed) ? parsed : migrateLegacySave(parsed);
+    return v8 ? normalizeCurrentSave(migrateV8ToV9(v8)) : null;
   } catch {
     return null;
   }
 }
 
-function normalizeCurrentSave(save: SaveV8): SaveV8 {
+function migrateV8ToV9(save: SaveV8): SaveV9 {
+  return {
+    version: 9,
+    discoveredItemIds: save.discoveredItemIds,
+    discoveredRecipeIds: save.discoveredRecipeIds,
+    bestEndlessWave: save.bestEndlessWave,
+    bestCorruptedLoop: save.bestCorruptedLoop,
+    settings: save.settings,
+    dailyRetention: DEFAULT_DAILY_RETENTION,
+    heroMasteryXp: DEFAULT_HERO_MASTERY_XP,
+    bossHistory: [],
+    activeRun: save.activeRun,
+  };
+}
+
+function normalizeCurrentSave(save: SaveV9): SaveV9 {
   const run = save.activeRun;
   if (!run) return save;
   const progress = run.progress;
@@ -184,16 +245,13 @@ function migrateLegacySave(value: unknown): SaveV8 | null {
     : deriveBestCorruptedLoop(value.bestEndlessWave);
   if (!isNonNegativeInteger(bestCorruptedLoop)) return null;
 
-  if (value.version === 1) {
-    return finalize(value, bestCorruptedLoop, null);
-  }
-
+  if (value.version === 1) return finalizeLegacy(value, bestCorruptedLoop, null);
   const run = migrateLegacyRun(value.version, value.activeRun);
   if (value.activeRun !== null && value.activeRun !== undefined && !run) return null;
-  return finalize(value, bestCorruptedLoop, run);
+  return finalizeLegacy(value, bestCorruptedLoop, run);
 }
 
-function finalize(meta: LegacyMeta, bestCorruptedLoop: number, activeRun: ActiveRunSave | null): SaveV8 {
+function finalizeLegacy(meta: LegacyMeta, bestCorruptedLoop: number, activeRun: ActiveRunSave | null): SaveV8 {
   return {
     version: 8,
     discoveredItemIds: meta.discoveredItemIds,
@@ -308,6 +366,21 @@ function deriveBestCorruptedLoop(bestEndlessWave: number): number {
   return bestEndlessWave > 0 ? 2 + Math.floor((Math.max(1, bestEndlessWave) - 1) / 12) : 0;
 }
 
+function isSaveV9(value: unknown): value is SaveV9 {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as Partial<SaveV9>;
+  return candidate.version === 9
+    && isStringArray(candidate.discoveredItemIds)
+    && isStringArray(candidate.discoveredRecipeIds)
+    && isNonNegativeFiniteNumber(candidate.bestEndlessWave)
+    && isNonNegativeInteger(candidate.bestCorruptedLoop)
+    && isSettings(candidate.settings)
+    && isDailyRetentionState(candidate.dailyRetention)
+    && isHeroMasteryXp(candidate.heroMasteryXp)
+    && isBossHistoryArray(candidate.bossHistory)
+    && (candidate.activeRun === null || isActiveRunV8(candidate.activeRun));
+}
+
 function isSaveV8(value: unknown): value is SaveV8 {
   if (!value || typeof value !== 'object') return false;
   const candidate = value as Partial<SaveV8>;
@@ -380,6 +453,32 @@ function isPlacedItem(value: unknown): value is PlacedItem {
 
 function isHeroId(value: unknown): value is HeroId {
   return value === 'scavenger' || value === 'engineer' || value === 'alchemist' || value === 'beastfriend';
+}
+
+function isHeroMasteryXp(value: unknown): value is HeroMasteryXpSave {
+  if (!value || typeof value !== 'object') return false;
+  const mastery = value as Partial<HeroMasteryXpSave>;
+  return isNonNegativeInteger(mastery.scavenger)
+    && isNonNegativeInteger(mastery.engineer)
+    && isNonNegativeInteger(mastery.alchemist)
+    && isNonNegativeInteger(mastery.beastfriend);
+}
+
+function isBossHistoryArray(value: unknown): value is readonly BossHistorySave[] {
+  return Array.isArray(value) && value.every(isBossHistory);
+}
+
+function isBossHistory(value: unknown): value is BossHistorySave {
+  if (!value || typeof value !== 'object') return false;
+  const history = value as Partial<BossHistorySave>;
+  return typeof history.bossId === 'string'
+    && history.bossId.length > 0
+    && isNonNegativeInteger(history.wins)
+    && isNonNegativeInteger(history.losses)
+    && (history.fastestVictoryMs === null || isNonNegativeInteger(history.fastestVictoryMs))
+    && isNonNegativeInteger(history.currentWinStreak)
+    && isNonNegativeInteger(history.bestWinStreak)
+    && typeof history.revengePending === 'boolean';
 }
 
 function isSettings(value: unknown): value is SaveSettings {
