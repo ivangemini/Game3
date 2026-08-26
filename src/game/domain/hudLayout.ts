@@ -16,7 +16,7 @@ export interface HudActionLayout {
 }
 
 const LOGICAL_WIDTH = 1600;
-const ACTION_HEIGHT = 34;
+const ACTION_HEIGHT = 32;
 
 export function createHudActionLayout(displayWidthCss: number): HudActionLayout {
   const safeDisplayWidth = Number.isFinite(displayWidthCss) ? Math.max(0, displayWidthCss) : 0;
@@ -24,20 +24,20 @@ export function createHudActionLayout(displayWidthCss: number): HudActionLayout 
 
   const actions: readonly HudActionPlacement[] = mode === 'wide'
     ? [
-        action('daily', 330, 104, 260, false),
-        action('help', 930, 104, 110, false),
-        action('settings', 1055, 104, 110, false),
-        action('archive', 1200, 104, 150, false),
-        action('trophies', 1360, 104, 150, false),
-        action('reset', 1515, 104, 130, true),
+        action('daily', 255, 130, 205, true),
+        action('help', 930, 130, 96, true),
+        action('settings', 1038, 130, 106, true),
+        action('archive', 1164, 130, 126, true),
+        action('trophies', 1307, 130, 138, true),
+        action('reset', 1460, 130, 126, true),
       ]
     : [
-        action('daily', 278, 104, 228, true),
-        action('help', 1055, 90, 110, true),
-        action('settings', 1180, 90, 120, true),
-        action('archive', 1325, 90, 150, true),
-        action('reset', 1500, 90, 160, true),
-        action('trophies', 1370, 132, 330, true),
+        action('daily', 228, 126, 194, true),
+        action('help', 1050, 112, 96, true),
+        action('settings', 1160, 112, 112, true),
+        action('archive', 1290, 112, 126, true),
+        action('reset', 1445, 112, 150, true),
+        action('trophies', 1368, 150, 304, true),
       ];
 
   return { mode, actions };
