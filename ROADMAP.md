@@ -107,7 +107,7 @@
 - [x] Corrupted Loop + score foundation
 - [x] Achievements (**13 derived Trophy Shelf goals across items, recipes, secret evolutions and loop depth**)
 
-## P5R — Retention expansion [IN PROGRESS]
+## P5R — Retention expansion [DONE]
 
 ### R1 — Daily return loop [DONE]
 - [x] Deterministic **Daily Contracts**: 3 objectives per UTC day generated from progression/build/discovery action pools.
@@ -152,7 +152,7 @@
 
 **R3 gate:** complete in code. The game now has a daily return loop, multi-week mastery/discovery progression and a standardized weekly replay target with local history and cosmetic tiers. Real portal traffic is the next gate before leaderboard/backend investment or threshold/reward retuning.
 
-### Parallel gameplay lane — late-world identity [IN PROGRESS]
+### Parallel gameplay lane — late-world identity [DONE]
 - [x] Give **World 5** a stronger authored gameplay identity that previews Copycat Auditor concepts through lighter ordinary/elite encounter pressure rather than duplicating the boss mechanic verbatim.
 - [x] Give **World 6** a stronger authored gameplay identity that previews perimeter/space pressure before Border Shark.
 - [x] Add deterministic pre-fight teaching, affected-item highlights, district palettes and authored World 5/6 hazard emblems with Reduced Motion-safe presentation.
