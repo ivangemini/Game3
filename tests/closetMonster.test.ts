@@ -146,7 +146,7 @@ describe('Closet Monster Clutter Crush', () => {
       itemInstanceIds: ['loose-a'],
       impactAtMs: 6000,
       affectedItemCount: 1,
-    })).toMatchObject({ id: 'boss.clutter.telegraph', priority: 3, group: 'boss' });
+    })).toMatchObject({ id: 'boss.clutter.telegraph', priority: 4, group: 'boss' });
     expect(audioCueForClutterCrushEvent({
       kind: 'boss-clutter-impact',
       atMs: 6000,

@@ -291,7 +291,7 @@ describe('Corrupted Loop boss families 5 and 6', () => {
       impactAtMs: 5600,
       copyCount: 2,
       extraCopyCount: 1,
-    })).toMatchObject({ id: 'boss.duplicate-debt.telegraph', priority: 3, group: 'boss', sourceId: 'laser-cat' });
+    })).toMatchObject({ id: 'boss.duplicate-debt.telegraph', priority: 4, group: 'boss', sourceId: 'laser-cat' });
     expect(audioCueForEdgeRentEvent({
       kind: 'boss-edge-impact',
       atMs: 6500,
