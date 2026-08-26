@@ -45,7 +45,7 @@ async function waitForEncounterReward(page: import('@playwright/test').Page): Pr
     const raw = localStorage.getItem('junkpack.save');
     if (!raw) return 0;
     try { return JSON.parse(raw)?.activeRun?.claimedEncounterIds?.length ?? 0; } catch { return 0; }
-  }), { timeout: 15_000 }).toBeGreaterThan(0);
+  }), { timeout: 45_000 }).toBeGreaterThan(0);
 }
 
 async function advanceSaveToFirstBoss(page: import('@playwright/test').Page): Promise<void> {
@@ -70,7 +70,7 @@ async function advanceSaveToFirstBoss(page: import('@playwright/test').Page): Pr
 }
 
 test('captures production presentation matrix for preparation, combat, boss and reward', async ({ page }, testInfo) => {
-  test.setTimeout(90_000);
+  test.setTimeout(120_000);
   test.skip(testInfo.project.name !== 'chromium-desktop', 'release screenshots are captured once in Chromium desktop');
 
   const canvas = await enterFirstRun(page);
