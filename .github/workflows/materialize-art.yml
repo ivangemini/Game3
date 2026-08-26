@@ -1,0 +1,26 @@
+name: Materialize raster art integration
+on:
+  push:
+    branches: [polish/presentation-ux-gamefeel-pass]
+    paths:
+      - '.agent-art-integration.patch'
+      - '.github/workflows/materialize-art.yml'
+permissions:
+  contents: write
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: polish/presentation-ux-gamefeel-pass
+          fetch-depth: 0
+      - name: Apply authored art patch
+        run: |
+          git apply --3way .agent-art-integration.patch
+          rm .agent-art-integration.patch .github/workflows/materialize-art.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'feat: integrate raster production art into runtime'
+          git push origin HEAD:polish/presentation-ux-gamefeel-pass
