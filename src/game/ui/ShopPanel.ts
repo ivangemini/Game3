@@ -4,6 +4,7 @@ import type { PlatformAdapter } from '../../platform/PlatformAdapter';
 import { generateShopOffers, type ShopOffer } from '../domain/shop';
 import type { ItemDefinition } from '../domain/types';
 import { createItemGlyph } from './ItemGlyph';
+import { createMaterialSurface } from './materialSurface';
 import { PANEL_VISUALS, rarityVisual } from './visualTokens';
 
 const PLATFORM_REGISTRY_KEY = 'junkpack.platform-adapter';
@@ -113,10 +114,29 @@ export class ShopPanel {
       .setStrokeStyle(5, PANEL_VISUALS.leatherEdge).setDepth(-2);
     this.scene.add.rectangle(centerX, centerY, 1392, 128, 0x171820, 1)
       .setStrokeStyle(2, 0x342c2a).setDepth(-1);
+    createMaterialSurface(this.scene, {
+      x: centerX,
+      y: centerY,
+      width: 1372,
+      height: 110,
+      kind: 'scrap',
+      seed: `shop-shell:${String(this.runSeed)}`,
+      depth: -0.8,
+      alpha: 0.64,
+    });
 
     const titlePlate = this.scene.add.rectangle(this.left + 142, this.top + 26, 246, 35, 0x5a3b2e, 1)
       .setStrokeStyle(3, 0xc28c5e);
     titlePlate.setAngle(-1.3);
+    createMaterialSurface(this.scene, {
+      x: this.left + 142,
+      y: this.top + 26,
+      width: 232,
+      height: 25,
+      kind: 'paper',
+      seed: 'shop:title-plate',
+      alpha: 0.52,
+    }).setAngle(-1.3);
     this.scene.add.text(this.left + 142, this.top + 25, 'JUNK SHOP', {
       fontFamily: 'Arial Black, Impact, sans-serif', fontSize: '21px', color: '#ffd56e',
       stroke: '#261611', strokeThickness: 5,
@@ -248,6 +268,15 @@ export class ShopPanel {
       .setStrokeStyle(3, sold ? 0x55515b : rarity.stroke);
     const inner = this.scene.add.rectangle(x, y, 274, 100, sold ? 0x1a1a20 : 0x23242c, 0.8)
       .setStrokeStyle(1, sold ? 0x444149 : rarity.mid);
+    const wear = createMaterialSurface(this.scene, {
+      x,
+      y,
+      width: 264,
+      height: 90,
+      kind: 'scrap',
+      seed: `shop-offer:${offer.id}`,
+      alpha: sold ? 0.18 : 0.34,
+    });
     const glyph = createItemGlyph(this.scene, definition, x - 103, y - 2, { size: 62, compact: true });
     glyph.setAlpha(sold ? 0.34 : 1);
 
@@ -272,7 +301,7 @@ export class ShopPanel {
       fontSize: '11px', color: sold ? '#77727e' : '#e3ffc5', fontStyle: 'bold',
     }).setOrigin(0.5);
 
-    this.offerObjects.push(shadow, card, inner, glyph, title, rarityLabel, tags, price, buyButton, buyLabel);
+    this.offerObjects.push(shadow, card, inner, wear, glyph, title, rarityLabel, tags, price, buyButton, buyLabel);
     if (sold) return;
     buyButton.setInteractive({ useHandCursor: true });
     buyButton.on('pointerover', () => { buyButton.setFillStyle(0x47653c); card.setStrokeStyle(4, rarity.accent); });
