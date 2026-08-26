@@ -1,0 +1,136 @@
+diff --git a/src/game/ui/CombatPanel.ts b/src/game/ui/CombatPanel.ts
+index 3630cd9..22da90a 100644
+--- a/src/game/ui/CombatPanel.ts
++++ b/src/game/ui/CombatPanel.ts
+@@ -112,40 +128,97 @@ export class CombatPanel {
+     this.onOutcome = options.onOutcome;
+     this.onAudioCue = options.onAudioCue;
+     this.backpackGrid = options.backpackGrid ?? { left: 90, top: 225, cellSize: 76 };
+-
+-    scene.add.rectangle(centerX, centerY, 720, 530, 0x211d28, 1).setStrokeStyle(5, 0x55365e);
+-    scene.add.text(centerX - 325, centerY - 250, 'LIVE COMBAT', {
+-      fontSize: '25px', color: '#ff91e6', fontStyle: 'bold',
+-    });
+-    scene.add.text(centerX - 325, centerY - 216, 'Build + hero + perks snapshot at fight start. Bosses attack backpack rules.', {
+-      fontSize: '13px', color: '#aaa5b2',
+-    });
+-
+-    this.enemyBody = scene.add.rectangle(centerX + 85, centerY - 42, 250, 190, 0x6f8f50, 1).setStrokeStyle(8, 0x2a2732);
+-    scene.add.rectangle(centerX + 85, centerY - 42, 188, 110, 0x9aca68, 1).setStrokeStyle(7, 0x34313c);
+-    scene.add.circle(centerX + 45, centerY - 58, 18, 0xffe26d);
+-    scene.add.circle(centerX + 125, centerY - 54, 22, 0xffc65c);
+-    scene.add.circle(centerX + 48, centerY - 58, 6, 0x1a1922);
+-    scene.add.circle(centerX + 121, centerY - 54, 8, 0x1a1922);
+-    scene.add.text(centerX + 85, centerY - 15, '▂▂▂', { fontSize: '30px', color: '#302038' }).setOrigin(0.5);
+-    this.enemyNameText = scene.add.text(centerX + 85, centerY + 80, 'WAITING FOR ENCOUNTER', {
+-      fontSize: '15px', color: '#f5f0e7', fontStyle: 'bold',
+-    }).setOrigin(0.5);
+-
+-    this.barGraphics = scene.add.graphics();
+-    this.playerText = scene.add.text(centerX - 325, centerY - 158, '', { fontSize: '17px', color: '#f7f2e8', fontStyle: 'bold' });
+-    this.enemyText = scene.add.text(centerX - 325, centerY - 124, '', { fontSize: '17px', color: '#f7f2e8', fontStyle: 'bold' });
+-    this.poisonText = scene.add.text(centerX - 325, centerY - 90, '', { fontSize: '14px', color: '#b8ff77' });
+-    this.nextActionText = scene.add.text(centerX - 325, centerY + 88, '', { fontSize: '12px', color: '#ffcf69', fontStyle: 'bold' });
+-    this.bossStatusText = scene.add.text(centerX - 325, centerY + 110, '', {
+-      fontSize: '12px', color: '#f08cff', fontStyle: 'bold', wordWrap: { width: 610 },
+-    });
+-    this.statusText = scene.add.text(centerX - 325, centerY + 134, 'Ready. Use the RUN panel to start the next encounter.', {
+-      fontSize: '13px', color: '#d8d1df', wordWrap: { width: 610 },
+-    });
+-    this.eventLogText = scene.add.text(centerX - 325, centerY + 166, '', {
+-      fontSize: '10px', color: '#aaa5b2', lineSpacing: 3, wordWrap: { width: 610 },
+-    });
++    this.compactHud = typeof document !== 'undefined' && document.getElementById('app')?.dataset.compactHud === 'true';
++
++    // Combat mode deliberately masks preparation-only chrome instead of trying to
++    // shrink every subsystem into the same visual hierarchy. The backpack stays
++    // visible at left; run/fusion/shop/meta controls fall behind these focus mats.
++    this.focusRight = scene.add.rectangle(1050, 445, 990, 570, 0x0a0c12, 0.97)
++      .setStrokeStyle(2, 0x32273a, 0.55).setDepth(12).setVisible(false).setInteractive();
++    this.focusBottom = scene.add.rectangle(800, 792, 1510, 166, 0x0a0c12, 0.98)
++      .setStrokeStyle(2, 0x252934, 0.65).setDepth(12).setVisible(false).setInteractive();
++    this.focusTop = scene.add.rectangle(800, 86, 1600, 172, 0x090b10, 0.985)
++      .setDepth(95).setVisible(false).setInteractive();
++    this.focusTitle = scene.add.text(800, 57, 'FIGHT LIVE', {
++      fontFamily: 'Arial Black, Impact, sans-serif', fontSize: '28px', color: '#ff91e6',
++      fontStyle: 'bold', stroke: '#08090d', strokeThickness: 7,
++    }).setOrigin(0.5).setDepth(96).setVisible(false);
++    this.focusHint = scene.add.text(800, 101, 'BACKPACK SNAPSHOT LOCKED  •  READ THE TELEGRAPH  •  LET THE BUILD FIRE', {
++      fontSize: this.compactHud ? '16px' : '12px', color: '#c9c4d0', fontStyle: 'bold', letterSpacing: 1,
++    }).setOrigin(0.5).setDepth(96).setVisible(false);
++
++    // Preparation deliberately treats the combat half as quiet negative space.
++    // Run/Fusion/Shop remain actionable while the full theatre stays covered
++    // until a fight actually starts, so the backpack is the first read.
++    this.prepVeil = scene.add.rectangle(centerX, centerY, 770, 550, 0x0d1017, 0.975)
++      .setStrokeStyle(3, 0x313746, 0.62).setDepth(31);
++    this.prepVeilInner = scene.add.rectangle(centerX, centerY, 710, 490, 0x10141c, 0.58)
++      .setStrokeStyle(1, 0x272d38, 0.48).setDepth(32);
++    this.prepVeilTitle = scene.add.text(centerX, centerY - 54, 'FIGHT BAY', {
++      fontFamily: 'Arial Black, Impact, sans-serif', fontSize: this.compactHud ? '40px' : '34px', color: '#d9dde6',
++      fontStyle: 'bold', stroke: '#080a0e', strokeThickness: 7, letterSpacing: 2,
++    }).setOrigin(0.5).setDepth(33);
++    this.prepVeilHint = scene.add.text(centerX, centerY + 2, 'PACK THE BAG.  READ THE RUN.  START WHEN READY.', {
++      fontSize: this.compactHud ? '19px' : '15px', color: '#9aa3b1', fontStyle: 'bold', letterSpacing: 1,
++    }).setOrigin(0.5).setDepth(33);
++    this.prepVeilRule = scene.add.text(centerX, centerY + 50, 'Combat HUD appears only when the encounter is live.', {
++      fontSize: this.compactHud ? '15px' : '11px', color: '#666e7c', fontStyle: 'bold',
++    }).setOrigin(0.5).setDepth(33);
++
++    this.stageShell = scene.add.rectangle(centerX, centerY, 770, 550, 0x171821, 0.78)
++      .setStrokeStyle(4, 0x4a3154, 0.72).setDepth(20);
++    scene.add.rectangle(centerX, centerY, 750, 530, 0x0f1219, 0.72)
++      .setStrokeStyle(1, 0x343846, 0.8).setDepth(20);
++    this.stageTitle = scene.add.text(centerX - 345, centerY - 258, 'NEXT THREAT', {
++      fontFamily: 'Arial Black, Impact, sans-serif', fontSize: this.compactHud ? '30px' : '24px', color: '#e8d9ec',
++      fontStyle: 'bold', stroke: '#0b0c10', strokeThickness: 5,
++    }).setDepth(22);
++    this.stageSubtitle = scene.add.text(centerX - 345, centerY - 222, 'Repack first. Start the encounter when the build feels ready.', {
++      fontSize: this.compactHud ? '17px' : '12px', color: '#85818d', fontStyle: 'bold',
++    }).setDepth(22);
++
++    scene.add.rectangle(centerX + 112, centerY - 38, 356, 278, 0x090b10, 0.72)
++      .setStrokeStyle(2, 0x343846, 0.72).setDepth(20);
++    this.enemyBody = scene.add.rectangle(centerX + 112, centerY - 38, 310, 230, 0x6f8f50, 1)
++      .setStrokeStyle(9, 0x2a2732).setDepth(21);
++    scene.add.rectangle(centerX + 112, centerY - 38, 232, 132, 0x9aca68, 1)
++      .setStrokeStyle(7, 0x34313c).setDepth(21);
++    scene.add.circle(centerX + 62, centerY - 58, 21, 0xffe26d).setDepth(22);
++    scene.add.circle(centerX + 157, centerY - 54, 25, 0xffc65c).setDepth(22);
++    scene.add.circle(centerX + 66, centerY - 58, 7, 0x1a1922).setDepth(23);
++    scene.add.circle(centerX + 153, centerY - 54, 9, 0x1a1922).setDepth(23);
++    scene.add.text(centerX + 112, centerY - 5, '▂▂▂', { fontSize: '34px', color: '#302038' })
++      .setOrigin(0.5).setDepth(23);
++    this.enemyNameText = scene.add.text(centerX + 112, centerY + 102, 'NEXT ENCOUNTER', {
++      fontFamily: 'Arial Black, Impact, sans-serif', fontSize: this.compactHud ? '22px' : '17px', color: '#f5f0e7',
++      fontStyle: 'bold', stroke: '#090a0e', strokeThickness: 4,
++    }).setOrigin(0.5).setDepth(34);
++
++    this.barGraphics = scene.add.graphics().setDepth(22);
++    this.playerText = scene.add.text(centerX - 345, centerY - 158, 'BUILD READY', {
++      fontSize: this.compactHud ? '22px' : '18px', color: '#f7f2e8', fontStyle: 'bold', stroke: '#0a0b0f', strokeThickness: 3,
++    }).setDepth(22);
++    this.enemyText = scene.add.text(centerX - 345, centerY - 120, '', {
++      fontSize: this.compactHud ? '22px' : '18px', color: '#f7f2e8', fontStyle: 'bold', stroke: '#0a0b0f', strokeThickness: 3,
++    }).setDepth(22);
++    this.poisonText = scene.add.text(centerX - 345, centerY - 82, '', {
++      fontSize: this.compactHud ? '18px' : '14px', color: '#b8ff77', fontStyle: 'bold',
++    }).setDepth(22);
++
++    this.telegraphPlate = scene.add.rectangle(centerX, centerY + 103, 694, 60, 0x2a1b31, 0.88)
++      .setStrokeStyle(3, 0x8f4aa4, 0.75).setDepth(21).setVisible(false);
++    this.nextActionText = scene.add.text(centerX - 325, centerY + 80, '', {
++      fontSize: this.compactHud ? '18px' : '14px', color: '#ffdc78', fontStyle: 'bold', wordWrap: { width: 650 },
++    }).setDepth(22);
++    this.bossStatusText = scene.add.text(centerX - 325, centerY + 105, '', {
++      fontSize: this.compactHud ? '18px' : '14px', color: '#ff9bea', fontStyle: 'bold', wordWrap: { width: 650 },
++    }).setDepth(22);
++    this.statusText = scene.add.text(centerX - 325, centerY + 145, 'Ready • Start the encounter from RUN.', {
++      fontSize: this.compactHud ? '16px' : '12px', color: '#c6bfcb', fontStyle: 'bold', wordWrap: { width: 650 },
++    }).setDepth(22);
++    this.eventLogText = scene.add.text(centerX - 325, centerY + 174, '', {
++      fontSize: '9px', color: '#817c88', lineSpacing: 2, wordWrap: { width: 650 },
++    }).setDepth(22).setVisible(!this.compactHud);
+ 
+     if (options.showDebugButtons) {
+       this.createFightButton(centerX + 98, centerY + 222, 'DEBUG DUMMY', 'debug:dummy', SCRAP_DUMMY, 0x354157, 0x68a8ff);
