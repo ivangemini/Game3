@@ -9,6 +9,29 @@ def replace_once(path: str, old: str, new: str) -> None:
     file.write_text(text.replace(old, new, 1), encoding='utf-8')
 
 
+# A generated blank template must be structurally valid. Zero measurements mean
+# "not recorded yet" and are converted to INCOMPLETE by evaluateAcceptance().
+replace_once(
+    'scripts/release-acceptance-report.mjs',
+    "import { fileURLToPath } from 'node:url';\n",
+    "import { pathToFileURL } from 'node:url';\n",
+)
+replace_once(
+    'scripts/release-acceptance-report.mjs',
+    "  validatePositive(device.canvas?.width, `${prefix}.canvas.width`, errors);\n  validatePositive(device.canvas?.height, `${prefix}.canvas.height`, errors);\n  validatePositive(device.canvas?.devicePixelRatio, `${prefix}.canvas.devicePixelRatio`, errors);\n",
+    "  validateNonNegative(device.canvas?.width, `${prefix}.canvas.width`, errors);\n  validateNonNegative(device.canvas?.height, `${prefix}.canvas.height`, errors);\n  validateNonNegative(device.canvas?.devicePixelRatio, `${prefix}.canvas.devicePixelRatio`, errors);\n",
+)
+replace_once(
+    'scripts/release-acceptance-report.mjs',
+    "function validatePositive(value, prefix, errors) {\n  if (!Number.isFinite(value) || value <= 0) errors.push(`${prefix} must be a positive finite number`);\n}\n\n",
+    "",
+)
+replace_once(
+    'scripts/release-acceptance-report.mjs',
+    "const invokedAsCli = process.argv[1] && import.meta.url === new URL(`file://${path.resolve(process.argv[1])}`).href;\n",
+    "const invokedAsCli = process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;\n",
+)
+
 replace_once(
     'docs/SYSTEMS/RUNTIME_PROFILING.md',
     "## Reporting\nAttach the device/browser/build SHA and scenario to each measurement. P8 `real-device performance profiling` remains open until the physical-device pass is completed; the automated browser baseline can be green independently.\n",
@@ -32,4 +55,4 @@ replace_once(
     "- [ ] portal-specific compliance checks (**repository/unit/browser harness + structured evidence validator/report implemented; real Yandex debug panel / CrazyGames SDK tester acceptance still required**)\n",
 )
 
-print('release acceptance docs integrated')
+print('release acceptance tooling and docs integrated')
