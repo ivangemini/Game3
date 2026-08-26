@@ -78,7 +78,8 @@ Each history entry stores:
 - fastest valid victory time;
 - current win streak;
 - best win streak;
-- whether revenge is pending.
+- whether revenge is pending;
+- optional best counterplay challenge stars (`0–3`) for backward-compatible save-v9 persistence.
 
 ### Revenge lifecycle
 
@@ -88,19 +89,31 @@ The next victory against that same family resolves revenge. Revenge is cosmetic/
 
 The runtime shows restrained `GRUDGE MARKED` and `REVENGE COMPLETE` feedback. The Boss Grudges tab uses authored boss portraits and a non-color-only `REVENGE ACTIVE` label. With Reduced Motion enabled the label remains static instead of pulsing.
 
-## Boss mastery tiers
+## Boss mastery: rivalry + counterplay
 
-The first R2 pass derives three simple mastery tiers from existing history instead of introducing another persistence schema:
+Boss mastery now has two deliberately separate three-step tracks on the same card:
 
-- **Tier 1:** first victory;
-- **Tier 2:** at least three victories;
-- **Tier 3:** at least three victories and a best win streak of three.
+- **Rivalry** remains derived from history: first victory, three total victories, then a best win streak of three.
+- **Counterplay** is a persistent best-of-three challenge result evaluated only on a valid victory from the immutable combat build snapshot.
 
-This is intentionally compact. Arrangement-specific boss challenge stars can build on the same surface later without invalidating save v9.
+Counterplay stars are boss-specific and use the same deterministic concepts as each boss rule:
+
+| Boss | Challenge | ★ | ★★ | ★★★ |
+| --- | --- | --- | --- | --- |
+| TV Tyrant | Signal Split | 3 active items / 3 rows | 4 / 4 | 5 / all 5 rows |
+| Deadline Snail | No Single Deadline | 2 items within 25% of fastest trigger | 3 | 4 |
+| Closet Monster | Anchor the Clutter | ≤2 loose items | ≤1 | 0 |
+| Baby Moon | Family Diversification | dominant tag affects ≤4 items | ≤3 | ≤2 |
+| Copycat Auditor | Original Receipts | largest duplicate group has ≤2 extra copies | ≤1 | 0 exact duplicates |
+| Border Shark | Own the Center | ≤4 Edge Rent items | ≤2 | 0 |
+
+The thresholds are nested, deterministic and evaluated against the locked fight-start layout/build, so frame rate, combat animation timing and post-fight UI input cannot alter the result. Corrupted-loop boss IDs map back to the same six family records.
+
+The saved value is best-ever stars per family and never downgrades. A star upgrade gets one restrained authored mastery toast; repeated equal/lower clears do not spam feedback.
 
 ## Persistence and idempotence
 
-R1 already reserved `heroMasteryXp` and `bossHistory` in save v9, so R2 does not require another schema bump.
+R1 already reserved `heroMasteryXp` and `bossHistory` in save v9. Counterplay stars extend each boss-history record with an optional bounded `challengeStars` field, so existing v9 saves remain valid and default missing stars to zero without another schema bump.
 
 Important runtime boundaries:
 
@@ -143,8 +156,10 @@ Automated coverage includes:
 - boss-family normalization;
 - revenge start/resolve behavior;
 - fastest-win and streak updates;
-- boss mastery tiers;
-- save-v9 persistence and malformed-state rejection;
+- rivalry mastery tiers;
+- all six deterministic counterplay challenge evaluators and corrupted-family mapping;
+- best-star monotonic persistence (no downgrade);
+- save-v9 challenge-star round trip and malformed-state rejection;
 - authored UI atlas registration;
 - client telemetry event typing;
 - strict telemetry receiver validation.

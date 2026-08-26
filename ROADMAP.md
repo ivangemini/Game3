@@ -1,9 +1,9 @@
 # Game3 Roadmap
 
 ## Current execution priority
-1. **Finish Retention Wave R2 mastery challenges:** add arrangement-specific Boss Mastery challenges on top of the now-live mastery/grudge history; the Archive silhouette/trace/almost-solved discovery layer is implemented and ready for real engagement measurement.
-2. **Retention Wave R3:** Weekly Challenge + personal weekly history/tiers; no backend leaderboard until real behavior justifies it.
-3. **Release acceptance:** physical-device presentation/performance review and real Yandex/CrazyGames tester compliance.
+1. **Retention Wave R3:** Weekly Challenge + personal weekly history/tiers; no backend leaderboard until real behavior justifies it.
+2. **Release acceptance:** physical-device presentation/performance review and real Yandex/CrazyGames tester compliance.
+3. **R2 measurement:** use real Archive/fusion/mastery behavior to decide whether conditional/forbidden fusion content is justified.
 4. Real traffic then decides whether the next investment is balance, additional gameplay content, social competition or another retention layer.
 
 **Completed parallel milestone:** Worlds 5–6 now teach their final-boss counterplay through deterministic duplicate/perimeter pressure, authored visual language and no extra campaign length.
@@ -126,20 +126,20 @@
 
 **R1 gate:** implemented and automated-browser validated. A returning player can understand today's goal/rule, progress it in the normal deterministic run and retain it across reloads without permanent power creep. Real retention lift still requires portal traffic.
 
-### R2 — Mastery, revenge and discovery [IN PROGRESS]
+### R2 — Mastery, revenge and discovery [DONE]
 - [x] **Hero Mastery** tracks for all 4 heroes with **20 levels per hero**.
 - [x] Hero mastery XP comes from meaningful run accomplishments rather than raw idle time; rewards are cosmetic titles, portrait frames, trails and VFX variants rather than permanent combat stats.
 - [x] Mastery UI in the existing TROPHIES path shows current level/XP, next threshold, next cosmetic reward and unlocked milestone count without requiring a backend/account.
 - [x] **Boss Grudges:** persist six-family wins/losses, pending revenge, fastest valid victory, current win streak and best win streak.
 - [x] Revenge lifecycle after a boss defeat: the next valid victory against that family resolves the grudge, with restrained authored feedback and no combat-power compensation.
 - [x] Derived three-tier Boss Mastery foundation from wins/streak history without another persistence field.
-- [ ] **Boss Mastery challenges** across the six families: arrangement/counterplay goals tied to each boss rule, with multi-star completion tiers beyond the current history-derived foundation.
+- [x] **Boss Mastery challenges** across all six families: deterministic arrangement/counterplay goals tied to each boss rule, three persistent stars per family, rare upgrade feedback and a dedicated counterplay readout beside rivalry history.
 - [x] Expand Junk Archive discovery UX: unknown item silhouettes, partial ingredient traces, exact-pair `ALMOST SOLVED` breadcrumbs and forbidden second-stage presentation using the existing 24-recipe pool first; hidden results remain classified until fusion.
-- [ ] Add conditional/forbidden fusion discoveries only after the current 24-recipe archive proves that hint-driven discovery increases replay intent.
+- [x] Conditional/forbidden fusion expansion is deliberately **deferred behind real engagement evidence** from the current 24-recipe Archive; no speculative recipe-count inflation is required to close R2.
 - [x] Privacy-minimal telemetry + soft-launch report support for Hero Mastery level-up reach/cosmetic milestones and Boss Grudge start/resolve volumes, including explicit protection against mislabeling ephemeral-session volume ratios as player-level conversion.
 - [x] Archive-hint engagement telemetry/reporting: Archive reach, Recipe Book reach, ALMOST SOLVED exposure and aggregate clue counts; no recipe/item identities are transmitted.
 
-**R2 gate:** mastery, revenge and discovery breadcrumbs are implemented. The remaining authored R2 gameplay layer is arrangement-specific Boss Mastery challenges; conditional recipe expansion is deliberately gated on real Archive/fusion engagement data rather than content-count pressure.
+**R2 gate:** complete in code. Hero Mastery, revenge, six-family counterplay challenge stars and Archive discovery breadcrumbs are implemented without permanent power creep. Conditional recipe expansion remains an evidence-gated future content decision, not unfinished R2 scope.
 
 ### R3 — Weekly replay layer [PLANNED]
 - [ ] Deterministic **Weekly Challenge** with one weekly seed plus a curated rule/loadout constraint assembled from existing systems.

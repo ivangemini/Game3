@@ -10,6 +10,7 @@ import {
 import { uiAudioCue } from '../audio/audioCues';
 import { GameAudio } from '../audio/GameAudio';
 import { dailyRealityRuleForSeed, bonusPocketUnlocksForRun, claimDailyContract, claimDailyTrackReward, createDailyBoardSnapshot, ensureDailyRetentionDay, evaluateDailyContracts, incrementDailyCounter, perkChoiceCountForRun, rerollCostForRun, startingCoinsForRun, type DailyCounterKey } from '../domain/dailyRetention';
+import { PROTOTYPE_COMBAT_PROFILE_MAP } from '../data/combatProfiles';
 import { PROTOTYPE_FUSION_RECIPES, SECOND_STAGE_FUSION_RECIPE_IDS } from '../data/fusionRecipes';
 import { PROTOTYPE_HEROES, PROTOTYPE_HERO_MAP } from '../data/heroes';
 import { PROTOTYPE_ITEM_MAP, PROTOTYPE_ITEMS, PROTOTYPE_SHOP_ITEMS } from '../data/items';
@@ -17,7 +18,9 @@ import { PROTOTYPE_PERKS, PROTOTYPE_PERK_MAP } from '../data/perks';
 import { getRuntimeRunEncounter } from '../data/dailyRunEncounters';
 import { PROTOTYPE_RUN_EVENT_MAP, PROTOTYPE_RUN_EVENTS } from '../data/runEvents';
 import { BACKPACK_HEIGHT, BACKPACK_WIDTH, blockedCellsForPocketUnlockCount } from '../domain/backpackLayout';
-import { recordBossOutcome } from '../domain/bossGrudges';
+import { evaluateBossMasteryChallenge } from '../domain/bossMasteryChallenges';
+import { recordBossMasteryChallenge, recordBossOutcome } from '../domain/bossGrudges';
+import { createCombatBuild } from '../domain/combatBuild';
 import { createDailyRunIdentity, dailyKeyFromSeed } from '../domain/dailyRun';
 import { applyFusion, type FusionRecipe } from '../domain/fusions';
 import {
@@ -399,7 +402,30 @@ export class PrototypeScene extends Phaser.Scene {
         if (currentMatches && current?.kind === 'boss') {
           const grudge = recordBossOutcome(save.bossHistory, current.enemy.id, outcome, combatDurationMs);
           if (grudge.tracked) {
-            save = { ...save, bossHistory: grudge.history };
+            let nextBossHistory = grudge.history;
+            if (outcome === 'victory') {
+              const challengeInventory: InventoryState = {
+                width: BACKPACK_WIDTH,
+                height: BACKPACK_HEIGHT,
+                blockedCells: [],
+                items: board.getSnapshot().items,
+              };
+              const challengeBuild = createCombatBuild(
+                challengeInventory,
+                PROTOTYPE_ITEM_MAP,
+                PROTOTYPE_COMBAT_PROFILE_MAP,
+                PROTOTYPE_PERK_MAP,
+                activeRun.selectedPerkIds,
+                activeRun.heroId ? PROTOTYPE_HERO_MAP.get(activeRun.heroId) : undefined,
+              );
+              const challenge = evaluateBossMasteryChallenge(current.enemy.id, challengeBuild.items);
+              if (challenge) {
+                const mastery = recordBossMasteryChallenge(nextBossHistory, current.enemy.id, challenge.stars);
+                nextBossHistory = mastery.history;
+                if (mastery.improved) metaFeedback.bossMastery(challenge.bossId, mastery.bestStars);
+              }
+            }
+            save = { ...save, bossHistory: nextBossHistory };
             if (grudge.revengeStarted) metaFeedback.grudge(current.title, false);
             if (grudge.revengeResolved) metaFeedback.grudge(current.title, true);
           }

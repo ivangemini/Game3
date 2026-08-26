@@ -73,6 +73,7 @@ export interface BossHistorySave {
   readonly currentWinStreak: number;
   readonly bestWinStreak: number;
   readonly revengePending: boolean;
+  readonly challengeStars?: 0 | 1 | 2 | 3;
 }
 
 export interface SaveV9 {
@@ -478,7 +479,8 @@ function isBossHistory(value: unknown): value is BossHistorySave {
     && (history.fastestVictoryMs === null || isNonNegativeInteger(history.fastestVictoryMs))
     && isNonNegativeInteger(history.currentWinStreak)
     && isNonNegativeInteger(history.bestWinStreak)
-    && typeof history.revengePending === 'boolean';
+    && typeof history.revengePending === 'boolean'
+    && (history.challengeStars === undefined || isIntegerInRange(history.challengeStars, 0, 3));
 }
 
 function isSettings(value: unknown): value is SaveSettings {
