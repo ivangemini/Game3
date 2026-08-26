@@ -2,6 +2,7 @@ import {
   dailyRealityRuleForSeed,
   type DailyRealityRule,
 } from '../domain/dailyRetention';
+import { lateWorldPressureTemplateForEnemyId } from '../domain/lateWorldPressure';
 import type { RunProgressState } from '../domain/runProgression';
 import {
   getRunEncounter,
@@ -15,8 +16,9 @@ export function getRuntimeRunEncounter(
 ): RunEncounterDefinition | null {
   const encounter = getRunEncounter(progress, runSeed);
   if (!encounter) return null;
+  const districtEncounter = applyLateWorldPreview(encounter);
   const rule = dailyRealityRuleForSeed(runSeed);
-  return rule ? applyDailyRealityRule(encounter, rule) : encounter;
+  return rule ? applyDailyRealityRule(districtEncounter, rule) : districtEncounter;
 }
 
 export function applyDailyRealityRule(
@@ -40,6 +42,15 @@ export function applyDailyRealityRule(
       attackDamage: Math.max(0, Math.round(encounter.enemy.attackDamage * damageScale)),
       attackIntervalMs: Math.max(500, Math.round(encounter.enemy.attackIntervalMs / speedScale)),
     },
+  };
+}
+
+function applyLateWorldPreview(encounter: RunEncounterDefinition): RunEncounterDefinition {
+  const hazard = lateWorldPressureTemplateForEnemyId(encounter.enemy.id);
+  if (!hazard) return encounter;
+  return {
+    ...encounter,
+    subtitle: `${encounter.subtitle} • DISTRICT HAZARD: ${hazard.name} — ${hazard.description}`,
   };
 }
 
