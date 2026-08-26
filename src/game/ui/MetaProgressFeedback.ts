@@ -1,4 +1,8 @@
 import * as Phaser from 'phaser';
+import { telemetry } from '../../analytics/Telemetry';
+import { PROTOTYPE_HEROES } from '../data/heroes';
+import { BOSS_FAMILY_IDS } from '../domain/bossGrudges';
+import { HERO_MASTERY_REWARDS } from '../domain/heroMastery';
 import { resolveAuthoredTexture, uiArtKey } from './authoredArt';
 
 const DEPTH = 946;
@@ -14,6 +18,15 @@ export class MetaProgressFeedback {
       ? `LV ${level} • ${rewardName.toUpperCase()}`
       : `${heroName.toUpperCase()} • MASTERY LV ${level}`;
     this.reveal('MASTERY UNLOCKED', detail, 0xd99cff, 'mastery');
+
+    const hero = PROTOTYPE_HEROES.find((entry) => entry.name === heroName);
+    if (hero && level >= 2 && level <= 20) {
+      telemetry.track('hero_mastery_level_up', {
+        heroId: hero.id,
+        level,
+        rewardCount: HERO_MASTERY_REWARDS.filter((reward) => reward.heroId === hero.id && reward.level <= level).length,
+      });
+    }
   }
 
   grudge(bossName: string, resolved: boolean): void {
@@ -23,6 +36,9 @@ export class MetaProgressFeedback {
       resolved ? 0xffd56e : 0xff6f61,
       'grudge',
     );
+
+    const bossId = BOSS_FAMILY_IDS.find((id) => displayBossName(id) === bossName);
+    if (bossId) telemetry.track('boss_grudge_changed', { bossId, state: resolved ? 'resolved' : 'started' });
   }
 
   private reveal(kicker: string, detail: string, color: number, iconId: 'mastery' | 'grudge'): void {
@@ -76,4 +92,8 @@ export class MetaProgressFeedback {
   private toHex(color: number): string {
     return `#${color.toString(16).padStart(6, '0')}`;
   }
+}
+
+function displayBossName(id: string): string {
+  return id.split('-').map((part) => part[0]!.toUpperCase() + part.slice(1)).join(' ');
 }
