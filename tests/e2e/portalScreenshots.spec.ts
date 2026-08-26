@@ -42,6 +42,10 @@ async function clickCanvasPoint(
 
 test('captures portal-ready build and active-combat screenshots', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium-desktop', 'release screenshots are captured once in Chromium desktop');
+  // This test deliberately rasterizes three full production frames. Keep gameplay
+  // performance budgets in performance.spec.ts strict while allowing CI PNG encoding
+  // headroom on shared runners.
+  test.setTimeout(60_000);
 
   const canvas = await enterFirstRun(page);
   await page.screenshot({ path: 'portal-screenshot-build-1440x900.png', type: 'png' });
