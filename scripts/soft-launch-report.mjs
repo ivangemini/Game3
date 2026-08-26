@@ -77,6 +77,7 @@ export function renderMarkdown(summary) {
   const daily = summary.dailyRetention ?? emptyDailyRetention();
   const mastery = summary.heroMastery ?? emptyHeroMastery();
   const grudges = summary.bossGrudges ?? emptyBossGrudges();
+  const counterplay = summary.bossCounterplay ?? emptyBossCounterplay();
   const archive = summary.archiveDiscovery ?? emptyArchiveDiscovery();
   const dailyStreakBuckets = Object.entries(daily.streakBuckets ?? {});
   const masteryLevelUpsByHero = Object.entries(mastery.levelUpsByHero ?? {});
@@ -85,6 +86,11 @@ export function renderMarkdown(summary) {
     ...Object.keys(grudges.startsByBoss ?? {}),
     ...Object.keys(grudges.resolutionsByBoss ?? {}),
   ])].sort();
+  const counterplayBossIds = [...new Set([
+    ...Object.keys(counterplay.completionsByBoss ?? {}),
+    ...Object.keys(counterplay.maxStarObservedByBoss ?? {}),
+  ])].sort();
+  const challengeCompletions = Object.entries(counterplay.completionsByChallenge ?? {});
   const lines = [
     '# Junkpack Soft-launch Report',
     '',
@@ -155,6 +161,30 @@ export function renderMarkdown(summary) {
       const starts = finiteCount(grudges.startsByBoss?.[bossId]);
       const resolutions = finiteCount(grudges.resolutionsByBoss?.[bossId]);
       lines.push(`| ${escapeCell(bossId)} | ${starts} | ${resolutions} | ${percent(starts > 0 ? resolutions / starts : 0)} |`);
+    }
+  }
+
+  lines.push(
+    '',
+    '## Boss counterplay mastery',
+    '',
+    `- New counterplay-star reach: **${percent(counterplay.challengeCompletionSessionRate)}** (${counterplay.sessionsCompletingChallenge}/${summary.sessions} sessions).`,
+    `- Newly unlocked counterplay stars: **${counterplay.challengeCompletions}**.`,
+    challengeCompletions.length > 0
+      ? `- Challenge unlock events: ${challengeCompletions.map(([challengeId, count]) => `${challengeId} **${count}**`).join(' · ')}.`
+      : '- Challenge unlock events: none in this export.',
+    '',
+    'Counterplay telemetry is transition-only: an event is emitted when a local save unlocks a new star. It does not report the full installed-base mastery state, a backpack layout, or a persistent player identity.',
+    '',
+  );
+
+  if (counterplayBossIds.length === 0) {
+    lines.push('No new boss counterplay stars in this export.');
+  } else {
+    lines.push('| Boss family | New stars | Highest emitted star |');
+    lines.push('| --- | ---: | ---: |');
+    for (const bossId of counterplayBossIds) {
+      lines.push(`| ${escapeCell(bossId)} | ${finiteCount(counterplay.completionsByBoss?.[bossId])} | ${finiteCount(counterplay.maxStarObservedByBoss?.[bossId])} |`);
     }
   }
 
@@ -293,6 +323,17 @@ function emptyBossGrudges() {
     sessionsResolvingGrudge: 0, grudgeResolveSessionRate: 0,
     grudgeStarts: 0, grudgeResolutions: 0, aggregateResolveToStartRatio: 0,
     startsByBoss: {}, resolutionsByBoss: {},
+  };
+}
+
+function emptyBossCounterplay() {
+  return {
+    sessionsCompletingChallenge: 0,
+    challengeCompletionSessionRate: 0,
+    challengeCompletions: 0,
+    completionsByBoss: {},
+    completionsByChallenge: {},
+    maxStarObservedByBoss: {},
   };
 }
 
