@@ -1,0 +1,88 @@
+diff --git a/src/game/scenes/PrototypeScene.ts b/src/game/scenes/PrototypeScene.ts
+index abb96e5..dfe3994 100644
+--- a/src/game/scenes/PrototypeScene.ts
++++ b/src/game/scenes/PrototypeScene.ts
+@@ -528,6 +528,15 @@ export class PrototypeScene extends Phaser.Scene {
+         const nextProgress = registerRunVictory(previousProgress, current.scoreValue);
+         activeRun = { ...activeRun, progress: nextProgress };
+         const nextPocketCount = effectivePocketCount();
++        if (current.kind === 'boss') {
++          if (nextProgress.mode === 'deep-choice' && previousProgress.mode === 'campaign') {
++            runFeedback.milestone('CAMPAIGN CLEARED', 'SIX WORLDS • REALITY BROKEN', 0xff91e6);
++          } else if (nextProgress.mode === 'deep-choice' && previousProgress.mode === 'loop') {
++            runFeedback.milestone('CORRUPTED LOOP CLEARED', `LOOP ${previousProgress.loopNumber} SURVIVED`, 0xd47cff);
++          } else {
++            runFeedback.milestone('WORLD CLEARED', `WORLD ${current.world} • BOSS DOWN`, 0xffd56e);
++          }
++        }
+ 
+         awardHeroMastery(
+           current.kind === 'boss' ? 'boss-victory' : current.kind === 'elite' ? 'elite-victory' : 'fight-victory',
+@@ -614,6 +623,7 @@ export class PrototypeScene extends Phaser.Scene {
+           || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return;
+         activeRun = { ...activeRun, progress: enterCorruptedLoop(activeRun.progress) };
+         telemetry.track('loop_entered', { loopNumber: activeRun.progress.loopNumber });
++        runFeedback.milestone('CORRUPTED LOOP', `LOOP ${activeRun.progress.loopNumber} • REALITY BENDS`, 0xd47cff);
+         syncDailyContracts();
+         syncWeeklyProgress();
+         persistRun();
+diff --git a/tests/audioCues.test.ts b/tests/audioCues.test.ts
+index 3562735..40b7f94 100644
+--- a/tests/audioCues.test.ts
++++ b/tests/audioCues.test.ts
+@@ -1,6 +1,7 @@
+ import { describe, expect, it } from 'vitest';
+ import {
+   audioCueForCombatEvent,
++  bossDefeatAudioCue,
+   combatStartAudioCue,
+ } from '../src/game/audio/audioCues';
+ import type { CombatPresentationEvent } from '../src/game/domain/combat';
+@@ -65,6 +66,9 @@ describe('combat audio cue contract', () => {
+     expect(item.priority).toBe(1);
+     expect(item.cooldownMs).toBeGreaterThan(0);
+     expect(boss.priority).toBe(4);
++    expect(audioCueForCombatEvent({ kind: 'boss-row-telegraph', atMs: 180, row: 1, impactAtMs: 600, magneticPriority: true }).priority).toBe(4);
++    expect(audioCueForCombatEvent({ kind: 'outcome', atMs: 250, outcome: 'victory' }).priority).toBe(3);
++    expect(bossDefeatAudioCue(300, 'tv-tyrant')).toMatchObject({ id: 'boss.defeat', priority: 4, group: 'outcome', sourceId: 'tv-tyrant' });
+     expect(defeat).toMatchObject({ id: 'combat.defeat', priority: 4, group: 'outcome', cooldownMs: 0 });
+   });
+ });
+diff --git a/tests/audioMix.test.ts b/tests/audioMix.test.ts
+index d1ccecc..20c1d15 100644
+--- a/tests/audioMix.test.ts
++++ b/tests/audioMix.test.ts
+@@ -60,15 +60,17 @@ describe('music ducking policy', () => {
+     expect(musicDuckForCue(cue())).toBeNull();
+   });
+ 
+-  it('ducks softly for readable priority-three boss telegraphs and player hits', () => {
+-    expect(musicDuckForCue(cue({ id: 'boss.jam.telegraph', priority: 3, group: 'boss' })))
+-      .toEqual({ target: 0.58, attackMs: 24, holdMs: 120, releaseMs: 300 });
++  it('gives must-read boss telegraphs a clear pocket while routine major hits duck softly', () => {
++    expect(musicDuckForCue(cue({ id: 'boss.jam.telegraph', priority: 4, group: 'boss' })))
++      .toEqual({ target: 0.22, attackMs: 20, holdMs: 260, releaseMs: 520 });
+     expect(musicDuckForCue(cue({ id: 'player.hit', priority: 3, group: 'impact' })))
+-      .toEqual({ target: 0.58, attackMs: 24, holdMs: 120, releaseMs: 300 });
++      .toEqual({ target: 0.58, attackMs: 24, holdMs: 140, releaseMs: 320 });
+   });
+ 
+   it('ducks harder for must-read outcomes and boss impacts', () => {
+     expect(musicDuckForCue(cue({ id: 'combat.victory', priority: 4, group: 'outcome' })))
+       .toEqual({ target: 0.34, attackMs: 28, holdMs: 210, releaseMs: 420 });
++    expect(musicDuckForCue(cue({ id: 'boss.defeat', priority: 4, group: 'outcome' })))
++      .toEqual({ target: 0.22, attackMs: 20, holdMs: 260, releaseMs: 520 });
+   });
+ });
+diff --git a/tests/audioSynthesis.test.ts b/tests/audioSynthesis.test.ts
+index 749a953..348df21 100644
+--- a/tests/audioSynthesis.test.ts
++++ b/tests/audioSynthesis.test.ts
+@@ -31,6 +31,7 @@ const REPRESENTATIVE_IDS: readonly AudioCueId[] = [
+   'boss.edge-rent.telegraph',
+   'boss.edge-rent.impact',
+   'combat.victory',
++  'boss.defeat',
+   'combat.defeat',
+   'ui.purchase',
+   'ui.reroll',
