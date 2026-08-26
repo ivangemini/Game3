@@ -1,0 +1,42 @@
+name: Late World Retention Reuse
+
+on:
+  push:
+    branches:
+      - feat/late-world-retention-reuse
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/late-world-retention-reuse
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply retention reuse
+        run: python .github/scripts/apply_late_world_retention_reuse.py
+      - name: Remove temporary integration files
+        run: rm .github/scripts/apply_late_world_retention_reuse.py .github/workflows/late-world-retention-reuse.yml
+      - name: Check whitespace
+        run: git diff --check
+      - name: Install dependencies
+        run: npm install --no-package-lock --no-audit --no-fund
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm run test
+      - name: Build
+        run: npm run build
+      - name: Commit validated feature
+        run: |
+          git config user.name "game3-ci"
+          git config user.email "game3-ci@users.noreply.github.com"
+          git add -A
+          git commit -m "feat: reuse late-world mechanics in retention goals"
+          git push origin HEAD:feat/late-world-retention-reuse
