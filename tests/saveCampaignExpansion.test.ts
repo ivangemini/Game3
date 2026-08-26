@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { DEFAULT_DAILY_RETENTION } from '../src/game/domain/dailyRetention';
 import { DEFAULT_SAVE, loadSave, type SaveV8 } from '../src/persistence/save';
 
 class MemoryStorage implements Storage {
@@ -13,8 +14,12 @@ class MemoryStorage implements Storage {
 
 function legacyFourWorldBreakpoint(): SaveV8 {
   return {
-    ...DEFAULT_SAVE,
+    version: 8,
     discoveredItemIds: ['laser-cat'],
+    discoveredRecipeIds: [],
+    bestEndlessWave: 0,
+    bestCorruptedLoop: 0,
+    settings: DEFAULT_SAVE.settings,
     activeRun: {
       runSeed: 'pre-six-world-v8',
       shopIndex: 7,
@@ -54,6 +59,7 @@ describe('six-world save compatibility', () => {
     storage.setItem('junkpack.save', JSON.stringify(oldSave));
 
     const loaded = loadSave(storage);
+    expect(loaded.version).toBe(9);
     expect(loaded.activeRun?.progress).toEqual({
       mode: 'campaign',
       campaignEncounterIndex: 12,
@@ -66,14 +72,16 @@ describe('six-world save compatibility', () => {
     expect(loaded.activeRun?.selectedPerkIds).toEqual(['overclock']);
     expect(loaded.activeRun?.pendingPerkOfferIds).toEqual(['laser-pet']);
     expect(loaded.activeRun?.backpackItems).toHaveLength(1);
+    expect(loaded.dailyRetention).toEqual(DEFAULT_DAILY_RETENTION);
   });
 
-  it('leaves a genuine six-world campaign breakpoint unchanged', () => {
+  it('leaves a genuine six-world v8 campaign breakpoint unchanged while migrating the envelope', () => {
     const storage = new MemoryStorage();
+    const old = legacyFourWorldBreakpoint();
     const current: SaveV8 = {
-      ...legacyFourWorldBreakpoint(),
+      ...old,
       activeRun: {
-        ...legacyFourWorldBreakpoint().activeRun!,
+        ...old.activeRun!,
         progress: {
           mode: 'deep-choice',
           campaignEncounterIndex: 17,
@@ -84,6 +92,9 @@ describe('six-world save compatibility', () => {
       },
     };
     storage.setItem('junkpack.save', JSON.stringify(current));
-    expect(loadSave(storage)).toEqual(current);
+    const loaded = loadSave(storage);
+    expect(loaded.version).toBe(9);
+    expect(loaded.activeRun).toEqual(current.activeRun);
+    expect(loaded.dailyRetention).toEqual(DEFAULT_DAILY_RETENTION);
   });
 });

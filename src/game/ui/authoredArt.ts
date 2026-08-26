@@ -31,6 +31,7 @@ const BOSS_IDS = [
 ] as const;
 const UI_IDS = [
   'daily', 'archive', 'trophies', 'help', 'settings', 'reset', 'coin', 'fusion', 'pocket', 'logo-mark',
+  'contract', 'stamp',
 ] as const;
 
 export const AUTHORED_ART_ASSETS: readonly AuthoredArtAsset[] = [

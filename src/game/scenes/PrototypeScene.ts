@@ -1,12 +1,20 @@
 import * as Phaser from 'phaser';
 import { telemetry } from '../../analytics/Telemetry';
+import {
+  clearActiveRun,
+  loadSave,
+  writeSave,
+  type ActiveRunSave,
+  type SaveV9,
+} from '../../persistence/save';
 import { uiAudioCue } from '../audio/audioCues';
 import { GameAudio } from '../audio/GameAudio';
+import { dailyRealityRuleForSeed, bonusPocketUnlocksForRun, claimDailyContract, claimDailyTrackReward, createDailyBoardSnapshot, ensureDailyRetentionDay, evaluateDailyContracts, incrementDailyCounter, perkChoiceCountForRun, rerollCostForRun, startingCoinsForRun, type DailyCounterKey } from '../domain/dailyRetention';
 import { PROTOTYPE_FUSION_RECIPES, SECOND_STAGE_FUSION_RECIPE_IDS } from '../data/fusionRecipes';
 import { PROTOTYPE_HEROES, PROTOTYPE_HERO_MAP } from '../data/heroes';
 import { PROTOTYPE_ITEM_MAP, PROTOTYPE_ITEMS, PROTOTYPE_SHOP_ITEMS } from '../data/items';
 import { PROTOTYPE_PERKS, PROTOTYPE_PERK_MAP } from '../data/perks';
-import { getRunEncounter } from '../data/runEncounters';
+import { getRuntimeRunEncounter } from '../data/dailyRunEncounters';
 import { PROTOTYPE_RUN_EVENT_MAP, PROTOTYPE_RUN_EVENTS } from '../data/runEvents';
 import { BACKPACK_HEIGHT, BACKPACK_WIDTH, blockedCellsForPocketUnlockCount } from '../domain/backpackLayout';
 import { createDailyRunIdentity, dailyKeyFromSeed } from '../domain/dailyRun';
@@ -21,6 +29,7 @@ import {
   cashOutRun,
   createInitialRunProgress,
   enterCorruptedLoop,
+  MAX_BASE_POCKET_UNLOCKS,
   registerRunVictory,
 } from '../domain/runProgression';
 import { createStandardRunSeed } from '../domain/runSeed';
@@ -28,6 +37,7 @@ import { BackpackBoard } from '../ui/BackpackBoard';
 import { CollectionOverlay } from '../ui/CollectionOverlay';
 import { CombatFeedback } from '../ui/CombatFeedback';
 import { CombatPanel } from '../ui/CombatPanel';
+import { DailyBoardOverlay } from '../ui/DailyBoardOverlay';
 import { FusionPanel } from '../ui/FusionPanel';
 import { HeroChoiceOverlay } from '../ui/HeroChoiceOverlay';
 import { MetaProgressOverlay } from '../ui/MetaProgressOverlay';
@@ -39,13 +49,6 @@ import { SettingsOverlay } from '../ui/SettingsOverlay';
 import { ShopPanel } from '../ui/ShopPanel';
 import { TopHudActions } from '../ui/TopHudActions';
 import { TutorialOverlay } from '../ui/TutorialOverlay';
-import {
-  clearActiveRun,
-  loadSave,
-  writeSave,
-  type ActiveRunSave,
-  type SaveV8,
-} from '../../persistence/save';
 
 const AUDIO_REGISTRY_KEY = 'junkpack.game-audio';
 const COLORS = { background: 0x0d1117, text: '#f7f2e8', muted: '#aaa5b2' } as const;
@@ -54,7 +57,7 @@ function createFreshRun(runSeed: string): ActiveRunSave {
   return {
     runSeed,
     shopIndex: 0,
-    coins: 110,
+    coins: startingCoinsForRun(runSeed),
     soldOfferIds: [],
     backpackItems: [],
     nextLootSequence: 1,
@@ -82,7 +85,7 @@ export class PrototypeScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(COLORS.background);
     this.drawHeader();
 
-    let save: SaveV8 = loadSave();
+    let save: SaveV9 = loadSave();
     let audio = this.registry.get(AUDIO_REGISTRY_KEY) as GameAudio | undefined;
     if (!audio) {
       audio = new GameAudio(save.settings);
@@ -109,10 +112,31 @@ export class PrototypeScene extends Phaser.Scene {
     let activeRun: ActiveRunSave = save.activeRun ?? createFreshRun(createStandardRunSeed());
     if (!hadActiveRun) telemetry.track('run_started', { mode: 'standard' });
     const todayDaily = createDailyRunIdentity();
+    save = { ...save, dailyRetention: ensureDailyRetentionDay(save.dailyRetention, todayDaily.key) };
 
+    let dailyOverlay: DailyBoardOverlay | null = null;
+    const activeDailyKey = (): string | null => dailyKeyFromSeed(activeRun.runSeed);
+    const effectivePocketCount = (): number => Math.min(
+      MAX_BASE_POCKET_UNLOCKS,
+      backpackUnlockedPocketCount(activeRun.progress) + bonusPocketUnlocksForRun(activeRun.runSeed),
+    );
     const persistRun = (): void => {
       save = { ...save, activeRun };
       writeSave(save);
+    };
+    const syncDailyContracts = (): void => {
+      const key = activeDailyKey();
+      if (!key) return;
+      const evaluation = evaluateDailyContracts(save.dailyRetention, key, { progress: activeRun.progress });
+      save = { ...save, dailyRetention: evaluation.state };
+      writeSave({ ...save, activeRun });
+      if (dailyOverlay?.isVisible()) dailyOverlay.refresh();
+    };
+    const recordDailyCounter = (counter: DailyCounterKey, amount = 1): void => {
+      const key = activeDailyKey();
+      if (!key) return;
+      save = { ...save, dailyRetention: incrementDailyCounter(save.dailyRetention, key, counter, amount) };
+      syncDailyContracts();
     };
     const markDiscoveredItem = (definitionId: string): void => {
       if (save.discoveredItemIds.includes(definitionId)) return;
@@ -157,7 +181,7 @@ export class PrototypeScene extends Phaser.Scene {
     const board = new BackpackBoard(this, PROTOTYPE_ITEM_MAP, 90, 225, {
       initialItems: hadActiveRun ? activeRun.backpackItems : undefined,
       nextLootSequence: activeRun.nextLootSequence,
-      unlockedPocketCount: backpackUnlockedPocketCount(activeRun.progress),
+      unlockedPocketCount: effectivePocketCount(),
       onStateChanged: (snapshot) => {
         activeRun = { ...activeRun, backpackItems: snapshot.items, nextLootSequence: snapshot.nextLootSequence };
         persistRun();
@@ -192,12 +216,14 @@ export class PrototypeScene extends Phaser.Scene {
         initialCoins: activeRun.coins,
         initialShopIndex: activeRun.shopIndex,
         initialSoldOfferIds: activeRun.soldOfferIds,
+        rerollCost: rerollCostForRun(activeRun.runSeed),
         onStateChanged: (snapshot) => {
           activeRun = { ...activeRun, coins: snapshot.coins, shopIndex: snapshot.shopIndex, soldOfferIds: snapshot.soldOfferIds };
           persistRun();
         },
         onFeedback: (event) => {
           if (event.kind === 'purchase') {
+            recordDailyCounter('shopPurchases');
             audio.playCue(uiAudioCue('ui.purchase', event.definitionId));
             runFeedback.purchase(PROTOTYPE_ITEM_MAP.get(event.definitionId)?.name ?? event.definitionId);
             return;
@@ -218,6 +244,29 @@ export class PrototypeScene extends Phaser.Scene {
     const shopSnapshot = shop.getSnapshot();
     activeRun = { ...activeRun, coins: shopSnapshot.coins, shopIndex: shopSnapshot.shopIndex, soldOfferIds: shopSnapshot.soldOfferIds };
     let runPanel!: RunProgressPanel;
+
+    dailyOverlay = new DailyBoardOverlay(this, {
+      getSnapshot: () => createDailyBoardSnapshot(save.dailyRetention, todayDaily.key, { progress: activeRun.progress }),
+      reducedMotion: save.settings.reducedMotion,
+      onClaimContract: (contractId) => {
+        if (activeDailyKey() !== todayDaily.key) return false;
+        const result = claimDailyContract(save.dailyRetention, todayDaily.key, contractId);
+        if (!result.claimed) return false;
+        save = { ...save, dailyRetention: result.state };
+        writeSave({ ...save, activeRun });
+        audio.playCue(uiAudioCue('ui.reward', 'daily-contract'));
+        return true;
+      },
+      onClaimTrackReward: (rewardId) => {
+        const result = claimDailyTrackReward(save.dailyRetention, rewardId);
+        if (!result.claimed) return false;
+        save = { ...save, dailyRetention: result.state };
+        writeSave({ ...save, activeRun });
+        audio.playCue(uiAudioCue('ui.reward', 'daily-track'));
+        return true;
+      },
+    });
+
     const perkOverlay = new PerkChoiceOverlay(this, PROTOTYPE_PERK_MAP, (perkId) => {
       if (!activeRun.pendingPerkOfferIds.includes(perkId) || activeRun.selectedPerkIds.includes(perkId)) return;
       activeRun = {
@@ -226,6 +275,7 @@ export class PrototypeScene extends Phaser.Scene {
         perkChoiceIndex: activeRun.perkChoiceIndex + 1,
         pendingPerkOfferIds: [],
       };
+      recordDailyCounter('perkChoices');
       persistRun();
       audio.playCue(uiAudioCue('ui.confirm', perkId));
       perkOverlay.hide();
@@ -257,6 +307,7 @@ export class PrototypeScene extends Phaser.Scene {
         pendingEventId: null,
         resolvedEventIds: [...activeRun.resolvedEventIds, event.id],
       };
+      recordDailyCounter('eventChoices');
       persistRun();
       runPanel.refresh('Event resolved. Repack, shop or fuse before the next encounter.');
       return { ok: true, message: resolution.resultText };
@@ -280,7 +331,13 @@ export class PrototypeScene extends Phaser.Scene {
       },
       onBossVictory: (encounterId) => {
         if (activeRun.offeredPerkEncounterIds.includes(encounterId) || activeRun.pendingPerkOfferIds.length > 0) return;
-        const choices = generatePerkChoices(PROTOTYPE_PERKS, activeRun.runSeed, activeRun.perkChoiceIndex, activeRun.selectedPerkIds, 3);
+        const choices = generatePerkChoices(
+          PROTOTYPE_PERKS,
+          activeRun.runSeed,
+          activeRun.perkChoiceIndex,
+          activeRun.selectedPerkIds,
+          perkChoiceCountForRun(activeRun.runSeed),
+        );
         if (choices.length === 0) return;
         activeRun = {
           ...activeRun,
@@ -305,19 +362,22 @@ export class PrototypeScene extends Phaser.Scene {
           runPanel.refresh('Defeat. Repack, shop or fuse, then retry the same encounter.');
           return;
         }
-        const current = getRunEncounter(activeRun.progress, activeRun.runSeed);
+        const current = getRuntimeRunEncounter(activeRun.progress, activeRun.runSeed);
         if (!current || current.encounterId !== encounterId) return;
         const previousProgress = activeRun.progress;
-        const previousPocketCount = backpackUnlockedPocketCount(previousProgress);
+        const previousPocketCount = effectivePocketCount();
         const nextProgress = registerRunVictory(previousProgress, current.scoreValue);
-        const nextPocketCount = backpackUnlockedPocketCount(nextProgress);
+        activeRun = { ...activeRun, progress: nextProgress };
+        const nextPocketCount = effectivePocketCount();
 
         let scheduledEventId: string | null = null;
         if (current.slot === 1 && activeRun.pendingEventId === null) {
           const previousEventId = activeRun.resolvedEventIds[activeRun.resolvedEventIds.length - 1] ?? null;
           scheduledEventId = selectRunEvent(PROTOTYPE_RUN_EVENTS, activeRun.runSeed, activeRun.eventIndex, previousEventId).id;
         }
-        activeRun = { ...activeRun, progress: nextProgress, pendingEventId: scheduledEventId ?? activeRun.pendingEventId };
+        activeRun = { ...activeRun, pendingEventId: scheduledEventId ?? activeRun.pendingEventId };
+        if (current.kind === 'boss') recordDailyCounter('bossVictories');
+        else syncDailyContracts();
         if (previousProgress.mode === 'loop' && nextProgress.mode === 'deep-choice') {
           save = { ...save, bestCorruptedLoop: Math.max(save.bestCorruptedLoop, previousProgress.loopNumber) };
         }
@@ -349,11 +409,12 @@ export class PrototypeScene extends Phaser.Scene {
     const metaBlocked = (): boolean => collectionOverlay.isVisible()
       || metaOverlay.isVisible()
       || tutorialOverlay.isVisible()
-      || settingsOverlay.isVisible();
+      || settingsOverlay.isVisible()
+      || dailyOverlay?.isVisible() === true;
 
     runPanel = new RunProgressPanel(this, 570, 225, {
       getProgress: () => activeRun.progress,
-      getEncounter: () => getRunEncounter(activeRun.progress, activeRun.runSeed),
+      getEncounter: () => getRuntimeRunEncounter(activeRun.progress, activeRun.runSeed),
       onStartEncounter: (encounter) => {
         if (activeRun.heroId === null
           || activeRun.pendingPerkOfferIds.length > 0
@@ -361,7 +422,7 @@ export class PrototypeScene extends Phaser.Scene {
           || eventOverlay.isVisible()
           || metaBlocked()
           || combatPanel.isRunning()) return false;
-        const current = getRunEncounter(activeRun.progress, activeRun.runSeed);
+        const current = getRuntimeRunEncounter(activeRun.progress, activeRun.runSeed);
         if (!current || current.encounterId !== encounter.encounterId) return false;
         const started = combatPanel.startEncounter(encounter.encounterId, encounter.enemy, encounter.rewardCoins);
         if (started) {
@@ -375,6 +436,7 @@ export class PrototypeScene extends Phaser.Scene {
           || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return;
         activeRun = { ...activeRun, progress: enterCorruptedLoop(activeRun.progress) };
         telemetry.track('loop_entered', { loopNumber: activeRun.progress.loopNumber });
+        syncDailyContracts();
         persistRun();
         runPanel.refresh(`LOOP ${activeRun.progress.loopNumber} started. Mutations now stack.`);
       },
@@ -385,6 +447,7 @@ export class PrototypeScene extends Phaser.Scene {
         const finalScore = activeRun.progress.score;
         activeRun = { ...activeRun, progress: cashOutRun(activeRun.progress) };
         telemetry.track('run_cashout', { loopNumber: completedLoop, score: finalScore });
+        syncDailyContracts();
         persistRun();
         runPanel.refresh('Run complete. Score and deepest completed loop are saved.');
       },
@@ -405,7 +468,7 @@ export class PrototypeScene extends Phaser.Scene {
         const inventory: InventoryState = {
           width: BACKPACK_WIDTH,
           height: BACKPACK_HEIGHT,
-          blockedCells: blockedCellsForPocketUnlockCount(backpackUnlockedPocketCount(activeRun.progress)),
+          blockedCells: blockedCellsForPocketUnlockCount(effectivePocketCount()),
           items: snapshot.items,
         };
         const result = applyFusion(inventory, PROTOTYPE_ITEM_MAP, recipe, `fusion-${snapshot.nextLootSequence}-${recipe.resultDefinitionId}`);
@@ -413,6 +476,7 @@ export class PrototypeScene extends Phaser.Scene {
         activeRun = { ...activeRun, backpackItems: result.state.items, nextLootSequence: snapshot.nextLootSequence + 1 };
         markDiscoveredRecipe(recipe.id);
         markDiscoveredItem(recipe.resultDefinitionId);
+        recordDailyCounter('fusionUses');
         persistRun();
         this.time.delayedCall(save.settings.reducedMotion ? 160 : 460, () => this.scene.restart());
         return true;
@@ -437,13 +501,20 @@ export class PrototypeScene extends Phaser.Scene {
       this.time.delayedCall(0, () => this.scene.restart());
     });
     persistRun();
+    syncDailyContracts();
+
     new TopHudActions(this, {
       dailyKey: todayDaily.key,
       dailyActive: dailyKeyFromSeed(activeRun.runSeed) === todayDaily.key,
       onDaily: () => {
         if (combatPanel.isRunning() || eventOverlay.isVisible() || metaBlocked()
           || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return;
+        if (activeDailyKey() === todayDaily.key) {
+          dailyOverlay?.show();
+          return;
+        }
         activeRun = createFreshRun(todayDaily.seed);
+        save = { ...save, dailyRetention: ensureDailyRetentionDay(save.dailyRetention, todayDaily.key) };
         telemetry.track('run_started', { mode: 'daily' });
         persistRun();
         this.scene.restart();
@@ -528,8 +599,12 @@ export class PrototypeScene extends Phaser.Scene {
       const heroId = getHeroId();
       const heroName = heroId ? PROTOTYPE_HERO_MAP.get(heroId)?.name ?? heroId : 'choose hero';
       const perkNames = getPerkIds().map((id) => PROTOTYPE_PERK_MAP.get(id)?.name ?? id);
-      const dailyKey = dailyKeyFromSeed(getRunSeed());
-      const runLabel = dailyKey ? `DAILY ${dailyKey}` : 'STANDARD RUN';
+      const runSeed = getRunSeed();
+      const dailyKey = dailyKeyFromSeed(runSeed);
+      const dailyRule = dailyRealityRuleForSeed(runSeed);
+      const runLabel = dailyKey
+        ? `DAILY ${dailyKey}${dailyRule ? ` • ${dailyRule.name.toUpperCase()}` : ''}`
+        : 'STANDARD RUN';
       text.setText(`${runLabel}    HERO • ${heroName.toUpperCase()}    RUN PERKS • ${perkNames.length > 0 ? perkNames.join(' • ') : 'none yet'}`);
     };
     update();

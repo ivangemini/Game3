@@ -1,11 +1,11 @@
 # Game3 Roadmap
 
 ## Current execution priority
-1. **Retention Wave R1 first:** Daily Contracts + non-punitive streak + 7-day reward track + Reality Rule of the Day + retention telemetry/save support.
-2. **Gameplay can run in parallel after the R1 foundation is stable:** make Worlds 5–6 more mechanically distinct and climactic, but do not lengthen the six-world campaign again before real traffic.
-3. **Retention Wave R2:** Hero Mastery + Boss Grudges/Mastery + deeper Fusion Archive discovery goals.
-4. **Retention Wave R3:** Weekly Challenge + personal weekly history/tiers; no backend leaderboard until real behavior justifies it.
-5. Release/traffic then decides whether the next investment is more gameplay content, balance, social competition or additional retention layers.
+1. **Late-world gameplay identity:** make Worlds 5–6 teach their boss counterplay before Copycat Auditor / Border Shark, with authored visual language and no extra campaign length.
+2. **Retention Wave R2:** Hero Mastery + Boss Grudges/Mastery + deeper Fusion Archive discovery goals, using the v9 foundations already shipped in R1.
+3. **Retention Wave R3:** Weekly Challenge + personal weekly history/tiers; no backend leaderboard until real behavior justifies it.
+4. **Release acceptance:** physical-device presentation/performance review and real Yandex/CrazyGames tester compliance.
+5. Real traffic then decides whether the next investment is balance, additional gameplay content, social competition or another retention layer.
 
 **Product rule:** retention rewards should primarily create goals, expression, discovery and replay variety. Avoid permanent damage/HP/stat inflation from streaks or mastery because it would weaken backpack skill, boss counterplay and balance readability.
 
@@ -28,7 +28,7 @@
 - [x] Basic seeded shop/reward choice with run currency and deterministic rerolls
 - [x] Purchased junk enters the real backpack through deterministic legal placement
 - [x] Save/restore current run: backpack, rotations, loot sequence, seed, coins, shop step and sold offers
-- [x] Versioned save v8 with legacy migrations, hero choice, encounter claims, perk state, long-session progression and pending events
+- [x] Versioned save v9 with v8 retention migration, older legacy migrations, hero choice, encounter claims, perk/event state and recovery-safe backups
 - [x] Progressive backpack: one lower pocket cell unlocks after Boss 1, Boss 2 and Boss 3 each unlock one
 - [x] Shared backpack-layout domain for blocked pocket cells outside Phaser
 - [x] Final interaction implementation (**lift/depth, validity-weight feedback, cell previews/flashes, elastic two-stage snap, invalid shake, reward arrival, rotation impact, pocket reveal and directional multi-trail synergy activation**)
@@ -104,24 +104,24 @@
 - [x] Corrupted Loop + score foundation
 - [x] Achievements (**13 derived Trophy Shelf goals across items, recipes, secret evolutions and loop depth**)
 
-## P5R — Retention expansion [NEXT PRIORITY]
+## P5R — Retention expansion [IN PROGRESS]
 
-### R1 — Daily return loop [NEXT]
-- [ ] Deterministic **Daily Contracts**: 3 objectives per UTC day generated from existing heroes, tags, synergies, fusions, bosses, events and run actions.
-- [ ] Contract validity constraints: never generate impossible objectives for the current content pool/run mode; avoid three objectives that all demand the same build archetype.
-- [ ] Contract progress domain outside Phaser with deterministic counters and reload-safe progress.
-- [ ] Retention save upgrade (**planned v9**) with safe v8 migration for contract day/progress, streak state, reward-track state, mastery foundations and boss-history foundations.
-- [ ] Daily Contracts UI reachable immediately from the main run shell; show all 3 goals, progress and completed state without hiding core play behind a modal maze.
-- [ ] **Non-punitive streak:** completing at least 1 daily contract advances the streak; a missed day reduces momentum instead of hard-resetting a long streak to zero.
-- [ ] **7-day reward track** with milestone claims. Launch rewards are cosmetic/collection/expression-oriented, not permanent combat-stat inflation.
-- [ ] **Reality Rule of the Day:** deterministic global daily modifier layered onto the existing Daily Run, with an initial pool of roughly 10–14 high-interaction rules built from existing systems rather than bespoke levels.
-- [ ] Daily-rule safety checks so a rule creates a build puzzle but cannot make the seeded run structurally unwinnable.
-- [ ] Daily reward/contract feedback: compact completion burst, claim state and next-milestone preview; Reduced Motion path required.
-- [ ] Privacy-minimal telemetry for daily offered/started/completed/claimed behavior, Reality Rule participation, streak bucket and contract archetype performance.
-- [ ] Soft-launch report sections for daily participation, contract completion, reward claims and return-age/streak mix. Keep return-age buckets explicitly separate from true D1/D7 cohort retention.
-- [ ] Automated tests for UTC rollover, reload/resume, missed-day decay, double-claim prevention, deterministic contract generation and Reality Rule compatibility.
+### R1 — Daily return loop [DONE]
+- [x] Deterministic **Daily Contracts**: 3 objectives per UTC day generated from progression/build/discovery action pools.
+- [x] Contract validity/diversity constraints: one progression, one build and one discovery/economy contract prevent three same-archetype objectives and keep launch goals achievable with current systems.
+- [x] Contract progress domain outside Phaser with deterministic counters and reload-safe progress.
+- [x] Retention save upgrade to **v9** with safe v8 migration for contract day/progress, streak state, reward-track state, mastery foundations and boss-history foundations.
+- [x] Daily Contracts UI reachable through the existing DAILY action; active Daily opens a dedicated board without adding another permanent HUD button.
+- [x] **Non-punitive streak:** claiming at least one daily contract advances momentum; missed days decay it instead of hard-resetting a long streak to zero.
+- [x] **7-day reward track** with recurring 3/5/7-day Reality Stamp claims and double-claim protection; no permanent combat-stat inflation.
+- [x] **Reality Rule of the Day:** deterministic 12-rule pool changes real combat/economy/backpack/perk-choice knobs on the Daily Run.
+- [x] Daily-rule safety bounds prevent structurally extreme HP/damage/speed/economy combinations.
+- [x] Daily reward/contract feedback: authored contract/stamp symbols, progress cards, claim burst, milestone preview and Reduced Motion path.
+- [x] Privacy-minimal telemetry for Daily rule start, board open, contract completion/claim and track claims using bounded rule/archetype/streak fields rather than persistent player identity.
+- [x] Soft-launch report Daily funnel for participation, board reach, completion, completion→claim conversion and track claims; return-age/streak buckets remain explicitly separate from true D1/D7 cohort retention.
+- [x] Automated tests for UTC rollover, reload/migration, missed-day decay, double-claim prevention, deterministic contract generation, Reality Rule compatibility, receiver validation and Daily funnel aggregation.
 
-**R1 gate:** a returning player can open the game, understand today's distinct goal/rule within seconds, make visible progress in one normal run and retain that progress safely across reloads without receiving permanent power creep.
+**R1 gate:** implemented and automated-browser validated. A returning player can understand today's goal/rule, progress it in the normal deterministic run and retain it across reloads without permanent power creep. Real retention lift still requires portal traffic.
 
 ### R2 — Mastery, revenge and discovery [PLANNED]
 - [ ] **Hero Mastery** tracks for all 4 heroes, initially targeting ~20 mastery levels per hero.
@@ -146,13 +146,13 @@
 
 **R3 gate:** the game has a daily reason to return, a multi-week personal progression reason to continue, and a weekly standardized challenge reason to replay.
 
-### Parallel gameplay lane — reinforce retention with better play [PLANNED; START AFTER R1 FOUNDATION]
+### Parallel gameplay lane — late-world identity [IN PROGRESS]
 - [ ] Give **World 5** a stronger authored gameplay identity that previews Copycat Auditor concepts through lighter ordinary/elite encounter pressure rather than duplicating the boss mechanic verbatim.
 - [ ] Give **World 6** a stronger authored gameplay identity that previews perimeter/space pressure before Border Shark.
 - [ ] Add world-specific event weighting/flavor where it increases campaign identity while preserving deterministic reload behavior.
 - [ ] Evaluate a second escalation phase for Copycat Auditor and Border Shark so the late campaign feels climactic, with deterministic telegraphs and at least two viable counters.
 - [ ] Feed new late-world mechanics into Daily Contract / Weekly Challenge archetypes so gameplay additions multiply retention content instead of becoming isolated one-off encounters.
-- [ ] Do **not** expand the base campaign beyond 6 worlds / 18 encounters before real pacing and continuation data indicates a need.
+- [x] Do **not** expand the base campaign beyond 6 worlds / 18 encounters before real pacing and continuation data indicates a need.
 
 **Parallel-lane rule:** retention work remains the primary sequence. Gameplay work may proceed alongside R2/R3 when it reuses the same domains, creates new challenge/contract combinations or fixes a measured weak point in the six-world funnel.
 
@@ -169,7 +169,7 @@
 - [x] Authored item art wave 2 (**20 additional item SVGs: remaining original shop/base set + 8 high-salience first-stage fusion results; total item-art coverage reached 32/60**)
 - [x] Complete authored item catalog (**60/60 items: 36/36 shop/base + 24/24 fusion, including all 4 second-stage evolutions; exact catalog parity enforced by CI**)
 - [x] Packed production item + portrait atlases (**deterministic build creates 60-frame 1280×1280 `junk-items` + 10-frame 1280×720 `junk-portraits`**)
-- [x] Core UI atlas + authored HUD symbols (**10-frame 640×256 `junk-ui`; daily/archive/trophies/help/settings/reset + coin/fusion/pocket/logo sources; total authored runtime sources collapse from 80 standalone files to 3 atlas groups**)
+- [x] Core UI atlas + authored HUD/retention symbols (**12-frame 640×384 `junk-ui`; core actions + coin/fusion/pocket/logo + Daily contract/stamp sources; 82 authored runtime SVG sources still collapse into 3 atlas requests**)
 - [ ] Final physical-device visual review refinements (**automated Chromium/Firefox/WebKit matrix is green; physical iOS/Android small-text/touch/crop review remains**)
 - [x] Combat semantic feedback foundation (**30-object particle pool, item/status rings, hit bursts, boss-frame pulses, outcome flashes, restrained shake, reduced-motion fallback**)
 - [x] Non-combat run feedback foundation (**shop purchase/reward/reroll/error SFX hooks, fusion reveal, event-drop toast, pocket-unlock feedback**)
@@ -194,7 +194,7 @@
 - [x] Cloud/leaderboard launch decision (**deferred for soft launch; add only when retention/competitive behavior justifies backend/platform hooks**)
 
 ## P8 — QA, balance & performance
-- [x] Automated deterministic tests for core run/fusion/event/hero/boss domains
+- [x] Automated deterministic tests for core run/fusion/event/hero/boss/Daily-retention domains
 - [x] Seeded pacing target simulation with percentile bands and target hit rates (**18-encounter campaign + 12-encounter loops modeled separately**)
 - [x] Seeded combat/build simulation reports across weak/typical/strong power bands and boss checkpoints, including boss-rule wrappers
 - [x] Campaign balance sampling excludes second-stage fusion results; loop checkpoints may sample them
@@ -203,9 +203,9 @@
 - [x] Automated mobile/browser matrix (**Playwright production smoke across Chromium desktop/compact/mobile/portrait, WebKit mobile landscape and Firefox desktop; viewport/overflow/save recovery/console/network/atlas-first checks**)
 - [x] Automated runtime performance regression smoke (**CI-safe RAF responsiveness ceiling, bounded render backing store, compact atlas-first network waterfall; intended to catch catastrophic regressions rather than claim device FPS**)
 - [x] Browser-level portal bootstrap compliance harness (**forced Yandex/CrazyGames adapters with injected SDK doubles validate initialization/loading-ready lifecycle without external SDK fetches**)
-- [x] Portal archive/compliance gates (**root index, required runtime atlases, path charset/whitespace, no source maps/source-art/store-art in runtime ZIP, Yandex/Crazy size/file-count ceilings, 20 MiB mobile target, context-menu suppression and one-click first launch are enforced by release/browser tests; measured candidate is 455.8 KiB ZIP / 1.66 MiB unpacked / 14 runtime files after stripping 86 non-runtime build files**)
+- [x] Portal archive/compliance gates (**root index, required runtime atlases, path charset/whitespace, no source maps/source-art/store-art in runtime ZIP, Yandex/Crazy size/file-count ceilings, 20 MiB mobile target, context-menu suppression and one-click first launch are enforced by release/browser tests**)
 - [x] Production dependency security gate (**Node 22 + exact direct tool versions; `npm audit --omit=dev --audit-level=high` is CI-required and current resolver reports 0 vulnerabilities**)
-- [x] Save migrations/recovery UX (**v1–v7 → v8 migrations, previous-valid backup slot, corrupt-primary recovery, safe reset fallback and visible web-shell recovery/write warnings**)
+- [x] Save migrations/recovery UX (**v1–v7 legacy migration → v8 semantic compatibility → v9 retention migration, previous-valid backup slot, corrupt-primary recovery, safe reset fallback and visible web-shell recovery/write warnings**)
 - [ ] real-device performance profiling (**frame time, peak WebGL memory, portal network waterfall, low-memory lifecycle; automated regression baseline + capture protocol exist**)
 - [ ] portal-specific compliance checks (**repository/unit/browser harness implemented; real Yandex debug panel / CrazyGames SDK tester acceptance still required**)
 
@@ -215,7 +215,7 @@
 - [x] Soft-launch pacing summary foundation (**session reach + average/median/p90 time-to-hero and first-combat latency; run-start-anchored first-boss and six-world campaign reach/duration; per-encounter win rate + average/median/p90 duration, without persistent identity**)
 - [x] Six-world continuation funnel foundation (**world-by-world boss clear, continuation and run-start-anchored timing derived from existing privacy-minimal combat telemetry**)
 - [x] User-directed pre-traffic content expansion (**Wave 5 combinatorial depth + six-world/18-encounter base campaign; loops remain compact at 12 encounters**)
-- [ ] Complete P5R R1 retention foundation before broad traffic so daily return behavior is measurable from the first meaningful cohort.
+- [x] P5R R1 retention foundation completed before broad traffic: Daily Contracts, Reality Rules, v9 persistence, streak/track claims and privacy-minimal Daily funnel are automated-test/browser validated.
 - [ ] release candidate to first portals
 - [ ] measure tutorial/help usage/hero choice/first boss/six-world campaign duration/world continuation/event choice/fusion usage/daily participation/contract completion/loop-entry/loop-completion/return behavior on real traffic
 - [ ] tune difficulty/economy/ad pacing and retention objective/reward cadence from real data

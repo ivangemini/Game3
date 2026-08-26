@@ -33,6 +33,22 @@ export interface CampaignWorldMetric {
   readonly p90TimeFromRunStartMs: number;
 }
 
+export interface DailyRetentionMetric {
+  readonly sessionsStartingDaily: number;
+  readonly dailyStartSessionRate: number;
+  readonly sessionsOpeningBoard: number;
+  readonly boardOpenRateAmongDailySessions: number;
+  readonly sessionsCompletingContract: number;
+  readonly contractCompletionRateAmongDailySessions: number;
+  readonly sessionsClaimingContract: number;
+  readonly contractClaimRateAmongCompletedSessions: number;
+  readonly sessionsClaimingTrackReward: number;
+  readonly contractCompletions: number;
+  readonly contractClaims: number;
+  readonly trackRewardClaims: number;
+  readonly streakBuckets: Readonly<Record<string, number>>;
+}
+
 export interface SoftLaunchSummary {
   readonly sessions: number;
   readonly returningSessions: number;
@@ -63,6 +79,7 @@ export interface SoftLaunchSummary {
   readonly campaignWorlds: readonly CampaignWorldMetric[];
   readonly standardRunsStarted: number;
   readonly dailyRunsStarted: number;
+  readonly dailyRetention: DailyRetentionMetric;
   readonly tutorialOpened: number;
   readonly tutorialCompleted: number;
   readonly tutorialSkipped: number;
@@ -95,6 +112,9 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
   let returningSessions = 0;
   let standardRunsStarted = 0;
   let dailyRunsStarted = 0;
+  let dailyContractCompletions = 0;
+  let dailyContractClaims = 0;
+  let dailyTrackRewardClaims = 0;
   let tutorialOpened = 0;
   let tutorialCompleted = 0;
   let tutorialSkipped = 0;
@@ -113,6 +133,12 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
   const combats = new Map<string, CombatAccumulator>();
   const sessionStartedAt = new Map<string, number>();
   const runStartedAt = new Map<string, number>();
+  const dailyRunSessions = new Set<string>();
+  const dailyBoardSessions = new Set<string>();
+  const dailyContractCompletedSessions = new Set<string>();
+  const dailyContractClaimedSessions = new Set<string>();
+  const dailyTrackClaimedSessions = new Set<string>();
+  const dailyStreakBucketBySession = new Map<string, string>();
   const firstHeroAt = new Map<string, number>();
   const firstCombatAt = new Map<string, number>();
   const firstBossAt = new Map<string, number>();
@@ -135,9 +161,34 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
       }
       case 'run_started': {
         const payload = event.payload as { mode: 'standard' | 'daily' };
-        if (payload.mode === 'daily') dailyRunsStarted += 1;
-        else standardRunsStarted += 1;
+        if (payload.mode === 'daily') {
+          dailyRunsStarted += 1;
+          dailyRunSessions.add(event.sessionId);
+        } else standardRunsStarted += 1;
         rememberEarliest(runStartedAt, event.sessionId, event.timestampMs);
+        break;
+      }
+      case 'daily_board_opened': {
+        const payload = event.payload as { streakBucket: string };
+        dailyBoardSessions.add(event.sessionId);
+        if (!dailyStreakBucketBySession.has(event.sessionId)) {
+          dailyStreakBucketBySession.set(event.sessionId, payload.streakBucket);
+        }
+        break;
+      }
+      case 'daily_contract_completed': {
+        dailyContractCompletions += 1;
+        dailyContractCompletedSessions.add(event.sessionId);
+        break;
+      }
+      case 'daily_contract_claimed': {
+        dailyContractClaims += 1;
+        dailyContractClaimedSessions.add(event.sessionId);
+        break;
+      }
+      case 'daily_track_claimed': {
+        dailyTrackRewardClaims += 1;
+        dailyTrackClaimedSessions.add(event.sessionId);
         break;
       }
       case 'tutorial_opened': tutorialOpened += 1; break;
@@ -225,6 +276,11 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
     if (sessionAgeBySession.has(sessionId)) sessionsWithAgeBucket += 1;
   }
 
+  const dailyStreakBuckets: Record<string, number> = {};
+  for (const bucket of dailyStreakBucketBySession.values()) {
+    dailyStreakBuckets[bucket] = (dailyStreakBuckets[bucket] ?? 0) + 1;
+  }
+
   const timeToHero = sessionLatencies(sessionStartedAt, firstHeroAt);
   const timeToFirstCombat = sessionLatencies(sessionStartedAt, firstCombatAt);
   const timeToFirstBoss = milestoneLatencies(runStartedAt, sessionStartedAt, firstBossAt);
@@ -277,6 +333,21 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
     campaignWorlds,
     standardRunsStarted,
     dailyRunsStarted,
+    dailyRetention: {
+      sessionsStartingDaily: dailyRunSessions.size,
+      dailyStartSessionRate: ratio(dailyRunSessions.size, sessions),
+      sessionsOpeningBoard: dailyBoardSessions.size,
+      boardOpenRateAmongDailySessions: ratio(dailyBoardSessions.size, dailyRunSessions.size),
+      sessionsCompletingContract: dailyContractCompletedSessions.size,
+      contractCompletionRateAmongDailySessions: ratio(dailyContractCompletedSessions.size, dailyRunSessions.size),
+      sessionsClaimingContract: dailyContractClaimedSessions.size,
+      contractClaimRateAmongCompletedSessions: ratio(dailyContractClaimedSessions.size, dailyContractCompletedSessions.size),
+      sessionsClaimingTrackReward: dailyTrackClaimedSessions.size,
+      contractCompletions: dailyContractCompletions,
+      contractClaims: dailyContractClaims,
+      trackRewardClaims: dailyTrackRewardClaims,
+      streakBuckets: sortRecord(dailyStreakBuckets),
+    },
     tutorialOpened,
     tutorialCompleted,
     tutorialSkipped,

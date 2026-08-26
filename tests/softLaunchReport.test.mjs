@@ -45,8 +45,23 @@ function summary(overrides = {}) {
     tutorialCompleted: 1,
     tutorialSkipped: 0,
     tutorialCompletionRate: 0.5,
-    standardRunsStarted: 4,
-    dailyRunsStarted: 0,
+    standardRunsStarted: 2,
+    dailyRunsStarted: 2,
+    dailyRetention: {
+      sessionsStartingDaily: 2,
+      dailyStartSessionRate: 0.5,
+      sessionsOpeningBoard: 2,
+      boardOpenRateAmongDailySessions: 1,
+      sessionsCompletingContract: 2,
+      contractCompletionRateAmongDailySessions: 1,
+      sessionsClaimingContract: 1,
+      contractClaimRateAmongCompletedSessions: 0.5,
+      sessionsClaimingTrackReward: 1,
+      contractCompletions: 4,
+      contractClaims: 2,
+      trackRewardClaims: 1,
+      streakBuckets: { '1-2': 1, '3-6': 1 },
+    },
     shopPurchases: 8,
     paidRerolls: 2,
     rewardedRerolls: 1,
@@ -77,7 +92,7 @@ describe('soft-launch report', () => {
     expect(parseTelemetryText(`${JSON.stringify(event)}\n${JSON.stringify({ events: [event] })}`)).toEqual([event, event]);
   });
 
-  it('surfaces first-boss, six-world pacing and adjacent-world continuation', () => {
+  it('surfaces first-boss, six-world pacing, daily retention and adjacent-world continuation', () => {
     const markdown = renderMarkdown(summary());
     expect(markdown).toContain('Return-age telemetry coverage: **100.0%** (4/4)');
     expect(markdown).toContain('## Review signals');
@@ -89,6 +104,12 @@ describe('soft-launch report', () => {
     expect(markdown).toContain('Base campaign completion');
     expect(markdown).toContain('p50 35.0 min, p90 41.0 min');
     expect(markdown).toContain('Target p50: **32–42 min**');
+    expect(markdown).toContain('## Daily retention funnel');
+    expect(markdown).toContain('Daily start reach: **50.0%** (2/4 sessions)');
+    expect(markdown).toContain('Daily Board open: **100.0%** (2/2 Daily sessions)');
+    expect(markdown).toContain('Complete → claim: **50.0%** (1/2 completing sessions; 2 claims)');
+    expect(markdown).toContain('1-2 **1** · 3-6 **1**');
+    expect(markdown).toContain('not D1/D7 retention measurements');
     expect(markdown).toContain('| w1-tv-tyrant | 3 | 66.7% | 50.0 s | 48.0 s | 1.1 min |');
     expect(markdown).toContain('## Campaign world funnel');
     expect(markdown).toContain('| 1 | w1-tv-tyrant | 3 | 75.0% | — | 4.0 min | 5.5 min |');
