@@ -282,7 +282,7 @@ export class RuntimeFlowPolishScene extends Phaser.Scene {
     let best: Phaser.GameObjects.Text | null = null;
     let bestDistance = Number.POSITIVE_INFINITY;
     for (const text of this.collectTexts(scene)) {
-      if (!text.visible) continue;
+      if (!this.isEffectivelyVisible(text)) continue;
       const distance = Math.abs(text.x - 584) + Math.abs(text.y - 551) * 1.4;
       if (distance > 70 || distance >= bestDistance) continue;
       best = text;
@@ -292,15 +292,24 @@ export class RuntimeFlowPolishScene extends Phaser.Scene {
   }
 
   private perkChoiceVisible(scene: Phaser.Scene): boolean {
-    return this.collectTexts(scene).some((text) => text.visible && text.text.includes('CHOOSE A PERK'));
+    return this.collectTexts(scene).some((text) => this.isEffectivelyVisible(text) && text.text.includes('CHOOSE A PERK'));
   }
 
   private metaBoardVisible(scene: Phaser.Scene): boolean {
-    return this.collectTexts(scene).some((text) => text.visible && (
+    return this.collectTexts(scene).some((text) => this.isEffectivelyVisible(text) && (
       text.text === 'DAILY BOARD'
       || text.text === 'WEEKLY CHALLENGE'
       || text.text === 'TROPHY SHELF'
     ));
+  }
+
+  private isEffectivelyVisible(object: Phaser.GameObjects.GameObject): boolean {
+    let current: Phaser.GameObjects.GameObject | null = object;
+    while (current) {
+      if ('visible' in current && current.visible === false) return false;
+      current = current.parentContainer;
+    }
+    return true;
   }
 
   private findOverlayRoot(scene: Phaser.Scene, title: string): Phaser.GameObjects.Container | null {
