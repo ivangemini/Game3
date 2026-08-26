@@ -9,7 +9,7 @@ import {
 } from '../../persistence/save';
 import { uiAudioCue } from '../audio/audioCues';
 import { GameAudio } from '../audio/GameAudio';
-import { dailyRealityRuleForSeed, bonusPocketUnlocksForRun, claimDailyContract, claimDailyTrackReward, createDailyBoardSnapshot, ensureDailyRetentionDay, evaluateDailyContracts, incrementDailyCounter, perkChoiceCountForRun, rerollCostForRun, startingCoinsForRun, type DailyCounterKey } from '../domain/dailyRetention';
+import { dailyRealityRuleForSeed, bonusPocketUnlocksForRun, claimDailyContract, claimDailyTrackReward, createDailyBoardSnapshot, dailyBoardProgressForRun, ensureDailyRetentionDay, evaluateDailyContracts, incrementDailyCounter, perkChoiceCountForRun, rerollCostForRun, startingCoinsForRun, type DailyCounterKey } from '../domain/dailyRetention';
 import { PROTOTYPE_COMBAT_PROFILE_MAP } from '../data/combatProfiles';
 import { PROTOTYPE_FUSION_RECIPES, SECOND_STAGE_FUSION_RECIPE_IDS } from '../data/fusionRecipes';
 import { PROTOTYPE_HEROES, PROTOTYPE_HERO_MAP } from '../data/heroes';
@@ -323,7 +323,7 @@ export class PrototypeScene extends Phaser.Scene {
     let runPanel!: RunProgressPanel;
 
     dailyOverlay = new DailyBoardOverlay(this, {
-      getSnapshot: () => createDailyBoardSnapshot(save.dailyRetention, todayDaily.key, { progress: activeRun.progress }),
+      getSnapshot: () => createDailyBoardSnapshot(save.dailyRetention, todayDaily.key, { progress: dailyBoardProgressForRun(activeRun.runSeed, todayDaily.key, activeRun.progress) }),
       getRunState: () => activeDailyKey() === todayDaily.key
         ? activeRun.progress.mode === 'complete' ? 'complete' : 'active'
         : 'inactive',
