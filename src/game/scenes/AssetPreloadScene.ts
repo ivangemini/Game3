@@ -3,6 +3,8 @@ import type { PlatformAdapter } from '../../platform/PlatformAdapter';
 import { RUNTIME_ATLASES } from '../assets/atlasContract';
 
 const PLATFORM_REGISTRY_KEY = 'junkpack.platform-adapter';
+const PRODUCTION_PLATE_TEXTURE_KEY = 'junkpack-production-plate';
+const PRODUCTION_PLATE_URL = '/assets/art/production/junkpack-production-plate.webp';
 
 export class AssetPreloadScene extends Phaser.Scene {
   private progressFill?: Phaser.GameObjects.Rectangle;
@@ -22,8 +24,12 @@ export class AssetPreloadScene extends Phaser.Scene {
     this.load.once('complete', () => {
       this.progressFill?.setScale(1, 1);
       this.progressText?.setText(this.errorCount > 0 ? 'CORE READY • FALLBACK ART ARMED' : 'CORE READY • OPENING THE BAG');
-      this.fileText?.setText(this.errorCount > 0 ? `${this.errorCount} ASSET ERROR${this.errorCount === 1 ? '' : 'S'} • SAFE FALLBACKS ACTIVE` : 'ATLASES PACKED • REALITY UNSTABLE');
+      this.fileText?.setText(this.errorCount > 0 ? `${this.errorCount} ASSET ERROR${this.errorCount === 1 ? '' : 'S'} • SAFE FALLBACKS ACTIVE` : 'PAINTED STAGE + ATLASES PACKED');
     });
+
+    if (!this.textures.exists(PRODUCTION_PLATE_TEXTURE_KEY)) {
+      this.load.image(PRODUCTION_PLATE_TEXTURE_KEY, PRODUCTION_PLATE_URL);
+    }
 
     for (const atlas of RUNTIME_ATLASES) {
       if (this.textures.exists(atlas.textureKey)) continue;
@@ -69,7 +75,7 @@ export class AssetPreloadScene extends Phaser.Scene {
     this.progressText = this.add.text(cx, cy + 58, 'SORTING CURSED JUNK • 0%', {
       fontSize: '14px', color: '#dfffc0', fontStyle: 'bold', stroke: '#080a0d', strokeThickness: 4,
     }).setOrigin(0.5);
-    this.fileText = this.add.text(cx, cy + 92, 'CHECKING ATLAS TAPES…', {
+    this.fileText = this.add.text(cx, cy + 92, 'CHECKING PAINT + ATLAS TAPES…', {
       fontSize: '10px', color: '#9296a3', fontStyle: 'bold', wordWrap: { width: 560 }, align: 'center',
     }).setOrigin(0.5);
 
