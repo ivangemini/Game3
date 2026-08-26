@@ -79,7 +79,7 @@ export function bossMasteryChallengeTitle(bossId: BossFamilyId): string {
 
 export function bossMasteryChallengeNextGoal(bossId: BossFamilyId, bestStars: number): string {
   const stars = normalizeStars(bestStars);
-  if (stars >= 3) return 'COUNTERPLAY MASTERED • replay for cleaner/faster wins';
+  if (stars === 3) return 'COUNTERPLAY MASTERED • replay for cleaner/faster wins';
   const next = BOSS_MASTERY_CHALLENGES[bossId].goals[stars];
   return `NEXT ★${stars + 1} • ${next}`;
 }
