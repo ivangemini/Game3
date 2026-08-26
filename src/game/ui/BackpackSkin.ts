@@ -17,12 +17,20 @@ export class BackpackSkin {
     const cx = gridLeft + width / 2;
     const cy = gridTop + height / 2;
 
+    if (scene.textures.exists('junkpack-production-plate')) {
+      scene.add.image(cx, cy, 'junkpack-production-plate')
+        .setCrop(68, 36, 270, 248)
+        .setDisplaySize(width + 76, height + 86)
+        .setDepth(-3.6)
+        .setAlpha(0.96);
+    }
+
     scene.add.rectangle(cx + 7, cy + 10, width + 64, height + 66, PANEL_VISUALS.ink, 0.6)
       .setDepth(-4);
-    scene.add.rectangle(cx, cy, width + 58, height + 58, PANEL_VISUALS.leatherDark, 1)
+    scene.add.rectangle(cx, cy, width + 58, height + 58, PANEL_VISUALS.leatherDark, 0.44)
       .setStrokeStyle(8, PANEL_VISUALS.leatherEdge)
       .setDepth(-3);
-    scene.add.rectangle(cx, cy, width + 42, height + 42, PANEL_VISUALS.leather, 1)
+    scene.add.rectangle(cx, cy, width + 42, height + 42, PANEL_VISUALS.leather, 0.26)
       .setStrokeStyle(3, 0xc08a62, 0.6)
       .setDepth(-2);
 
@@ -34,7 +42,7 @@ export class BackpackSkin {
       kind: 'leather',
       seed: `backpack:${widthCells}x${heightCells}:${cellSize}`,
       depth: -1.6,
-      alpha: 0.95,
+      alpha: 0.36,
     });
 
     const cornerScuffs = scene.add.graphics().setDepth(-1.4);
