@@ -84,6 +84,8 @@ export function buildReviewSignals(summary) {
 export function renderMarkdown(summary) {
   const returnBuckets = Object.entries(summary.returnAgeBuckets ?? {});
   const reviewSignals = buildReviewSignals(summary);
+  const daily = summary.dailyRetention ?? emptyDailyRetention();
+  const dailyStreakBuckets = Object.entries(daily.streakBuckets ?? {});
   const lines = [
     '# Junkpack Soft-launch Report',
     '',
@@ -113,6 +115,19 @@ export function renderMarkdown(summary) {
     `- Purchases: **${summary.shopPurchases}** · paid rerolls: **${summary.paidRerolls}** · rewarded rerolls: **${summary.rewardedRerolls}**.`,
     `- Event choices: **${summary.eventChoices}** · fusions: **${summary.fusions}** · cashouts: **${summary.cashouts}** · avg cashout score: **${round(summary.averageCashoutScore)}**.`,
     `- Rewarded ad completion: **${percent(summary.rewardedAdCompletionRate)}** (${summary.rewardedAdCompletions}/${summary.rewardedAdAttempts}).`,
+    '',
+    '## Daily retention funnel',
+    '',
+    `- Daily start reach: **${percent(daily.dailyStartSessionRate)}** (${daily.sessionsStartingDaily}/${summary.sessions} sessions).`,
+    `- Daily Board open: **${percent(daily.boardOpenRateAmongDailySessions)}** (${daily.sessionsOpeningBoard}/${daily.sessionsStartingDaily} Daily sessions).`,
+    `- Contract completion: **${percent(daily.contractCompletionRateAmongDailySessions)}** (${daily.sessionsCompletingContract}/${daily.sessionsStartingDaily} Daily sessions; ${daily.contractCompletions} completion events).`,
+    `- Complete → claim: **${percent(daily.contractClaimRateAmongCompletedSessions)}** (${daily.sessionsClaimingContract}/${daily.sessionsCompletingContract} completing sessions; ${daily.contractClaims} claims).`,
+    `- 3/5/7-day track rewards claimed: **${daily.trackRewardClaims}** across **${daily.sessionsClaimingTrackReward}** sessions.`,
+    dailyStreakBuckets.length > 0
+      ? `- Daily Board streak buckets: ${dailyStreakBuckets.map(([bucket, count]) => `${bucket} **${count}**`).join(' · ')}.`
+      : '- Daily Board streak buckets: no board-open samples in this export.',
+    '',
+    'Daily streak buckets are local progression-state samples from sessions that opened the board; they are not D1/D7 retention measurements.',
     '',
     '## Encounter pacing',
     '',
@@ -219,6 +234,24 @@ function sessionAgeCoverage(summary) {
   if (Number.isFinite(summary.sessionAgeCoverageRate)) return clampRate(summary.sessionAgeCoverageRate);
   const bucketTotal = Object.values(summary.returnAgeBuckets ?? {}).reduce((sum, value) => sum + finiteCount(value), 0);
   return summary.sessions > 0 ? clampRate(bucketTotal / summary.sessions) : 0;
+}
+
+function emptyDailyRetention() {
+  return {
+    sessionsStartingDaily: 0,
+    dailyStartSessionRate: 0,
+    sessionsOpeningBoard: 0,
+    boardOpenRateAmongDailySessions: 0,
+    sessionsCompletingContract: 0,
+    contractCompletionRateAmongDailySessions: 0,
+    sessionsClaimingContract: 0,
+    contractClaimRateAmongCompletedSessions: 0,
+    sessionsClaimingTrackReward: 0,
+    contractCompletions: 0,
+    contractClaims: 0,
+    trackRewardClaims: 0,
+    streakBuckets: {},
+  };
 }
 
 function finiteCount(value) {
