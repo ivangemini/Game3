@@ -34,7 +34,13 @@ import {
 import { createCombatBuild } from '../domain/combatBuild';
 import type { HeroDefinition } from '../domain/heroes';
 import type { InventoryState } from '../domain/inventory';
+import {
+  applyLateWorldPressure,
+  evaluateLateWorldPressure,
+  type LateWorldPressureResult,
+} from '../domain/lateWorldPressure';
 import type { Cell, ItemTag, PlacedItem } from '../domain/types';
+import { resolveAuthoredTexture, uiArtKey } from './authoredArt';
 
 export interface CombatVictoryReward {
   readonly encounterId: string;
@@ -88,6 +94,8 @@ export class CombatPanel {
   private running = false;
   private currentEncounterId = 'debug:none';
   private currentRewardCoins = 0;
+  private lateWorldPressure: LateWorldPressureResult | null = null;
+  private lateWorldHazardIcon: Phaser.GameObjects.Image | null = null;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -148,6 +156,7 @@ export class CombatPanel {
     scene.events.once('shutdown', () => {
       scene.events.off('update', this.updateCombat, this);
       this.setBackpackLocked(false);
+      this.setLateWorldHazardVisual(null);
     });
     this.renderState();
   }
@@ -174,22 +183,49 @@ export class CombatPanel {
 
     this.currentEncounterId = encounterId;
     this.currentRewardCoins = Math.max(0, Math.floor(rewardCoins));
+    this.lateWorldPressure = evaluateLateWorldPressure(enemy.id, build.items);
+    const runtimeEnemy = applyLateWorldPressure(enemy, this.lateWorldPressure);
     this.setBackpackLocked(true);
-    this.setup = { playerMaxHp: 100, items: build.items, enemy };
+    this.setup = { playerMaxHp: 100, items: build.items, enemy: runtimeEnemy };
     this.state = createCombatState(this.setup);
     this.running = true;
     this.eventLog.length = 0;
     this.eventLogText.setText('');
-    const boss = this.isBoss(enemy);
-    this.onAudioCue?.(combatStartAudioCue(enemy.id, boss));
-    this.bossStatusText.setText(boss ? `${this.bossSystems(enemy).join(' + ')} armed.` : '');
-    this.enemyNameText.setText(enemy.name.toUpperCase());
-    this.enemyBody.setFillStyle(boss ? 0x697f45 : 0x6f8f50);
-    this.enemyBody.setStrokeStyle(8, boss ? 0x9b4aa7 : 0x2a2732);
+    const boss = this.isBoss(runtimeEnemy);
+    this.onAudioCue?.(combatStartAudioCue(runtimeEnemy.id, boss));
+    this.setLateWorldHazardVisual(this.lateWorldPressure);
+    if (boss) {
+      this.bossStatusText.setText(`${this.bossSystems(runtimeEnemy).join(' + ')} armed.`).setColor('#f08cff');
+    } else if (this.lateWorldPressure) {
+      const pressure = this.lateWorldPressure;
+      this.bossStatusText.setText(this.lateWorldPressureStatus(pressure)).setColor(pressure.world === 5 ? '#ffb27a' : '#8ceeff');
+      this.showBackpackItems(
+        pressure.affectedItemInstanceIds,
+        pressure.world === 5 ? 0xff9a62 : 0x67e7ff,
+        980,
+        true,
+      );
+      this.pushLog(`0.0s • ${pressure.name.toUpperCase()} reads ${pressure.pressureCount} pressure`);
+    } else {
+      this.bossStatusText.setText('').setColor('#f08cff');
+    }
+    this.enemyNameText.setText(runtimeEnemy.name.toUpperCase());
+    if (boss) {
+      this.enemyBody.setFillStyle(0x697f45).setStrokeStyle(8, 0x9b4aa7);
+    } else if (this.lateWorldPressure?.world === 5) {
+      this.enemyBody.setFillStyle(0x754739).setStrokeStyle(8, 0xff9a62);
+    } else if (this.lateWorldPressure?.world === 6) {
+      this.enemyBody.setFillStyle(0x315b62).setStrokeStyle(8, 0x67e7ff);
+    } else {
+      this.enemyBody.setFillStyle(0x6f8f50).setStrokeStyle(8, 0x2a2732);
+    }
     const heroText = hero ? ` • ${hero.name}` : '';
-    this.setStatus(`${enemy.name}${heroText} • ${build.items.size} items • ${build.synergies.connections.length} links • ${selectedPerks.length} perks.`, '#b8ff8e');
+    const pressureText = this.lateWorldPressure && this.lateWorldPressure.pressureCount > 0
+      ? ` • ${this.lateWorldPressure.name} active`
+      : '';
+    this.setStatus(`${runtimeEnemy.name}${heroText} • ${build.items.size} items • ${build.synergies.connections.length} links • ${selectedPerks.length} perks${pressureText}.`, '#b8ff8e');
     this.renderState();
-    this.punchEnemy(1.03);
+    this.punchEnemy(this.lateWorldPressure ? 1.06 : 1.03);
     return true;
   }
 
@@ -353,7 +389,9 @@ export class CombatPanel {
       rewardSuffix = granted ? ` +${this.currentRewardCoins} COINS.` : ' Reward already claimed.';
     }
     this.setStatus(won ? `VICTORY.${rewardSuffix}` : 'DEFEAT — rearrange or buy better junk and retry.', won ? '#c8ff83' : '#ff8a9b');
-    this.bossStatusText.setText('');
+    this.bossStatusText.setText('').setColor('#f08cff');
+    this.setLateWorldHazardVisual(null);
+    this.lateWorldPressure = null;
     if (won && this.setup && this.isBoss(this.setup.enemy)) this.onBossVictory?.(encounterId, enemyId);
     this.onOutcome?.({ encounterId, enemyId, outcome: event.outcome });
   }
@@ -459,9 +497,11 @@ export class CombatPanel {
     this.barGraphics.fillStyle(0x35242b, 1); this.barGraphics.fillRoundedRect(x, y, width, 14, 6);
     this.barGraphics.fillStyle(color, 1); this.barGraphics.fillRoundedRect(x, y, width * Math.max(0, Math.min(1, ratio)), 14, 6);
   }
+
   private isBoss(enemy: EnemyCombatDefinition): boolean {
     return !!enemy.interference || !!enemy.cellInterference || !!enemy.rowInterference || !!enemy.tagInterference || isBossRuleEnemy(enemy.id);
   }
+
   private bossSystems(enemy: EnemyCombatDefinition): string[] {
     const systems: string[] = [];
     if (enemy.interference) systems.push('CHANNEL JAM');
@@ -474,13 +514,61 @@ export class CombatPanel {
     if (edgeRentDefinitionForEnemyId(enemy.id)) systems.push('EDGE RENT');
     return systems;
   }
+
+  private lateWorldPressureStatus(pressure: LateWorldPressureResult): string {
+    if (pressure.pressureCount === 0) return `${pressure.name.toUpperCase()} • CLEAN BUILD • NO SURCHARGE`;
+    const target = pressure.metric === 'duplicate-stack'
+      ? `${pressure.pressureCount} EXTRA ${pressure.pressureCount === 1 ? 'COPY' : 'COPIES'}`
+      : `${pressure.pressureCount} EDGE ${pressure.pressureCount === 1 ? 'ITEM' : 'ITEMS'}`;
+    const effects: string[] = [];
+    if (pressure.enemyHpPct > 0) effects.push(`ENEMY HP +${pressure.enemyHpPct}%`);
+    if (pressure.enemyDamagePct > 0) effects.push(`DAMAGE +${pressure.enemyDamagePct}%`);
+    if (pressure.enemyAttackSpeedPct > 0) effects.push(`ATTACK SPEED +${pressure.enemyAttackSpeedPct}%`);
+    return `${pressure.name.toUpperCase()} • ${target} → ${effects.join(' • ')}`;
+  }
+
+  private setLateWorldHazardVisual(pressure: LateWorldPressureResult | null): void {
+    if (this.lateWorldHazardIcon) {
+      this.scene.tweens.killTweensOf(this.lateWorldHazardIcon);
+      this.lateWorldHazardIcon.destroy();
+      this.lateWorldHazardIcon = null;
+    }
+    if (!pressure) return;
+    const key = pressure.world === 5 ? 'world5-audit' : 'world6-edge';
+    const texture = resolveAuthoredTexture(this.scene, uiArtKey(key));
+    if (!texture) return;
+    const icon = this.scene.add.image(
+      this.centerX + 304,
+      this.centerY - 218,
+      texture.textureKey,
+      texture.frame,
+    ).setDisplaySize(46, 46).setDepth(45);
+    this.lateWorldHazardIcon = icon;
+    if (this.reducedMotion) return;
+    icon.setScale(0.31).setAlpha(0.75);
+    this.scene.tweens.add({
+      targets: icon,
+      scaleX: 0.36,
+      scaleY: 0.36,
+      alpha: 1,
+      yoyo: true,
+      repeat: -1,
+      duration: 520,
+      ease: 'Sine.InOut',
+    });
+  }
+
   private punchEnemy(scale: number): void {
     if (this.reducedMotion) return;
     this.scene.tweens.add({ targets: this.enemyBody, scaleX: scale, scaleY: scale, yoyo: true, duration: 85, onComplete: () => this.enemyBody.setScale(1) });
   }
+
   private pushLog(message: string): void {
-    this.eventLog.unshift(message); if (this.eventLog.length > 5) this.eventLog.length = 5; this.eventLogText.setText(this.eventLog.join('\n'));
+    this.eventLog.unshift(message);
+    if (this.eventLog.length > 5) this.eventLog.length = 5;
+    this.eventLogText.setText(this.eventLog.join('\n'));
   }
+
   private seconds(ms: number): string { return `${(ms / 1000).toFixed(1)}s`; }
   private setStatus(message: string, color: string): void { this.statusText.setText(message).setColor(color); }
 }
