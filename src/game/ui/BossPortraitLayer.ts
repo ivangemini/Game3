@@ -38,8 +38,8 @@ export class BossPortraitLayer {
       const backing = this.scene.add.rectangle(7, 10, 420, 316, 0x08090e, 0.82)
         .setStrokeStyle(3, 0x090a0f, 0.82);
       const paintedAtmosphere = addProductionPlate(this.scene, 0, 0, 402, 294, {
-        region: key.includes('tv-tyrant') ? 'boss' : 'backpack',
-        alpha: key.includes('tv-tyrant') ? 0.28 : 0.22,
+        region: 'boss',
+        alpha: key.includes('tv-tyrant') ? 0.28 : 0.18,
         tint: accent,
         flipX: key.includes('border-shark') || key.includes('deadline-snail'),
       });
@@ -56,12 +56,11 @@ export class BossPortraitLayer {
       });
       const inner = this.scene.add.rectangle(0, 0, 382, 282, 0x101219, 0.66)
         .setStrokeStyle(3, 0x737985, 0.5);
-      const useRasterTyrant = key.includes('tv-tyrant') && this.scene.textures.exists('junkpack-production-plate');
-      const image = useRasterTyrant
-        ? this.scene.add.image(0, 0, 'junkpack-production-plate')
-          .setCrop(392, 58, 240, 238)
-          .setDisplaySize(382, 292)
-        : this.scene.add.image(0, 0, texture.textureKey, texture.frame).setDisplaySize(370, 274);
+      const rasterTyrant = key.includes('tv-tyrant')
+        ? addProductionPlate(this.scene, 0, 0, 382, 292, { region: 'boss', alpha: 1 })
+        : null;
+      const image = rasterTyrant
+        ?? this.scene.add.image(0, 0, texture.textureKey, texture.frame).setDisplaySize(370, 274);
       const screenWear = createMaterialSurface(this.scene, {
         x: 0,
         y: 0,
@@ -69,7 +68,7 @@ export class BossPortraitLayer {
         height: 264,
         kind: key.includes('tv-tyrant') ? 'screen' : 'scrap',
         seed: `boss-portrait:${key}`,
-        alpha: key.includes('tv-tyrant') ? 0.68 : 0.15,
+        alpha: key.includes('tv-tyrant') ? 0.5 : 0.15,
       });
       const fasteners = [
         this.scene.add.circle(-190, -142, 6, 0x5a606c, 1).setStrokeStyle(2, 0xbac1cc, 0.6),
