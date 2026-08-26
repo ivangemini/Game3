@@ -121,6 +121,7 @@ export class PrototypeScene extends Phaser.Scene {
 
   create(): void {
     this.cameras.main.setBackgroundColor(COLORS.background);
+    this.drawProductionBackdrop();
     this.drawHeader();
 
     let save: SaveV9 = loadSave();
@@ -756,32 +757,32 @@ export class PrototypeScene extends Phaser.Scene {
     this.drawRunIdentity(() => activeRun.selectedPerkIds, () => activeRun.heroId, () => activeRun.runSeed);
   }
 
+  private drawProductionBackdrop(): void {
+    if (!this.textures.exists('junkpack-production-plate')) return;
+    this.add.image(800, 450, 'junkpack-production-plate')
+      .setDisplaySize(1600, 900)
+      .setDepth(-120)
+      .setAlpha(0.96);
+    this.add.rectangle(800, 450, 1600, 900, 0x08080b, 0.16).setDepth(-119);
+    this.add.rectangle(800, 4, 1600, 8, 0xf5b743, 0.58).setDepth(-118);
+  }
+
   private drawHeader(): void {
-    this.add.text(800, 32, 'JUNKPACK', {
-      fontFamily: 'Arial Black, Impact, sans-serif', fontSize: '62px', color: COLORS.text,
-      stroke: '#090a0d', strokeThickness: 10,
-    }).setOrigin(0.5, 0);
-    this.add.text(800, 94, 'BOSS RUSH', {
-      fontFamily: 'Arial Black, Impact, sans-serif', fontSize: '34px', color: '#b5ff4d',
-      stroke: '#15121a', strokeThickness: 8,
-    }).setOrigin(0.5, 0);
-    this.add.text(48, 38, 'JUNK PILOT', { fontSize: '25px', color: COLORS.text, fontStyle: 'bold' });
-    this.add.text(48, 73, '♥ 96 / 100', { fontSize: '22px', color: '#ff6578' });
-    this.add.text(1190, 48, '6 WORLDS  •  HEROES  •  FUSIONS  •  CORRUPTED LOOPS', {
-      fontSize: '16px', color: '#ff91e6', fontStyle: 'bold',
-    });
+    this.add.rectangle(800, 76, 1600, 152, 0x05060a, 0.20).setDepth(-20);
   }
 
   private drawSynergies(): void {
-    this.add.text(90, 165, 'BACKPACK 6×5  •  BOSS POCKET UNLOCKS  •  10 SPATIAL SYNERGIES', {
-      fontSize: '20px', color: COLORS.text, fontStyle: 'bold',
-    });
-    this.add.text(90, 660, 'LIVE SYNERGIES — MOVE JUNK TO BREAK / REBUILD LINKS', {
-      fontSize: '18px', color: '#ffcf69', fontStyle: 'bold',
-    });
-    this.add.text(90, 692, 'CORE: CAT • BATTERY • POISON • DUCK • MAGNET    EXPANDED: FOOD • ANTENNA • SLIME • METAL • CHAOS', {
-      fontSize: '12px', color: COLORS.muted,
-    });
+    const plate = this.add.rectangle(318, 190, 470, 52, 0x120d0a, 0.72)
+      .setStrokeStyle(3, 0xd2a15b, 0.72).setDepth(2).setAngle(-0.35);
+    this.add.text(112, 174, 'BACKPACK  •  BUILD THE JUNK', {
+      fontFamily: 'Arial Black, Impact, sans-serif', fontSize: '22px', color: '#ffe5a3',
+      fontStyle: 'bold', stroke: '#1a0d07', strokeThickness: 5,
+    }).setDepth(3).setAngle(-0.35);
+    this.add.text(98, 672, 'LIVE LINKS', {
+      fontFamily: 'Arial Black, Impact, sans-serif', fontSize: '18px', color: '#ffcf69',
+      fontStyle: 'bold', stroke: '#150c08', strokeThickness: 4,
+    }).setDepth(3);
+    plate.setData('presentation-role', 'backpack-sign');
   }
 
   private drawRunIdentity(
