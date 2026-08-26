@@ -1,0 +1,68 @@
+diff --git a/src/game/ui/CombatPanel.ts b/src/game/ui/CombatPanel.ts
+index 3630cd9..22da90a 100644
+--- a/src/game/ui/CombatPanel.ts
++++ b/src/game/ui/CombatPanel.ts
+@@ -456,15 +660,31 @@ export class CombatPanel {
+     const enemy = this.setup?.enemy ?? SCRAP_DUMMY;
+     const playerHp = state?.playerHp ?? 100;
+     const enemyHp = state?.enemyHp ?? enemy.maxHp;
+-    this.playerText.setText(`YOU ♥ ${playerHp}/100  ◈ ${state?.playerShield ?? 0}`);
+-    this.enemyText.setText(`${enemy.name} ${enemyHp}/${enemy.maxHp}`);
+-    this.poisonText.setText(`☣ POISON ${state?.enemyPoison ?? 0}`);
+-    const left = this.centerX - 325;
++    const left = this.centerX - 345;
+     const boss = this.isBoss(enemy);
+     this.barGraphics.clear();
+-    this.drawBar(left, this.centerY - 184, 280, playerHp / 100, 0xff5b72);
+-    this.drawBar(left, this.centerY - 150, 280, enemyHp / enemy.maxHp, boss ? 0xf06cff : 0xb96cff);
+-    if (!state || state.outcome !== 'active') { this.nextActionText.setText(''); return; }
++    if (!state) {
++      this.stageTitle.setText('NEXT THREAT').setColor('#e8d9ec');
++      this.stageSubtitle.setText('Repack first. Start the encounter when the build feels ready.');
++      this.playerText.setText('BUILD READY');
++      this.enemyText.setText('');
++      this.poisonText.setText('');
++      this.nextActionText.setText('');
++      this.bossStatusText.setText('');
++      this.telegraphPlate.setVisible(false);
++      return;
++    }
++
++    this.stageTitle.setText(state.outcome === 'active' ? (boss ? 'BOSS FIGHT' : 'FIGHT LIVE') : state.outcome === 'victory' ? 'VICTORY' : 'RUN BROKEN')
++      .setColor(state.outcome === 'active' ? (boss ? '#ff91e6' : '#d8ff96') : state.outcome === 'victory' ? '#b5ff4d' : '#ff7185');
++    this.stageSubtitle.setText(boss ? `${this.bossRuleSymbol(enemy)}  ${this.bossSystems(enemy).join(' + ')} — telegraphs hit the backpack.` : 'Autobattle running — build triggers resolve from the locked backpack snapshot.');
++    this.playerText.setText(`YOU  ♥ ${playerHp}/100   ◈ ${state.playerShield}`);
++    this.enemyText.setText(`${boss ? 'BOSS  ' : ''}${enemy.name.toUpperCase()}  ${enemyHp}/${enemy.maxHp}`);
++    this.poisonText.setText(state.enemyPoison > 0 ? `☣ POISON ${state.enemyPoison}` : '');
++    this.drawBar(left, this.centerY - 188, 315, playerHp / 100, 0xff5b72);
++    this.drawBar(left, this.centerY - 148, 315, enemyHp / enemy.maxHp, boss ? 0xf06cff : 0xb5ff4d);
++    this.telegraphPlate.setVisible(state.outcome === 'active' && boss);
++    if (state.outcome !== 'active') { this.nextActionText.setText(''); return; }
+     const entries: string[] = [];
+     const labels: Array<[string, string]> = [
+       ['enemy-attack', 'HIT'], ['boss-interference', 'JAM'], ['boss-cell-interference', 'SLIME'],
+diff --git a/src/game/ui/CombatPanel.ts b/src/game/ui/CombatPanel.ts
+index 3630cd9..22da90a 100644
+--- a/src/game/ui/CombatPanel.ts
++++ b/src/game/ui/CombatPanel.ts
+@@ -494,7 +714,7 @@ export class CombatPanel {
+       const nextImpact = (Math.floor(state.timeMs / edgeRent.intervalMs) + 1) * edgeRent.intervalMs;
+       entries.push(`RENT ${Math.max(0, (nextImpact - state.timeMs) / 1000).toFixed(1)}s`);
+     }
+-    this.nextActionText.setText(entries.join(' • '));
++    this.nextActionText.setText(entries.length > 0 ? `NEXT  //  ${entries.join('   •   ')}` : '');
+   }
+ 
+   private drawBar(x: number, y: number, width: number, ratio: number, color: number): void {
+diff --git a/src/game/ui/CombatPanel.ts b/src/game/ui/CombatPanel.ts
+index 3630cd9..22da90a 100644
+--- a/src/game/ui/CombatPanel.ts
++++ b/src/game/ui/CombatPanel.ts
+@@ -569,7 +789,7 @@ export class CombatPanel {
+ 
+   private pushLog(message: string): void {
+     this.eventLog.unshift(message);
+-    if (this.eventLog.length > 5) this.eventLog.length = 5;
++    if (this.eventLog.length > 3) this.eventLog.length = 3;
+     this.eventLogText.setText(this.eventLog.join('\n'));
+   }
