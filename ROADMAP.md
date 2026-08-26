@@ -1,7 +1,7 @@
 # Game3 Roadmap
 
 ## Current execution priority
-1. **Finish Retention Wave R2 discovery:** deepen the existing Fusion Archive with partial ingredient hints, condition notes and “almost solved” breadcrumbs, then add arrangement-specific Boss Mastery challenges on top of the now-live mastery/grudge history.
+1. **Finish Retention Wave R2 mastery challenges:** add arrangement-specific Boss Mastery challenges on top of the now-live mastery/grudge history; the Archive silhouette/trace/almost-solved discovery layer is implemented and ready for real engagement measurement.
 2. **Retention Wave R3:** Weekly Challenge + personal weekly history/tiers; no backend leaderboard until real behavior justifies it.
 3. **Release acceptance:** physical-device presentation/performance review and real Yandex/CrazyGames tester compliance.
 4. Real traffic then decides whether the next investment is balance, additional gameplay content, social competition or another retention layer.
@@ -134,12 +134,12 @@
 - [x] Revenge lifecycle after a boss defeat: the next valid victory against that family resolves the grudge, with restrained authored feedback and no combat-power compensation.
 - [x] Derived three-tier Boss Mastery foundation from wins/streak history without another persistence field.
 - [ ] **Boss Mastery challenges** across the six families: arrangement/counterplay goals tied to each boss rule, with multi-star completion tiers beyond the current history-derived foundation.
-- [ ] Expand Junk Archive discovery UX: stronger unknown silhouettes, partial ingredient hints, discovered-condition notes and “almost solved” recipe breadcrumbs using the existing recipe pool first.
+- [x] Expand Junk Archive discovery UX: unknown item silhouettes, partial ingredient traces, exact-pair `ALMOST SOLVED` breadcrumbs and forbidden second-stage presentation using the existing 24-recipe pool first; hidden results remain classified until fusion.
 - [ ] Add conditional/forbidden fusion discoveries only after the current 24-recipe archive proves that hint-driven discovery increases replay intent.
 - [x] Privacy-minimal telemetry + soft-launch report support for Hero Mastery level-up reach/cosmetic milestones and Boss Grudge start/resolve volumes, including explicit protection against mislabeling ephemeral-session volume ratios as player-level conversion.
-- [ ] Archive-hint engagement telemetry/reporting after the discovery UX exists.
+- [x] Archive-hint engagement telemetry/reporting: Archive reach, Recipe Book reach, ALMOST SOLVED exposure and aggregate clue counts; no recipe/item identities are transmitted.
 
-**R2 gate:** mastery and revenge are implemented. The remaining gate is discovery: after several normal runs, the player should visibly have all three unfinished goal types — hero mastery, boss revenge/mastery and collection/discovery breadcrumbs.
+**R2 gate:** mastery, revenge and discovery breadcrumbs are implemented. The remaining authored R2 gameplay layer is arrangement-specific Boss Mastery challenges; conditional recipe expansion is deliberately gated on real Archive/fusion engagement data rather than content-count pressure.
 
 ### R3 — Weekly replay layer [PLANNED]
 - [ ] Deterministic **Weekly Challenge** with one weekly seed plus a curated rule/loadout constraint assembled from existing systems.
@@ -200,7 +200,7 @@
 - [x] Cloud/leaderboard launch decision (**deferred for soft launch; add only when retention/competitive behavior justifies backend/platform hooks**)
 
 ## P8 — QA, balance & performance
-- [x] Automated deterministic tests for core run/fusion/event/hero/boss/Daily-retention/Hero-Mastery/Boss-Grudge/late-world-pressure domains
+- [x] Automated deterministic tests for core run/fusion/event/hero/boss/Daily-retention/Hero-Mastery/Boss-Grudge/Archive-discovery/late-world-pressure domains
 - [x] Seeded pacing target simulation with percentile bands and target hit rates (**18-encounter campaign + 12-encounter loops modeled separately**)
 - [x] Seeded combat/build simulation reports across weak/typical/strong power bands and boss checkpoints, including boss-rule wrappers
 - [x] Campaign balance sampling excludes second-stage fusion results; loop checkpoints may sample them
@@ -222,8 +222,8 @@
 - [x] Six-world continuation funnel foundation (**world-by-world boss clear, continuation and run-start-anchored timing derived from existing privacy-minimal combat telemetry**)
 - [x] User-directed pre-traffic content expansion (**Wave 5 combinatorial depth + six-world/18-encounter base campaign; loops remain compact at 12 encounters**)
 - [x] P5R R1 retention foundation completed before broad traffic: Daily Contracts, Reality Rules, v9 persistence, streak/track claims and privacy-minimal Daily funnel are automated-test/browser validated.
-- [x] P5R R2 mastery/revenge foundation: 4×20 Hero Mastery, 28 cosmetic milestones, six-family grudge history/revenge, Trophy UI and bounded transition-only telemetry/report aggregation.
+- [x] P5R R2 mastery/revenge/discovery foundation: 4×20 Hero Mastery, 28 cosmetic milestones, six-family grudge history/revenge, Trophy UI, Junk Archive silhouettes/traces/almost-solved breadcrumbs and bounded transition/exposure telemetry/report aggregation.
 - [ ] release candidate to first portals
-- [ ] measure tutorial/help usage/hero choice/first boss/six-world campaign duration/world continuation/event choice/fusion usage/daily participation/contract completion/mastery level-up reach/grudge start-resolve volumes/loop-entry/loop-completion/return behavior on real traffic
+- [ ] measure tutorial/help usage/hero choice/first boss/six-world campaign duration/world continuation/event choice/fusion usage/daily participation/contract completion/mastery level-up reach/grudge start-resolve volumes/Archive reach/Recipe Book reach/almost-solved exposure/loop-entry/loop-completion/return behavior on real traffic
 - [ ] tune difficulty/economy/ad pacing and retention objective/reward cadence from real data
-- [ ] choose further gameplay/content expansion from six-world funnel + contract/mastery/grudge/weekly engagement signals rather than raw content-count goals
+- [ ] choose further gameplay/content expansion from six-world funnel + contract/mastery/grudge/archive/weekly engagement signals rather than raw content-count goals
