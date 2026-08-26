@@ -142,8 +142,8 @@ export class TopHudActions {
         rect.setFillStyle(palette.fill).setStrokeStyle(3, palette.stroke);
         highlight.setFillStyle(palette.stroke, 0.36);
       });
-      rect.on('pointerdown', () => this.setPressed(placement, rect, shadow, highlight, text, icon, true));
-      const restore = (): void => this.setPressed(placement, rect, shadow, highlight, text, icon, false);
+      rect.on('pointerdown', () => this.setPressed(rect, shadow, highlight, text, icon, true));
+      const restore = (): void => this.setPressed(rect, shadow, highlight, text, icon, false);
       rect.on('pointerupoutside', restore);
       rect.on('pointerup', () => {
         restore();
@@ -158,7 +158,6 @@ export class TopHudActions {
   }
 
   private setPressed(
-    placement: HudActionPlacement,
     rect: Phaser.GameObjects.Rectangle,
     shadow: Phaser.GameObjects.Rectangle,
     highlight: Phaser.GameObjects.Rectangle,
@@ -171,7 +170,7 @@ export class TopHudActions {
     shadow.setScale(scale);
     highlight.setScale(scale);
     text.setScale(scale);
-    icon?.setScale(scale * iconBaseScale(placement));
+    icon?.setAlpha(pressed ? 0.76 : 1);
   }
 
   private activate(placement: HudActionPlacement, text: Phaser.GameObjects.Text): void {
@@ -218,10 +217,6 @@ function createActionIcon(scene: Phaser.Scene, placement: HudActionPlacement): P
   const maxSide = Math.max(1, icon.width, icon.height);
   icon.setScale(size / maxSide);
   return icon;
-}
-
-function iconBaseScale(_placement: HudActionPlacement): number {
-  return 15 / 128;
 }
 
 function readDisplayWidth(scene: Phaser.Scene): number {
