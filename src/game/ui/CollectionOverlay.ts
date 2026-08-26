@@ -7,10 +7,20 @@ import {
   type ItemdexEntry,
   type RecipeBookEntry,
 } from '../domain/collection';
-import type { ItemDefinition, Rarity } from '../domain/types';
+import type { Cell, ItemDefinition, Rarity } from '../domain/types';
 import { dismissOverlay, pressPulse, revealOverlay } from './uiMotion';
 
 export type CollectionTab = 'items' | 'recipes';
+
+export interface CollectionTabViewEvent {
+  readonly tab: CollectionTab;
+  readonly tracedRecipes: number;
+  readonly almostSolvedRecipes: number;
+}
+
+export interface CollectionOverlayOptions {
+  readonly onTabViewed?: (event: CollectionTabViewEvent) => void;
+}
 
 const DEPTH = 1200;
 const ITEM_PAGE_SIZE = 15;
@@ -39,6 +49,7 @@ export class CollectionOverlay {
     shopItems: readonly ItemDefinition[],
     recipes: readonly FusionRecipe[],
     getDiscovery: () => CollectionDiscoveryState,
+    private readonly options: CollectionOverlayOptions = {},
   ) {
     this.allItems = allItems;
     this.shopItems = shopItems;
@@ -62,7 +73,8 @@ export class CollectionOverlay {
 
   show(tab: CollectionTab = this.tab): void {
     this.tab = tab;
-    this.refresh();
+    const snapshot = this.refresh();
+    this.notifyTabViewed(snapshot);
     revealOverlay(this.scene, this.root, this.content);
   }
 
@@ -75,12 +87,21 @@ export class CollectionOverlay {
     return this.root.visible;
   }
 
-  private refresh(): void {
+  private refresh(): CollectionSnapshot {
     this.content.removeAll(true);
     const snapshot = createCollectionSnapshot(this.allItems, this.shopItems, this.recipes, this.getDiscovery());
     this.drawChrome(snapshot);
     if (this.tab === 'items') this.drawItems(snapshot);
     else this.drawRecipes(snapshot);
+    return snapshot;
+  }
+
+  private notifyTabViewed(snapshot: CollectionSnapshot): void {
+    this.options.onTabViewed?.({
+      tab: this.tab,
+      tracedRecipes: snapshot.recipeClueProgress.traced,
+      almostSolvedRecipes: snapshot.recipeClueProgress.almostSolved,
+    });
   }
 
   private drawChrome(snapshot: CollectionSnapshot): void {
@@ -89,8 +110,8 @@ export class CollectionOverlay {
       fontSize: '36px', color: '#f7f2e8',
       stroke: '#090a0d', strokeThickness: 7,
     }));
-    this.content.add(this.scene.add.text(94, 122, 'COLLECTION • DISCOVER BY PLAYING • UNKNOWN ENTRIES STAY HIDDEN', {
-      fontSize: '13px', color: '#9fa5b6', fontStyle: 'bold',
+    this.content.add(this.scene.add.text(94, 122, 'COLLECTION • UNKNOWN JUNK LEAVES SILHOUETTES • KNOWN INGREDIENTS REVEAL RECIPE CLUES', {
+      fontSize: '12px', color: '#9fa5b6', fontStyle: 'bold',
     }));
 
     this.addTabButton(94, 158, 205, 'ITEMDEX', 'items');
@@ -102,6 +123,9 @@ export class CollectionOverlay {
     this.content.add(this.scene.add.text(850, 162,
       `RECIPES ${snapshot.recipeProgress.discovered}/${snapshot.recipeProgress.total} • ${snapshot.recipeProgress.percent}%`,
       { fontSize: '15px', color: '#ff91e6', fontStyle: 'bold' }));
+    this.content.add(this.scene.add.text(1112, 162,
+      `TRACES ${snapshot.recipeClueProgress.traced} • ALMOST ${snapshot.recipeClueProgress.almostSolved}`,
+      { fontSize: '12px', color: snapshot.recipeClueProgress.almostSolved > 0 ? '#ffd56e' : '#8ceeff', fontStyle: 'bold' }));
     this.drawProgressBar(590, 194, 220, snapshot.itemProgress.percent, 0xb5ff4d);
     this.drawProgressBar(850, 194, 220, snapshot.recipeProgress.percent, 0xff91e6);
 
@@ -137,7 +161,8 @@ export class CollectionOverlay {
       text.setScale(1);
       if (this.tab === tab) return;
       this.tab = tab;
-      this.refresh();
+      const snapshot = this.refresh();
+      this.notifyTabViewed(snapshot);
     });
     this.content.add([rect, text]);
   }
@@ -160,16 +185,18 @@ export class CollectionOverlay {
     if (!entry.discovered) {
       const card = this.scene.add.rectangle(x + width / 2, y + height / 2, width, height, 0x151821, 1)
         .setStrokeStyle(2, 0x3a3e4c);
-      const mark = this.scene.add.text(x + width / 2, y + 50, '???', {
-        fontFamily: 'Arial Black, Impact, sans-serif', fontSize: '28px', color: '#676d7b',
+      this.content.add(card);
+      this.drawShape(entry.silhouetteShape, x + width / 2, y + 48, 0x59606d, 0.72, 16);
+      const mark = this.scene.add.text(x + width / 2, y + 88, '???', {
+        fontFamily: 'Arial Black, Impact, sans-serif', fontSize: '22px', color: '#737a89',
       }).setOrigin(0.5);
-      const label = this.scene.add.text(x + width / 2, y + 104, 'UNDISCOVERED JUNK', {
-        fontSize: '11px', color: '#6f7481', fontStyle: 'bold',
+      const label = this.scene.add.text(x + width / 2, y + 116, 'UNKNOWN SILHOUETTE', {
+        fontSize: '10px', color: '#777d8c', fontStyle: 'bold',
       }).setOrigin(0.5);
-      const hint = this.scene.add.text(x + width / 2, y + 130, 'Find it during a run.', {
-        fontSize: '10px', color: '#4f5460',
+      const hint = this.scene.add.text(x + width / 2, y + 139, 'Recognize the shape, then find it in a run.', {
+        fontSize: '9px', color: '#555b68',
       }).setOrigin(0.5);
-      this.content.add([card, mark, label, hint]);
+      this.content.add([mark, label, hint]);
       return;
     }
 
@@ -190,22 +217,29 @@ export class CollectionOverlay {
       fontSize: '10px', color: '#c3c0c9', wordWrap: { width: 180 }, lineSpacing: 2,
     });
     this.content.add([card, title, meta, tags, description]);
-    this.drawMiniShape(definition, x + 213, y + 108);
+    this.drawShape(definition.shape, x + 213, y + 108, 0xf7f2e8, 0.85, 13);
   }
 
-  private drawMiniShape(definition: ItemDefinition, x: number, y: number): void {
-    const cell = 13;
-    const xs = definition.shape.map((part) => part.x);
-    const ys = definition.shape.map((part) => part.y);
+  private drawShape(
+    shape: readonly Cell[],
+    x: number,
+    y: number,
+    color: number,
+    alpha: number,
+    cell: number,
+  ): void {
+    if (shape.length === 0) return;
+    const xs = shape.map((part) => part.x);
+    const ys = shape.map((part) => part.y);
     const width = (Math.max(...xs) + 1) * cell;
     const height = (Math.max(...ys) + 1) * cell;
     const startX = x - width / 2;
     const startY = y - height / 2;
-    for (const part of definition.shape) {
+    for (const part of shape) {
       const square = this.scene.add.rectangle(
         startX + part.x * cell + cell / 2,
         startY + part.y * cell + cell / 2,
-        cell - 2, cell - 2, 0xf7f2e8, 0.85,
+        cell - 2, cell - 2, color, alpha,
       ).setStrokeStyle(1, 0x11141d);
       this.content.add(square);
     }
@@ -227,14 +261,23 @@ export class CollectionOverlay {
   private drawRecipeCard(entry: RecipeBookEntry, x: number, y: number): void {
     const width = 338; const height = 166;
     if (!entry.discovered) {
+      if (entry.clue.state === 'traced') {
+        this.drawTracedRecipe(entry, x, y, width, height);
+        return;
+      }
+      if (entry.clue.state === 'almost-solved') {
+        this.drawAlmostSolvedRecipe(entry, x, y, width, height);
+        return;
+      }
+
       const card = this.scene.add.rectangle(x + width / 2, y + height / 2, width, height, 0x151821, 1)
         .setStrokeStyle(2, 0x3a3e4c);
       const title = this.scene.add.text(x + width / 2, y + 49, '???  +  ???', {
         fontFamily: 'Arial Black, Impact, sans-serif', fontSize: '23px', color: '#676d7b',
       }).setOrigin(0.5);
       const arrow = this.scene.add.text(x + width / 2, y + 88, '↓', { fontSize: '22px', color: '#505562' }).setOrigin(0.5);
-      const hint = this.scene.add.text(x + width / 2, y + 126, 'FUSE JUNK TO DISCOVER', {
-        fontSize: '10px', color: '#626875', fontStyle: 'bold',
+      const hint = this.scene.add.text(x + width / 2, y + 126, 'DISCOVER AN INGREDIENT TO TRACE THIS RECIPE', {
+        fontSize: '9px', color: '#626875', fontStyle: 'bold',
       }).setOrigin(0.5);
       this.content.add([card, title, arrow, hint]);
       return;
@@ -243,7 +286,7 @@ export class CollectionOverlay {
     const secondStage = entry.stage === 'second-stage';
     const card = this.scene.add.rectangle(x + width / 2, y + height / 2, width, height, secondStage ? 0x241b30 : 0x1c202a, 1)
       .setStrokeStyle(2, secondStage ? 0xff91e6 : 0xb5ff4d);
-    const stage = this.scene.add.text(x + 14, y + 12, secondStage ? 'SECRET SECOND-STAGE' : 'DISCOVERED RECIPE', {
+    const stage = this.scene.add.text(x + 14, y + 12, secondStage ? 'SECRET SECOND-STAGE • DISCOVERED' : 'DISCOVERED RECIPE', {
       fontSize: '9px', color: secondStage ? '#ff91e6' : '#b5ff4d', fontStyle: 'bold',
     });
     const title = this.scene.add.text(x + 14, y + 34, entry.resultDefinition.name.toUpperCase(), {
@@ -256,7 +299,69 @@ export class CollectionOverlay {
     const result = this.scene.add.text(x + 40, y + 105, entry.resultDefinition.tags.map((tag) => tag.toUpperCase()).join(' • '), {
       fontSize: '9px', color: '#f0c3ff', wordWrap: { width: 278 },
     });
-    this.content.add([card, stage, title, ingredients, arrow, result]);
+    const note = this.scene.add.text(x + 14, y + 139, 'ARCHIVE NOTE • FUSE THIS EXACT PAIR TO RECREATE IT', {
+      fontSize: '8px', color: '#777d8c', fontStyle: 'bold',
+    });
+    this.content.add([card, stage, title, ingredients, arrow, result, note]);
+  }
+
+  private drawTracedRecipe(
+    entry: Extract<RecipeBookEntry, { discovered: false }>,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ): void {
+    if (entry.clue.state !== 'traced') return;
+    const knownCount = entry.clue.knownIngredientDefinitions.length;
+    const missingCount = entry.clue.missingIngredientClues.length;
+    const total = knownCount + missingCount;
+    const card = this.scene.add.rectangle(x + width / 2, y + height / 2, width, height, 0x17212a, 1)
+      .setStrokeStyle(2, 0x66c8df);
+    const stage = this.scene.add.text(x + 14, y + 12, `RECIPE TRACE • ${knownCount}/${total} INGREDIENTS KNOWN`, {
+      fontSize: '9px', color: '#8ceeff', fontStyle: 'bold',
+    });
+    const known = entry.clue.knownIngredientDefinitions.map((definition) => definition.name.toUpperCase());
+    const title = this.scene.add.text(x + 14, y + 38, [...known, ...Array(missingCount).fill('???')].join('  +  '), {
+      fontFamily: 'Arial Black, Impact, sans-serif', fontSize: '15px', color: '#e8f7ff',
+      wordWrap: { width: 310 },
+    });
+    const missing = entry.clue.missingIngredientClues.map((clue) =>
+      `${clue.rarity.toUpperCase()} ${clue.primaryTag.toUpperCase()} • ${clue.cellCount} CELL${clue.cellCount === 1 ? '' : 'S'}`);
+    const clueText = this.scene.add.text(x + 14, y + 87, `MISSING TRACE\n${missing.join(' • ')}`, {
+      fontSize: '9px', color: '#a8cad5', fontStyle: 'bold', wordWrap: { width: 310 }, lineSpacing: 3,
+    });
+    const note = this.scene.add.text(x + 14, y + 137, 'Find the missing silhouette; the result stays classified.', {
+      fontSize: '9px', color: '#667f89',
+    });
+    this.content.add([card, stage, title, clueText, note]);
+  }
+
+  private drawAlmostSolvedRecipe(
+    entry: Extract<RecipeBookEntry, { discovered: false }>,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ): void {
+    if (entry.clue.state !== 'almost-solved') return;
+    const secret = entry.clue.stage === 'second-stage';
+    const accent = secret ? 0xff91e6 : 0xffd56e;
+    const card = this.scene.add.rectangle(x + width / 2, y + height / 2, width, height, secret ? 0x2b1c30 : 0x292519, 1)
+      .setStrokeStyle(3, accent);
+    const stage = this.scene.add.text(x + 14, y + 12, secret ? 'FORBIDDEN PAIR • ALMOST SOLVED' : 'ALMOST SOLVED • ALL INGREDIENTS FOUND', {
+      fontSize: '9px', color: secret ? '#ff91e6' : '#ffd56e', fontStyle: 'bold',
+    });
+    const ingredients = this.scene.add.text(x + 14, y + 39,
+      entry.clue.ingredientDefinitions.map((definition) => definition.name.toUpperCase()).join('  +  '),
+      { fontFamily: 'Arial Black, Impact, sans-serif', fontSize: '14px', color: '#fff7df', wordWrap: { width: 310 } });
+    const hint = this.scene.add.text(x + 14, y + 88, `ARCHIVE SIGNAL • ${entry.clue.authoredHint}`, {
+      fontSize: '9px', color: secret ? '#ffc8f4' : '#f5dca0', fontStyle: 'bold', wordWrap: { width: 310 },
+    });
+    const result = this.scene.add.text(x + 14, y + 132, 'RESULT ??? • PUT BOTH IN THE FUSION LAB', {
+      fontSize: '9px', color: '#d7d1c5', fontStyle: 'bold',
+    });
+    this.content.add([card, stage, ingredients, hint, result]);
   }
 
   private drawProgressBar(x: number, y: number, width: number, percent: number, color: number): void {
