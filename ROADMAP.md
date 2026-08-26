@@ -1,5 +1,14 @@
 # Game3 Roadmap
 
+## Current execution priority
+1. **Retention Wave R1 first:** Daily Contracts + non-punitive streak + 7-day reward track + Reality Rule of the Day + retention telemetry/save support.
+2. **Gameplay can run in parallel after the R1 foundation is stable:** make Worlds 5–6 more mechanically distinct and climactic, but do not lengthen the six-world campaign again before real traffic.
+3. **Retention Wave R2:** Hero Mastery + Boss Grudges/Mastery + deeper Fusion Archive discovery goals.
+4. **Retention Wave R3:** Weekly Challenge + personal weekly history/tiers; no backend leaderboard until real behavior justifies it.
+5. Release/traffic then decides whether the next investment is more gameplay content, balance, social competition or additional retention layers.
+
+**Product rule:** retention rewards should primarily create goals, expression, discovery and replay variety. Avoid permanent damage/HP/stat inflation from streaks or mastery because it would weaken backpack skill, boss counterplay and balance readability.
+
 ## P0 — Foundation [DONE]
 - [x] Product concept and scope boundaries
 - [x] Agent operating manual
@@ -87,13 +96,65 @@
 - [x] User-directed Wave 5 deep-content expansion (**+6 perks, +6 run events, +6 Loop 3+ anomaly modifiers, +8 alternate non-boss corrupted enemy families; item/recipe atlas stays 60/24**)
 - [x] Long-session campaign expansion (**4→6 worlds, 12→18 campaign encounters, all six boss families in base run; Corrupted Loops stay 12 encounters**)
 
-## P5 — Retention/meta [DONE]
+## P5 — Retention/meta foundation [DONE]
 - [x] Itemdex + Recipe Book UI (**Junk Archive: 60 item slots + 24 recipe slots, hidden unknown payloads, pagination and collection progress**)
 - [x] Discovery state for items and fusion recipes
 - [x] Unlock milestones (**5 derived Archive Ranks with cosmetic seals; final Void Archivist requires full current collection + Corrupted Loop 2**)
 - [x] Daily seeded run (**UTC `daily:YYYY-MM-DD` identity reusing the full deterministic campaign pipeline**)
 - [x] Corrupted Loop + score foundation
 - [x] Achievements (**13 derived Trophy Shelf goals across items, recipes, secret evolutions and loop depth**)
+
+## P5R — Retention expansion [NEXT PRIORITY]
+
+### R1 — Daily return loop [NEXT]
+- [ ] Deterministic **Daily Contracts**: 3 objectives per UTC day generated from existing heroes, tags, synergies, fusions, bosses, events and run actions.
+- [ ] Contract validity constraints: never generate impossible objectives for the current content pool/run mode; avoid three objectives that all demand the same build archetype.
+- [ ] Contract progress domain outside Phaser with deterministic counters and reload-safe progress.
+- [ ] Retention save upgrade (**planned v9**) with safe v8 migration for contract day/progress, streak state, reward-track state, mastery foundations and boss-history foundations.
+- [ ] Daily Contracts UI reachable immediately from the main run shell; show all 3 goals, progress and completed state without hiding core play behind a modal maze.
+- [ ] **Non-punitive streak:** completing at least 1 daily contract advances the streak; a missed day reduces momentum instead of hard-resetting a long streak to zero.
+- [ ] **7-day reward track** with milestone claims. Launch rewards are cosmetic/collection/expression-oriented, not permanent combat-stat inflation.
+- [ ] **Reality Rule of the Day:** deterministic global daily modifier layered onto the existing Daily Run, with an initial pool of roughly 10–14 high-interaction rules built from existing systems rather than bespoke levels.
+- [ ] Daily-rule safety checks so a rule creates a build puzzle but cannot make the seeded run structurally unwinnable.
+- [ ] Daily reward/contract feedback: compact completion burst, claim state and next-milestone preview; Reduced Motion path required.
+- [ ] Privacy-minimal telemetry for daily offered/started/completed/claimed behavior, Reality Rule participation, streak bucket and contract archetype performance.
+- [ ] Soft-launch report sections for daily participation, contract completion, reward claims and return-age/streak mix. Keep return-age buckets explicitly separate from true D1/D7 cohort retention.
+- [ ] Automated tests for UTC rollover, reload/resume, missed-day decay, double-claim prevention, deterministic contract generation and Reality Rule compatibility.
+
+**R1 gate:** a returning player can open the game, understand today's distinct goal/rule within seconds, make visible progress in one normal run and retain that progress safely across reloads without receiving permanent power creep.
+
+### R2 — Mastery, revenge and discovery [PLANNED]
+- [ ] **Hero Mastery** tracks for all 4 heroes, initially targeting ~20 mastery levels per hero.
+- [ ] Hero mastery XP from meaningful run accomplishments rather than raw idle time; rewards focus on portraits, frames, backpack cosmetics, VFX variants, titles and challenge unlocks.
+- [ ] Mastery UI shows next reward, current level and hero-specific challenge prompts without requiring a separate backend/account.
+- [ ] **Boss Grudges:** persist boss-family wins/losses, current revenge target, best win streak and fastest valid kill where available.
+- [ ] Revenge objective after a boss defeat; next valid victory resolves the grudge and grants a bounded cosmetic/collection reward rather than combat power.
+- [ ] **Boss Mastery challenges** across the six families: arrangement/counterplay goals tied to each boss rule, with multi-star completion tiers.
+- [ ] Expand Junk Archive discovery UX: stronger unknown silhouettes, partial ingredient hints, discovered-condition notes and “almost solved” recipe breadcrumbs using the existing recipe pool first.
+- [ ] Add conditional/forbidden fusion discoveries only after the current 24-recipe archive proves that hint-driven discovery increases replay intent.
+- [ ] Telemetry/report support for hero mastery progression, revenge conversion and archive-hint engagement.
+
+**R2 gate:** after finishing several normal runs, a player still has at least three visible unfinished goal types: hero mastery, boss revenge/mastery and collection/discovery.
+
+### R3 — Weekly replay layer [PLANNED]
+- [ ] Deterministic **Weekly Challenge** with one weekly seed plus a curated rule/loadout constraint assembled from existing systems.
+- [ ] Personal Bronze/Silver/Gold/Reality-Broken score tiers tuned by simulation first and real traffic later.
+- [ ] Local weekly history for recent weeks: best score, deepest checkpoint, hero/rule and earned tier.
+- [ ] Weekly reward track remains cosmetic/collection-focused and cannot invalidate normal-run balance.
+- [ ] Weekly challenge telemetry: entry rate, completion, score distribution, retry count and tier distribution.
+- [ ] Defer global leaderboard/backend identity until weekly participation and replay rates justify the added platform/backend complexity.
+
+**R3 gate:** the game has a daily reason to return, a multi-week personal progression reason to continue, and a weekly standardized challenge reason to replay.
+
+### Parallel gameplay lane — reinforce retention with better play [PLANNED; START AFTER R1 FOUNDATION]
+- [ ] Give **World 5** a stronger authored gameplay identity that previews Copycat Auditor concepts through lighter ordinary/elite encounter pressure rather than duplicating the boss mechanic verbatim.
+- [ ] Give **World 6** a stronger authored gameplay identity that previews perimeter/space pressure before Border Shark.
+- [ ] Add world-specific event weighting/flavor where it increases campaign identity while preserving deterministic reload behavior.
+- [ ] Evaluate a second escalation phase for Copycat Auditor and Border Shark so the late campaign feels climactic, with deterministic telegraphs and at least two viable counters.
+- [ ] Feed new late-world mechanics into Daily Contract / Weekly Challenge archetypes so gameplay additions multiply retention content instead of becoming isolated one-off encounters.
+- [ ] Do **not** expand the base campaign beyond 6 worlds / 18 encounters before real pacing and continuation data indicates a need.
+
+**Parallel-lane rule:** retention work remains the primary sequence. Gameplay work may proceed alongside R2/R3 when it reuses the same domains, creates new challenge/contract combinations or fixes a measured weak point in the six-world funnel.
 
 ## P6 — Presentation pass [IN PROGRESS]
 - [x] Responsive web-shell foundation (**safe-area insets, portrait orientation gate, compact-landscape viewport profile and resize/orientation sync**)
@@ -152,8 +213,10 @@
 - [x] Repository-built portal candidate pipeline (**production build → readiness/security checks → runtime-only ZIP + separate store art → v2 per-file SHA-256 manifest → integrity verification → CI artifact; strict `release:soft-launch` additionally requires HTTPS analytics endpoint**)
 - [x] Privacy-minimal measurement pipeline (**strict versioned Node receiver → sanitized append-only NDJSON → deterministic JSON/Markdown report; receiver/report contracts and report CLI are CI-tested, raw exports are gitignored**)
 - [x] Soft-launch pacing summary foundation (**session reach + average/median/p90 time-to-hero and first-combat latency; run-start-anchored first-boss and six-world campaign reach/duration; per-encounter win rate + average/median/p90 duration, without persistent identity**)
+- [x] Six-world continuation funnel foundation (**world-by-world boss clear, continuation and run-start-anchored timing derived from existing privacy-minimal combat telemetry**)
 - [x] User-directed pre-traffic content expansion (**Wave 5 combinatorial depth + six-world/18-encounter base campaign; loops remain compact at 12 encounters**)
+- [ ] Complete P5R R1 retention foundation before broad traffic so daily return behavior is measurable from the first meaningful cohort.
 - [ ] release candidate to first portals
-- [ ] measure tutorial/help usage/hero choice/first boss/six-world campaign duration/event choice/fusion usage/loop-entry/loop-completion/return behavior on real traffic
-- [ ] tune difficulty/economy/ad pacing
-- [ ] further content after the current expansion should be driven by core retention signals or another explicit product-direction change
+- [ ] measure tutorial/help usage/hero choice/first boss/six-world campaign duration/world continuation/event choice/fusion usage/daily participation/contract completion/loop-entry/loop-completion/return behavior on real traffic
+- [ ] tune difficulty/economy/ad pacing and retention objective/reward cadence from real data
+- [ ] choose further gameplay/content expansion from six-world funnel + contract/mastery/weekly engagement signals rather than raw content-count goals
