@@ -411,7 +411,8 @@ export class PrototypeScene extends Phaser.Scene {
             save = { ...save, bossHistory: grudge.history };
             if (grudge.revengeStarted) metaFeedback.grudge(current.title, false);
             if (grudge.revengeResolved) metaFeedback.grudge(current.title, true);
-            if (outcome === 'victory' && activeBossMasteryEvaluation?.bossId === grudge.bossId) {
+            const trackedBossId = grudge.bossId;
+            if (outcome === 'victory' && trackedBossId !== null && activeBossMasteryEvaluation?.bossId === trackedBossId) {
               const completion = completeBossMasteryChallenges(save.completedBossChallengeIds, activeBossMasteryEvaluation);
               if (completion.newlyCompletedChallengeIds.length > 0) {
                 save = { ...save, completedBossChallengeIds: completion.completedChallengeIds };
@@ -420,7 +421,7 @@ export class PrototypeScene extends Phaser.Scene {
                   .sort((a, b) => a.star - b.star);
                 newlyCompleted.forEach((challenge, index) => {
                   this.time.delayedCall(index * (save.settings.reducedMotion ? 40 : 180), () => {
-                    metaFeedback.bossChallenge(current.title, grudge.bossId, challenge.id, challenge.star);
+                    metaFeedback.bossChallenge(current.title, trackedBossId, challenge.id, challenge.star);
                   });
                 });
               }
