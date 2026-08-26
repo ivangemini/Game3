@@ -5,10 +5,11 @@ import {
   loadSave,
   writeSave,
   type ActiveRunSave,
-  type SaveV9,
+  type SaveV10,
 } from '../../persistence/save';
 import { uiAudioCue } from '../audio/audioCues';
 import { GameAudio } from '../audio/GameAudio';
+import { PROTOTYPE_COMBAT_PROFILE_MAP } from '../data/combatProfiles';
 import { dailyRealityRuleForSeed, bonusPocketUnlocksForRun, claimDailyContract, claimDailyTrackReward, createDailyBoardSnapshot, ensureDailyRetentionDay, evaluateDailyContracts, incrementDailyCounter, perkChoiceCountForRun, rerollCostForRun, startingCoinsForRun, type DailyCounterKey } from '../domain/dailyRetention';
 import { PROTOTYPE_FUSION_RECIPES, SECOND_STAGE_FUSION_RECIPE_IDS } from '../data/fusionRecipes';
 import { PROTOTYPE_HEROES, PROTOTYPE_HERO_MAP } from '../data/heroes';
@@ -17,7 +18,13 @@ import { PROTOTYPE_PERKS, PROTOTYPE_PERK_MAP } from '../data/perks';
 import { getRuntimeRunEncounter } from '../data/dailyRunEncounters';
 import { PROTOTYPE_RUN_EVENT_MAP, PROTOTYPE_RUN_EVENTS } from '../data/runEvents';
 import { BACKPACK_HEIGHT, BACKPACK_WIDTH, blockedCellsForPocketUnlockCount } from '../domain/backpackLayout';
-import { recordBossOutcome } from '../domain/bossGrudges';
+import {
+  completeBossMasteryChallenges,
+  evaluateBossMasteryChallenges,
+  type BossMasteryEvaluation,
+} from '../domain/bossMasteryChallenges';
+import { bossFamilyIdForEnemyId, recordBossOutcome } from '../domain/bossGrudges';
+import { createCombatBuild } from '../domain/combatBuild';
 import { createDailyRunIdentity, dailyKeyFromSeed } from '../domain/dailyRun';
 import { applyFusion, type FusionRecipe } from '../domain/fusions';
 import {
@@ -95,7 +102,7 @@ export class PrototypeScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(COLORS.background);
     this.drawHeader();
 
-    let save: SaveV9 = loadSave();
+    let save: SaveV10 = loadSave();
     let audio = this.registry.get(AUDIO_REGISTRY_KEY) as GameAudio | undefined;
     if (!audio) {
       audio = new GameAudio(save.settings);
@@ -179,6 +186,7 @@ export class PrototypeScene extends Phaser.Scene {
     masteryOverlay = new MasteryGrudgeOverlay(this, {
       getHeroMasteryXp: () => save.heroMasteryXp,
       getBossHistory: () => save.bossHistory,
+      getCompletedBossChallengeIds: () => save.completedBossChallengeIds,
       reducedMotion: save.settings.reducedMotion,
       onOpenArchiveTrophies: () => {
         masteryOverlay.hide();
@@ -351,6 +359,7 @@ export class PrototypeScene extends Phaser.Scene {
 
     let activeCombatStartedAtMs: number | null = null;
     let activeCombatEncounterId: string | null = null;
+    let activeBossMasteryEvaluation: BossMasteryEvaluation | null = null;
 
     const combatPanel = new CombatPanel(this, 1140, 445, {
       getBackpackItems: () => board.getSnapshot().items,
@@ -402,10 +411,25 @@ export class PrototypeScene extends Phaser.Scene {
             save = { ...save, bossHistory: grudge.history };
             if (grudge.revengeStarted) metaFeedback.grudge(current.title, false);
             if (grudge.revengeResolved) metaFeedback.grudge(current.title, true);
+            if (outcome === 'victory' && activeBossMasteryEvaluation?.bossId === grudge.bossId) {
+              const completion = completeBossMasteryChallenges(save.completedBossChallengeIds, activeBossMasteryEvaluation);
+              if (completion.newlyCompletedChallengeIds.length > 0) {
+                save = { ...save, completedBossChallengeIds: completion.completedChallengeIds };
+                const newlyCompleted = activeBossMasteryEvaluation.challenges
+                  .filter((challenge) => completion.newlyCompletedChallengeIds.includes(challenge.id))
+                  .sort((a, b) => a.star - b.star);
+                newlyCompleted.forEach((challenge, index) => {
+                  this.time.delayedCall(index * (save.settings.reducedMotion ? 40 : 180), () => {
+                    metaFeedback.bossChallenge(current.title, grudge.bossId, challenge.id, challenge.star);
+                  });
+                });
+              }
+            }
           }
         }
         activeCombatStartedAtMs = null;
         activeCombatEncounterId = null;
+        activeBossMasteryEvaluation = null;
 
         if (outcome !== 'victory') {
           if (currentMatches) writeSave({ ...save, activeRun });
@@ -484,10 +508,38 @@ export class PrototypeScene extends Phaser.Scene {
           || combatPanel.isRunning()) return false;
         const current = getRuntimeRunEncounter(activeRun.progress, activeRun.runSeed);
         if (!current || current.encounterId !== encounter.encounterId) return false;
+
+        let bossMasteryEvaluation: BossMasteryEvaluation | null = null;
+        if (current.kind === 'boss') {
+          const snapshot = board.getSnapshot();
+          const inventory: InventoryState = {
+            width: BACKPACK_WIDTH,
+            height: BACKPACK_HEIGHT,
+            blockedCells: blockedCellsForPocketUnlockCount(effectivePocketCount()),
+            items: snapshot.items,
+          };
+          const build = createCombatBuild(
+            inventory,
+            PROTOTYPE_ITEM_MAP,
+            PROTOTYPE_COMBAT_PROFILE_MAP,
+            PROTOTYPE_PERK_MAP,
+            activeRun.selectedPerkIds,
+            PROTOTYPE_HERO_MAP.get(activeRun.heroId),
+          );
+          const bossId = bossFamilyIdForEnemyId(current.enemy.id);
+          if (bossId) {
+            bossMasteryEvaluation = evaluateBossMasteryChallenges(bossId, {
+              items: build.items,
+              synergyConnectionCount: build.synergies.connections.length,
+            });
+          }
+        }
+
         const started = combatPanel.startEncounter(encounter.encounterId, encounter.enemy, encounter.rewardCoins);
         if (started) {
           activeCombatStartedAtMs = runtimeNowMs();
           activeCombatEncounterId = encounter.encounterId;
+          activeBossMasteryEvaluation = bossMasteryEvaluation;
         }
         return started;
       },
