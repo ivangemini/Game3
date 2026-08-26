@@ -8,6 +8,7 @@ export const BOSS_FAMILY_IDS = [
 ] as const;
 
 export type BossFamilyId = typeof BOSS_FAMILY_IDS[number];
+export type BossChallengeStars = 0 | 1 | 2 | 3;
 
 export interface BossHistoryState {
   readonly bossId: string;
@@ -17,6 +18,7 @@ export interface BossHistoryState {
   readonly currentWinStreak: number;
   readonly bestWinStreak: number;
   readonly revengePending: boolean;
+  readonly challengeStars?: BossChallengeStars;
 }
 
 export interface BossGrudgeUpdate {
@@ -29,9 +31,19 @@ export interface BossGrudgeUpdate {
   readonly newFastestVictory: boolean;
 }
 
+export interface BossMasteryChallengeUpdate {
+  readonly history: readonly BossHistoryState[];
+  readonly bossId: BossFamilyId | null;
+  readonly tracked: boolean;
+  readonly improved: boolean;
+  readonly previousStars: BossChallengeStars;
+  readonly bestStars: BossChallengeStars;
+}
+
 export interface BossGrudgeSnapshot extends BossHistoryState {
   readonly bossId: BossFamilyId;
   readonly masteryTier: 0 | 1 | 2 | 3;
+  readonly challengeStars: BossChallengeStars;
   readonly nextGoal: string;
 }
 
@@ -83,17 +95,52 @@ export function recordBossOutcome(
       revengePending: true,
     };
 
-  const historyById = new Map(history.map((entry) => [entry.bossId, entry]));
-  historyById.set(bossId, updated);
-  const normalized = [...historyById.values()].sort((a, b) => bossSort(a.bossId) - bossSort(b.bossId));
   return {
-    history: normalized,
+    history: upsertBossHistory(history, updated),
     bossId,
     tracked: true,
     revengeStarted,
     revengeResolved,
     firstVictory,
     newFastestVictory,
+  };
+}
+
+export function recordBossMasteryChallenge(
+  history: readonly BossHistoryState[],
+  enemyId: string,
+  earnedStars: number,
+): BossMasteryChallengeUpdate {
+  const bossId = bossFamilyIdForEnemyId(enemyId);
+  if (!bossId) return {
+    history,
+    bossId: null,
+    tracked: false,
+    improved: false,
+    previousStars: 0,
+    bestStars: 0,
+  };
+
+  const current = history.find((entry) => entry.bossId === bossId) ?? emptyBossHistory(bossId);
+  const previousStars = normalizeChallengeStars(current.challengeStars);
+  const normalizedEarned = normalizeChallengeStars(earnedStars);
+  const bestStars = Math.max(previousStars, normalizedEarned) as BossChallengeStars;
+  if (bestStars <= previousStars) return {
+    history,
+    bossId,
+    tracked: true,
+    improved: false,
+    previousStars,
+    bestStars: previousStars,
+  };
+
+  return {
+    history: upsertBossHistory(history, { ...current, challengeStars: bestStars }),
+    bossId,
+    tracked: true,
+    improved: true,
+    previousStars,
+    bestStars,
   };
 }
 
@@ -105,6 +152,7 @@ export function createBossGrudgeSnapshots(history: readonly BossHistoryState[]):
       ...state,
       bossId,
       masteryTier,
+      challengeStars: normalizeChallengeStars(state.challengeStars),
       nextGoal: bossNextGoal(state, masteryTier),
     };
   });
@@ -127,7 +175,7 @@ function bossNextGoal(history: BossHistoryState, tier: 0 | 1 | 2 | 3): string {
   if (tier === 0) return 'Defeat this boss once';
   if (tier === 1) return `${history.wins}/3 victories • reach 3 wins`;
   if (tier === 2) return `${history.bestWinStreak}/3 best streak • win 3 in a row`;
-  return 'MASTERED • keep improving fastest victory';
+  return 'RIVALRY MASTERED • keep improving fastest victory';
 }
 
 function emptyBossHistory(bossId: BossFamilyId): BossHistoryState {
@@ -139,7 +187,22 @@ function emptyBossHistory(bossId: BossFamilyId): BossHistoryState {
     currentWinStreak: 0,
     bestWinStreak: 0,
     revengePending: false,
+    challengeStars: 0,
   };
+}
+
+function normalizeChallengeStars(value: number | undefined): BossChallengeStars {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(3, Math.floor(value ?? 0))) as BossChallengeStars;
+}
+
+function upsertBossHistory(
+  history: readonly BossHistoryState[],
+  updated: BossHistoryState,
+): readonly BossHistoryState[] {
+  const historyById = new Map(history.map((entry) => [entry.bossId, entry]));
+  historyById.set(updated.bossId, updated);
+  return [...historyById.values()].sort((a, b) => bossSort(a.bossId) - bossSort(b.bossId));
 }
 
 function bossSort(bossId: string): number {
