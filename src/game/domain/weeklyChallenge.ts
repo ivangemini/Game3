@@ -167,6 +167,24 @@ export function weeklyTierRank(tier: WeeklyTier): number {
   return 0;
 }
 
+export function weeklyAttemptsBucket(attempts: number): '0' | '1' | '2-3' | '4-7' | '8+' {
+  const safe = Math.max(0, Math.floor(Number.isFinite(attempts) ? attempts : 0));
+  if (safe === 0) return '0';
+  if (safe === 1) return '1';
+  if (safe <= 3) return '2-3';
+  if (safe <= 7) return '4-7';
+  return '8+';
+}
+
+export function weeklyScoreBucket(score: number): 'under-2500' | '2500-4999' | '5000-7999' | '8000-10999' | '11000+' {
+  const safe = Math.max(0, Math.floor(Number.isFinite(score) ? score : 0));
+  if (safe < 2500) return 'under-2500';
+  if (safe < 5000) return '2500-4999';
+  if (safe < 8000) return '5000-7999';
+  if (safe < 11000) return '8000-10999';
+  return '11000+';
+}
+
 export function recordWeeklyAttempt(state: WeeklyChallengeState, key: string): WeeklyChallengeState {
   const challenge = weeklyChallengeForKey(key);
   const current = state.history.find((entry) => entry.key === key) ?? emptyHistory(challenge);

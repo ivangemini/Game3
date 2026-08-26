@@ -2,7 +2,7 @@ import * as Phaser from 'phaser';
 import { telemetry } from '../../analytics/Telemetry';
 import { PROTOTYPE_HERO_MAP } from '../data/heroes';
 import { PROTOTYPE_PERK_MAP } from '../data/perks';
-import { weeklyTierRank, type WeeklyBoardSnapshot, type WeeklyTier } from '../domain/weeklyChallenge';
+import { weeklyAttemptsBucket, weeklyTierRank, type WeeklyBoardSnapshot, type WeeklyTier } from '../domain/weeklyChallenge';
 import { resolveAuthoredTexture, uiArtKey } from './authoredArt';
 import { dismissOverlay, pressPulse, revealOverlay } from './uiMotion';
 
@@ -43,7 +43,7 @@ export class WeeklyChallengeOverlay {
     const snapshot = this.options.getSnapshot();
     telemetry.track('weekly_board_opened', {
       bestTier: snapshot.bestTier,
-      attemptsBucket: attemptsBucket(snapshot.attempts),
+      attemptsBucket: weeklyAttemptsBucket(snapshot.attempts),
     });
     this.refresh();
     revealOverlay(this.scene, this.root, this.content);
@@ -209,12 +209,4 @@ function tierColor(tier: WeeklyTier): string {
   if (tier === 'silver') return '#d9e0ea';
   if (tier === 'bronze') return '#d8a064';
   return '#858b98';
-}
-
-function attemptsBucket(attempts: number): '0' | '1' | '2-3' | '4-7' | '8+' {
-  if (attempts <= 0) return '0';
-  if (attempts === 1) return '1';
-  if (attempts <= 3) return '2-3';
-  if (attempts <= 7) return '4-7';
-  return '8+';
 }
