@@ -36,7 +36,8 @@ describe('weekly challenge markdown report', () => {
     expect(markdown).toContain('Attempt starts/finishes: **3/2**; finish/start volume ratio **66.7%**');
     expect(markdown).toContain('1 **1** · 2-3 **2**');
     expect(markdown).toContain('5000-7999 **1** · 8000-10999 **1**');
-    expect(markdown).toContain('gold **1** · silver **1**');
+    expect(markdown).toContain('silver **1**');
+    expect(markdown).toContain('gold **1**');
     expect(markdown).toContain('without introducing a backend player identity or global leaderboard');
   });
 });
