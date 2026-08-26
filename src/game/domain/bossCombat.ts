@@ -24,12 +24,16 @@ export interface DuplicateDebtDefinition {
   readonly intervalMs: number;
   readonly telegraphMs: number;
   readonly damagePerExtraCopy: number;
+  readonly phaseTwoStartsAtCycle: number;
+  readonly phaseTwoDamagePerExtraCopy: number;
 }
 
 export interface EdgeRentDefinition {
   readonly intervalMs: number;
   readonly telegraphMs: number;
   readonly damagePerEdgeItem: number;
+  readonly phaseTwoStartsAtCycle: number;
+  readonly phaseTwoDamagePerEdgeItem: number;
 }
 
 export interface DuplicateDebtTarget {
@@ -84,6 +88,8 @@ export type DuplicateDebtPresentationEvent =
       readonly impactAtMs: number;
       readonly copyCount: number;
       readonly extraCopyCount: number;
+      readonly phase?: 1 | 2;
+      readonly damagePerExtraCopy?: number;
     }
   | {
       readonly kind: 'boss-duplicate-impact';
@@ -93,6 +99,7 @@ export type DuplicateDebtPresentationEvent =
       readonly copyCount: number;
       readonly extraCopyCount: number;
       readonly damagePerExtraCopy: number;
+      readonly phase?: 1 | 2;
       readonly totalDamage: number;
       readonly absorbedByShield: number;
       readonly healthDamage: number;
@@ -105,6 +112,8 @@ export type EdgeRentPresentationEvent =
       readonly itemInstanceIds: readonly string[];
       readonly impactAtMs: number;
       readonly affectedItemCount: number;
+      readonly phase?: 1 | 2;
+      readonly damagePerEdgeItem?: number;
     }
   | {
       readonly kind: 'boss-edge-impact';
@@ -112,6 +121,7 @@ export type EdgeRentPresentationEvent =
       readonly itemInstanceIds: readonly string[];
       readonly affectedItemCount: number;
       readonly damagePerEdgeItem: number;
+      readonly phase?: 1 | 2;
       readonly totalDamage: number;
       readonly absorbedByShield: number;
       readonly healthDamage: number;
@@ -144,12 +154,16 @@ const COPYCAT_AUDITOR_BASE_RULE: DuplicateDebtDefinition = {
   intervalMs: 5600,
   telegraphMs: 1100,
   damagePerExtraCopy: 4,
+  phaseTwoStartsAtCycle: 2,
+  phaseTwoDamagePerExtraCopy: 6,
 };
 
 const BORDER_SHARK_BASE_RULE: EdgeRentDefinition = {
   intervalMs: 6500,
   telegraphMs: 1300,
   damagePerEdgeItem: 2,
+  phaseTwoStartsAtCycle: 2,
+  phaseTwoDamagePerEdgeItem: 3,
 };
 
 export function timeTaxDefinitionForEnemyId(enemyId: string): TimeTaxDefinition | null {
@@ -448,6 +462,8 @@ function advanceWithDuplicateDebt(
     const itemInstanceIds = target?.itemInstanceIds ?? [];
     const copyCount = target?.copyCount ?? 0;
     const extraCopyCount = target?.extraCopyCount ?? 0;
+    const phase: 1 | 2 = boundary.cycle >= rule.phaseTwoStartsAtCycle ? 2 : 1;
+    const damagePerExtraCopy = phase === 2 ? rule.phaseTwoDamagePerExtraCopy : rule.damagePerExtraCopy;
 
     if (boundary.kind === 'telegraph') {
       events.push({
@@ -458,11 +474,13 @@ function advanceWithDuplicateDebt(
         impactAtMs: boundary.impactAtMs,
         copyCount,
         extraCopyCount,
+        phase,
+        damagePerExtraCopy,
       });
       continue;
     }
 
-    const incoming = extraCopyCount * rule.damagePerExtraCopy;
+    const incoming = extraCopyCount * damagePerExtraCopy;
     const damage = applyShieldedBossDamage(state, incoming);
     state = damage.state;
     events.push({
@@ -472,7 +490,8 @@ function advanceWithDuplicateDebt(
       itemInstanceIds,
       copyCount,
       extraCopyCount,
-      damagePerExtraCopy: rule.damagePerExtraCopy,
+      damagePerExtraCopy,
+      phase,
       totalDamage: incoming,
       absorbedByShield: damage.absorbedByShield,
       healthDamage: damage.healthDamage,
@@ -508,6 +527,8 @@ function advanceWithEdgeRent(
     if (state.outcome !== 'active' || state.timeMs !== boundary.atMs) break;
 
     const edgeIds = edgeRentItems(setup.items).map((item) => item.instanceId);
+    const phase: 1 | 2 = boundary.cycle >= rule.phaseTwoStartsAtCycle ? 2 : 1;
+    const damagePerEdgeItem = phase === 2 ? rule.phaseTwoDamagePerEdgeItem : rule.damagePerEdgeItem;
     if (boundary.kind === 'telegraph') {
       events.push({
         kind: 'boss-edge-telegraph',
@@ -515,11 +536,13 @@ function advanceWithEdgeRent(
         itemInstanceIds: edgeIds,
         impactAtMs: boundary.impactAtMs,
         affectedItemCount: edgeIds.length,
+        phase,
+        damagePerEdgeItem,
       });
       continue;
     }
 
-    const incoming = edgeIds.length * rule.damagePerEdgeItem;
+    const incoming = edgeIds.length * damagePerEdgeItem;
     const damage = applyShieldedBossDamage(state, incoming);
     state = damage.state;
     events.push({
@@ -527,7 +550,8 @@ function advanceWithEdgeRent(
       atMs: boundary.atMs,
       itemInstanceIds: edgeIds,
       affectedItemCount: edgeIds.length,
-      damagePerEdgeItem: rule.damagePerEdgeItem,
+      damagePerEdgeItem,
+      phase,
       totalDamage: incoming,
       absorbedByShield: damage.absorbedByShield,
       healthDamage: damage.healthDamage,
@@ -600,6 +624,7 @@ interface BossBoundary {
   readonly kind: 'telegraph' | 'impact';
   readonly atMs: number;
   readonly impactAtMs: number;
+  readonly cycle: number;
 }
 
 function bossBoundaries(
@@ -614,10 +639,10 @@ function bossBoundaries(
     const impactAtMs = cycle * intervalMs;
     const telegraphAtMs = impactAtMs - telegraphMs;
     if (telegraphAtMs > startExclusiveMs && telegraphAtMs <= endInclusiveMs) {
-      boundaries.push({ kind: 'telegraph', atMs: telegraphAtMs, impactAtMs });
+      boundaries.push({ kind: 'telegraph', atMs: telegraphAtMs, impactAtMs, cycle });
     }
     if (impactAtMs > startExclusiveMs && impactAtMs <= endInclusiveMs) {
-      boundaries.push({ kind: 'impact', atMs: impactAtMs, impactAtMs });
+      boundaries.push({ kind: 'impact', atMs: impactAtMs, impactAtMs, cycle });
     }
   }
   return boundaries.sort((a, b) => a.atMs - b.atMs || (a.kind === 'telegraph' ? -1 : 1));

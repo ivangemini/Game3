@@ -140,6 +140,8 @@ describe('Corrupted Loop boss families 5 and 6', () => {
       impactAtMs: 5600,
       copyCount: 3,
       extraCopyCount: 2,
+      phase: 1,
+      damagePerExtraCopy: 4,
     });
     expect(result.events).toContainEqual({
       kind: 'boss-duplicate-impact',
@@ -149,6 +151,7 @@ describe('Corrupted Loop boss families 5 and 6', () => {
       copyCount: 3,
       extraCopyCount: 2,
       damagePerExtraCopy: 4,
+      phase: 1,
       totalDamage: 8,
       absorbedByShield: 4,
       healthDamage: 4,
@@ -168,6 +171,7 @@ describe('Corrupted Loop boss families 5 and 6', () => {
       copyCount: 0,
       extraCopyCount: 0,
       damagePerExtraCopy: 4,
+      phase: 1,
       totalDamage: 0,
       absorbedByShield: 0,
       healthDamage: 0,
@@ -194,6 +198,8 @@ describe('Corrupted Loop boss families 5 and 6', () => {
       itemInstanceIds: ['bottom-edge', 'left-edge', 'right-edge'],
       impactAtMs: 6500,
       affectedItemCount: 3,
+      phase: 1,
+      damagePerEdgeItem: 2,
     });
     expect(result.events).toContainEqual({
       kind: 'boss-edge-impact',
@@ -201,12 +207,53 @@ describe('Corrupted Loop boss families 5 and 6', () => {
       itemInstanceIds: ['bottom-edge', 'left-edge', 'right-edge'],
       affectedItemCount: 3,
       damagePerEdgeItem: 2,
+      phase: 1,
       totalDamage: 6,
       absorbedByShield: 2,
       healthDamage: 4,
     });
     expect(result.state.playerShield).toBe(0);
     expect(result.state.playerHp).toBe(96);
+  });
+
+  it('escalates Copycat Auditor from Duplicate Debt to a telegraphed Final Audit on cycle two', () => {
+    const setup = duplicateSetup();
+    const result = advanceCombatWithBossRules(createCombatState(setup), setup, 11200);
+    expect(result.events).toContainEqual(expect.objectContaining({
+      kind: 'boss-duplicate-telegraph',
+      atMs: 10100,
+      impactAtMs: 11200,
+      phase: 2,
+      damagePerExtraCopy: 6,
+      extraCopyCount: 2,
+    }));
+    expect(result.events).toContainEqual(expect.objectContaining({
+      kind: 'boss-duplicate-impact',
+      atMs: 11200,
+      phase: 2,
+      damagePerExtraCopy: 6,
+      totalDamage: 12,
+    }));
+  });
+
+  it('escalates Border Shark from Edge Rent to a telegraphed Border Lockdown on cycle two', () => {
+    const setup = edgeSetup();
+    const result = advanceCombatWithBossRules(createCombatState(setup), setup, 13000);
+    expect(result.events).toContainEqual(expect.objectContaining({
+      kind: 'boss-edge-telegraph',
+      atMs: 11700,
+      impactAtMs: 13000,
+      phase: 2,
+      damagePerEdgeItem: 3,
+      affectedItemCount: 3,
+    }));
+    expect(result.events).toContainEqual(expect.objectContaining({
+      kind: 'boss-edge-impact',
+      atMs: 13000,
+      phase: 2,
+      damagePerEdgeItem: 3,
+      totalDamage: 9,
+    }));
   });
 
   it('keeps both new boss clocks invariant to render/update chunk size', () => {
