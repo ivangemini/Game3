@@ -75,10 +75,14 @@ export function renderMarkdown(summary) {
   const returnBuckets = Object.entries(summary.returnAgeBuckets ?? {});
   const reviewSignals = buildReviewSignals(summary);
   const daily = summary.dailyRetention ?? emptyDailyRetention();
+  const weekly = summary.weeklyChallenge ?? emptyWeeklyChallenge();
   const mastery = summary.heroMastery ?? emptyHeroMastery();
   const grudges = summary.bossGrudges ?? emptyBossGrudges();
   const archive = summary.archiveDiscovery ?? emptyArchiveDiscovery();
   const dailyStreakBuckets = Object.entries(daily.streakBuckets ?? {});
+  const weeklyAttemptsBuckets = Object.entries(weekly.attemptsBuckets ?? {});
+  const weeklyScoreBuckets = Object.entries(weekly.scoreBuckets ?? {});
+  const weeklyTierDistribution = Object.entries(weekly.tierDistribution ?? {});
   const masteryLevelUpsByHero = Object.entries(mastery.levelUpsByHero ?? {});
   const masteryMaxByHero = Object.entries(mastery.maxObservedLevelByHero ?? {});
   const grudgeBossIds = [...new Set([
@@ -110,7 +114,7 @@ export function renderMarkdown(summary) {
     '',
     '## Run systems',
     '',
-    `- Standard/Daily runs started: **${summary.standardRunsStarted}/${summary.dailyRunsStarted}**.`,
+    `- Standard/Daily/Weekly runs started: **${summary.standardRunsStarted}/${summary.dailyRunsStarted}/${summary.weeklyRunsStarted ?? 0}**.`,
     `- Purchases: **${summary.shopPurchases}** · paid rerolls: **${summary.paidRerolls}** · rewarded rerolls: **${summary.rewardedRerolls}**.`,
     `- Event choices: **${summary.eventChoices}** · fusions: **${summary.fusions}** · cashouts: **${summary.cashouts}** · avg cashout score: **${round(summary.averageCashoutScore)}**.`,
     `- Rewarded ad completion: **${percent(summary.rewardedAdCompletionRate)}** (${summary.rewardedAdCompletions}/${summary.rewardedAdAttempts}).`,
@@ -127,6 +131,24 @@ export function renderMarkdown(summary) {
       : '- Daily Board streak buckets: no board-open samples in this export.',
     '',
     'Daily streak buckets are local progression-state samples from sessions that opened the board; they are not D1/D7 retention measurements.',
+    '',
+    '## Weekly challenge replay',
+    '',
+    `- Weekly start reach: **${percent(weekly.weeklyStartSessionRate)}** (${weekly.sessionsStartingWeekly}/${summary.sessions} sessions).`,
+    `- Weekly Board reach among Weekly sessions: **${percent(weekly.boardOpenRateAmongWeeklySessions)}** (${weekly.sessionsOpeningBoard}/${weekly.sessionsStartingWeekly}).`,
+    `- Sessions finishing a Weekly attempt: **${percent(weekly.finishSessionRateAmongWeeklySessions)}** (${weekly.sessionsFinishingAttempt}/${weekly.sessionsStartingWeekly}).`,
+    `- Attempt starts/finishes: **${weekly.attemptStarts}/${weekly.attemptFinishes}**; finish/start volume ratio **${percent(weekly.finishToStartVolumeRatio)}**.`,
+    weeklyAttemptsBuckets.length > 0
+      ? `- Retry-state buckets at attempt start: ${weeklyAttemptsBuckets.map(([bucket, count]) => `${bucket} **${count}**`).join(' · ')}.`
+      : '- Retry-state buckets: no Weekly attempt starts in this export.',
+    weeklyScoreBuckets.length > 0
+      ? `- Score buckets at attempt finish: ${weeklyScoreBuckets.map(([bucket, count]) => `${bucket} **${count}**`).join(' · ')}.`
+      : '- Score buckets: no Weekly attempt finishes in this export.',
+    weeklyTierDistribution.length > 0
+      ? `- Tier distribution at attempt finish: ${weeklyTierDistribution.map(([tier, count]) => `${tier} **${count}**`).join(' · ')}.`
+      : '- Tier distribution: no Weekly attempt finishes in this export.',
+    '',
+    'Weekly metrics use ephemeral session IDs and bounded score/retry buckets. They measure challenge participation and replay behavior without introducing a backend player identity or global leaderboard.',
     '',
     '## Mastery & revenge retention',
     '',
@@ -277,6 +299,16 @@ function emptyDailyRetention() {
     sessionsClaimingContract: 0, contractClaimRateAmongCompletedSessions: 0,
     sessionsClaimingTrackReward: 0, contractCompletions: 0, contractClaims: 0, trackRewardClaims: 0,
     streakBuckets: {},
+  };
+}
+
+function emptyWeeklyChallenge() {
+  return {
+    sessionsStartingWeekly: 0, weeklyStartSessionRate: 0,
+    sessionsOpeningBoard: 0, boardOpenRateAmongWeeklySessions: 0,
+    sessionsFinishingAttempt: 0, finishSessionRateAmongWeeklySessions: 0,
+    attemptStarts: 0, attemptFinishes: 0, finishToStartVolumeRatio: 0,
+    attemptsBuckets: {}, scoreBuckets: {}, tierDistribution: {},
   };
 }
 

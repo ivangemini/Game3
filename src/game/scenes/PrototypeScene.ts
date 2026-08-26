@@ -22,6 +22,19 @@ import { evaluateBossMasteryChallenge } from '../domain/bossMasteryChallenges';
 import { recordBossMasteryChallenge, recordBossOutcome } from '../domain/bossGrudges';
 import { createCombatBuild } from '../domain/combatBuild';
 import { createDailyRunIdentity, dailyKeyFromSeed } from '../domain/dailyRun';
+import {
+  DEFAULT_WEEKLY_CHALLENGE,
+  createWeeklyBoardSnapshot,
+  recordWeeklyAttempt,
+  recordWeeklyProgress,
+  weeklyAttemptsBucket,
+  weeklyChallengeForKey,
+  weeklyChallengeIdentity,
+  weeklyKeyFromSeed,
+  weeklyScoreBucket,
+  weeklyTierForScore,
+  type WeeklyChallengeDefinition,
+} from '../domain/weeklyChallenge';
 import { applyFusion, type FusionRecipe } from '../domain/fusions';
 import {
   addHeroMasteryXp,
@@ -62,6 +75,7 @@ import { SettingsOverlay } from '../ui/SettingsOverlay';
 import { ShopPanel } from '../ui/ShopPanel';
 import { TopHudActions } from '../ui/TopHudActions';
 import { TutorialOverlay } from '../ui/TutorialOverlay';
+import { WeeklyChallengeOverlay } from '../ui/WeeklyChallengeOverlay';
 
 const AUDIO_REGISTRY_KEY = 'junkpack.game-audio';
 const COLORS = { background: 0x0d1117, text: '#f7f2e8', muted: '#aaa5b2' } as const;
@@ -84,6 +98,17 @@ function createFreshRun(runSeed: string): ActiveRunSave {
     pendingEventId: null,
     resolvedEventIds: [],
     heroId: null,
+  };
+}
+
+function createWeeklyRun(challenge: WeeklyChallengeDefinition): ActiveRunSave {
+  const run = createFreshRun(challenge.seed);
+  const hero = PROTOTYPE_HERO_MAP.get(challenge.constraint.heroId);
+  return {
+    ...run,
+    coins: run.coins + Math.max(0, hero?.startingCoinsBonus ?? 0),
+    selectedPerkIds: [challenge.constraint.startingPerkId],
+    heroId: challenge.constraint.heroId,
   };
 }
 
@@ -125,10 +150,18 @@ export class PrototypeScene extends Phaser.Scene {
     let activeRun: ActiveRunSave = save.activeRun ?? createFreshRun(createStandardRunSeed());
     if (!hadActiveRun) telemetry.track('run_started', { mode: 'standard' });
     const todayDaily = createDailyRunIdentity();
-    save = { ...save, dailyRetention: ensureDailyRetentionDay(save.dailyRetention, todayDaily.key) };
+    const thisWeek = weeklyChallengeIdentity();
+    save = {
+      ...save,
+      dailyRetention: ensureDailyRetentionDay(save.dailyRetention, todayDaily.key),
+      weeklyChallenge: save.weeklyChallenge ?? DEFAULT_WEEKLY_CHALLENGE,
+    };
 
     let dailyOverlay: DailyBoardOverlay | null = null;
+    let weeklyOverlay: WeeklyChallengeOverlay | null = null;
     const activeDailyKey = (): string | null => dailyKeyFromSeed(activeRun.runSeed);
+    const activeWeeklyKey = (): string | null => weeklyKeyFromSeed(activeRun.runSeed);
+    const weeklyState = () => save.weeklyChallenge ?? DEFAULT_WEEKLY_CHALLENGE;
     const effectivePocketCount = (): number => Math.min(
       MAX_BASE_POCKET_UNLOCKS,
       backpackUnlockedPocketCount(activeRun.progress) + bonusPocketUnlocksForRun(activeRun.runSeed),
@@ -150,6 +183,13 @@ export class PrototypeScene extends Phaser.Scene {
       if (!key) return;
       save = { ...save, dailyRetention: incrementDailyCounter(save.dailyRetention, key, counter, amount) };
       syncDailyContracts();
+    };
+    const syncWeeklyProgress = (): void => {
+      const key = activeWeeklyKey();
+      if (!key) return;
+      const update = recordWeeklyProgress(weeklyState(), key, activeRun.progress.score, activeRun.progress.loopNumber);
+      save = { ...save, weeklyChallenge: update.state };
+      if (weeklyOverlay?.isVisible()) weeklyOverlay.refresh();
     };
     const markDiscoveredItem = (definitionId: string): void => {
       if (save.discoveredItemIds.includes(definitionId)) return;
@@ -284,6 +324,24 @@ export class PrototypeScene extends Phaser.Scene {
 
     dailyOverlay = new DailyBoardOverlay(this, {
       getSnapshot: () => createDailyBoardSnapshot(save.dailyRetention, todayDaily.key, { progress: activeRun.progress }),
+      getRunState: () => activeDailyKey() === todayDaily.key
+        ? activeRun.progress.mode === 'complete' ? 'complete' : 'active'
+        : 'inactive',
+      onStartOrResumeDaily: () => {
+        if (activeDailyKey() === todayDaily.key && activeRun.progress.mode !== 'complete') {
+          dailyOverlay?.hide();
+          return;
+        }
+        activeRun = createFreshRun(todayDaily.seed);
+        save = { ...save, dailyRetention: ensureDailyRetentionDay(save.dailyRetention, todayDaily.key) };
+        telemetry.track('run_started', { mode: 'daily' });
+        persistRun();
+        this.scene.restart();
+      },
+      onOpenWeekly: () => {
+        dailyOverlay?.hide();
+        this.time.delayedCall(save.settings.reducedMotion ? 0 : 160, () => weeklyOverlay?.show());
+      },
       reducedMotion: save.settings.reducedMotion,
       onClaimContract: (contractId) => {
         if (activeDailyKey() !== todayDaily.key) return false;
@@ -303,6 +361,32 @@ export class PrototypeScene extends Phaser.Scene {
         audio.playCue(uiAudioCue('ui.reward', 'daily-track'));
         return true;
       },
+    });
+
+    weeklyOverlay = new WeeklyChallengeOverlay(this, {
+      getSnapshot: () => createWeeklyBoardSnapshot(weeklyState(), thisWeek.key),
+      getRunState: () => activeWeeklyKey() === thisWeek.key
+        ? activeRun.progress.mode === 'complete' ? 'complete' : 'active'
+        : 'inactive',
+      onStartOrResume: () => {
+        if (activeWeeklyKey() === thisWeek.key && activeRun.progress.mode !== 'complete') {
+          weeklyOverlay?.hide();
+          return;
+        }
+        const challenge = weeklyChallengeForKey(thisWeek.key);
+        const nextWeekly = recordWeeklyAttempt(weeklyState(), thisWeek.key);
+        activeRun = createWeeklyRun(challenge);
+        save = { ...save, weeklyChallenge: nextWeekly };
+        const attempt = nextWeekly.history.find((entry) => entry.key === thisWeek.key)?.attempts ?? 1;
+        telemetry.track('run_started', { mode: 'weekly' });
+        telemetry.track('weekly_attempt_started', {
+          constraintId: challenge.constraint.id,
+          attemptsBucket: weeklyAttemptsBucket(attempt),
+        });
+        persistRun();
+        this.scene.restart();
+      },
+      reducedMotion: save.settings.reducedMotion,
     });
 
     const perkOverlay = new PerkChoiceOverlay(this, PROTOTYPE_PERK_MAP, (perkId) => {
@@ -463,6 +547,7 @@ export class PrototypeScene extends Phaser.Scene {
         activeRun = { ...activeRun, pendingEventId: scheduledEventId ?? activeRun.pendingEventId };
         if (current.kind === 'boss') recordDailyCounter('bossVictories');
         else syncDailyContracts();
+        syncWeeklyProgress();
         if (previousProgress.mode === 'loop' && nextProgress.mode === 'deep-choice') {
           save = { ...save, bestCorruptedLoop: Math.max(save.bestCorruptedLoop, previousProgress.loopNumber) };
         }
@@ -496,7 +581,8 @@ export class PrototypeScene extends Phaser.Scene {
       || masteryOverlay.isVisible()
       || tutorialOverlay.isVisible()
       || settingsOverlay.isVisible()
-      || dailyOverlay?.isVisible() === true;
+      || dailyOverlay?.isVisible() === true
+      || weeklyOverlay?.isVisible() === true;
 
     runPanel = new RunProgressPanel(this, 570, 225, {
       getProgress: () => activeRun.progress,
@@ -523,6 +609,7 @@ export class PrototypeScene extends Phaser.Scene {
         activeRun = { ...activeRun, progress: enterCorruptedLoop(activeRun.progress) };
         telemetry.track('loop_entered', { loopNumber: activeRun.progress.loopNumber });
         syncDailyContracts();
+        syncWeeklyProgress();
         persistRun();
         runPanel.refresh(`LOOP ${activeRun.progress.loopNumber} started. Mutations now stack.`);
       },
@@ -532,10 +619,21 @@ export class PrototypeScene extends Phaser.Scene {
           || activeRun.progress.mode !== 'deep-choice') return;
         const completedLoop = activeRun.progress.loopNumber;
         const finalScore = activeRun.progress.score;
+        const weeklyKey = activeWeeklyKey();
         awardHeroMastery('cashout', { loopNumber: completedLoop });
         activeRun = { ...activeRun, progress: cashOutRun(activeRun.progress) };
         telemetry.track('run_cashout', { loopNumber: completedLoop, score: finalScore });
         syncDailyContracts();
+        if (weeklyKey) {
+          const update = recordWeeklyProgress(weeklyState(), weeklyKey, finalScore, completedLoop);
+          save = { ...save, weeklyChallenge: update.state };
+          telemetry.track('weekly_attempt_finished', {
+            tier: weeklyTierForScore(finalScore),
+            scoreBucket: weeklyScoreBucket(finalScore),
+            deepestLoop: completedLoop,
+            attemptsBucket: weeklyAttemptsBucket(update.entry.attempts),
+          });
+        }
         persistRun();
         runPanel.refresh('Run complete. Score and deepest completed loop are saved.');
       },
@@ -598,15 +696,7 @@ export class PrototypeScene extends Phaser.Scene {
       onDaily: () => {
         if (combatPanel.isRunning() || eventOverlay.isVisible() || metaBlocked()
           || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return;
-        if (activeDailyKey() === todayDaily.key) {
-          dailyOverlay?.show();
-          return;
-        }
-        activeRun = createFreshRun(todayDaily.seed);
-        save = { ...save, dailyRetention: ensureDailyRetentionDay(save.dailyRetention, todayDaily.key) };
-        telemetry.track('run_started', { mode: 'daily' });
-        persistRun();
-        this.scene.restart();
+        dailyOverlay?.show();
       },
       onArchive: () => {
         if (activeRun.heroId === null || combatPanel.isRunning() || eventOverlay.isVisible() || metaBlocked()
@@ -691,9 +781,13 @@ export class PrototypeScene extends Phaser.Scene {
       const runSeed = getRunSeed();
       const dailyKey = dailyKeyFromSeed(runSeed);
       const dailyRule = dailyRealityRuleForSeed(runSeed);
-      const runLabel = dailyKey
-        ? `DAILY ${dailyKey}${dailyRule ? ` • ${dailyRule.name.toUpperCase()}` : ''}`
-        : 'STANDARD RUN';
+      const weeklyKey = weeklyKeyFromSeed(runSeed);
+      const weekly = weeklyKey ? weeklyChallengeForKey(weeklyKey) : null;
+      const runLabel = weekly
+        ? `WEEKLY ${weeklyKey} • ${weekly.constraint.name.toUpperCase()}`
+        : dailyKey
+          ? `DAILY ${dailyKey}${dailyRule ? ` • ${dailyRule.name.toUpperCase()}` : ''}`
+          : 'STANDARD RUN';
       text.setText(`${runLabel}    HERO • ${heroName.toUpperCase()}    RUN PERKS • ${perkNames.length > 0 ? perkNames.join(' • ') : 'none yet'}`);
     };
     update();

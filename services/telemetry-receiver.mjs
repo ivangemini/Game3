@@ -12,6 +12,9 @@ const EVENT_NAMES = new Set([
   'daily_contract_completed',
   'daily_contract_claimed',
   'daily_track_claimed',
+  'weekly_board_opened',
+  'weekly_attempt_started',
+  'weekly_attempt_finished',
   'tutorial_opened',
   'tutorial_completed',
   'tutorial_skipped',
@@ -35,6 +38,13 @@ const STREAK_BUCKETS = new Set(['0', '1-2', '3-6', '7-13', '14+']);
 const DAILY_ARCHETYPES = new Set(['boss', 'fusion', 'event', 'shop', 'perk', 'world', 'score', 'loop']);
 const HERO_IDS = new Set(['scavenger', 'engineer', 'alchemist', 'beastfriend']);
 const BOSS_IDS = new Set(['tv-tyrant', 'deadline-snail', 'closet-monster', 'baby-moon', 'copycat-auditor', 'border-shark']);
+const WEEKLY_TIERS = new Set(['none', 'bronze', 'silver', 'gold', 'reality-broken']);
+const WEEKLY_ATTEMPT_BUCKETS = new Set(['0', '1', '2-3', '4-7', '8+']);
+const WEEKLY_SCORE_BUCKETS = new Set(['under-2500', '2500-4999', '5000-7999', '8000-10999', '11000+']);
+const WEEKLY_CONSTRAINT_IDS = new Set([
+  'salvage-plating', 'engineer-overclock', 'toxic-warranty', 'pet-laser-license',
+  'salvage-bad-idea', 'signal-engineer', 'slime-alchemist', 'catnip-beastfriend',
+]);
 const SAFE_ID = /^[A-Za-z0-9._:-]+$/;
 const SAFE_SESSION_ID = /^[A-Za-z0-9._-]+$/;
 
@@ -142,7 +152,7 @@ function validatePayload(name, payload) {
     case 'session_age':
       return onlyKeys(payload, ['bucket']) && RETURN_AGE_BUCKETS.has(payload.bucket);
     case 'run_started':
-      return onlyKeys(payload, ['mode']) && (payload.mode === 'standard' || payload.mode === 'daily');
+      return onlyKeys(payload, ['mode']) && (payload.mode === 'standard' || payload.mode === 'daily' || payload.mode === 'weekly');
     case 'daily_rule_started':
       return onlyKeys(payload, ['ruleId']) && validToken(payload.ruleId, 1, 64);
     case 'daily_board_opened':
@@ -163,6 +173,20 @@ function validatePayload(name, payload) {
         && [3, 5, 7].includes(payload.milestone)
         && validInteger(payload.cycle, 0, 100_000)
         && validInteger(payload.stampReward, 1, 100);
+    case 'weekly_board_opened':
+      return onlyKeys(payload, ['bestTier', 'attemptsBucket'])
+        && WEEKLY_TIERS.has(payload.bestTier)
+        && WEEKLY_ATTEMPT_BUCKETS.has(payload.attemptsBucket);
+    case 'weekly_attempt_started':
+      return onlyKeys(payload, ['constraintId', 'attemptsBucket'])
+        && WEEKLY_CONSTRAINT_IDS.has(payload.constraintId)
+        && WEEKLY_ATTEMPT_BUCKETS.has(payload.attemptsBucket);
+    case 'weekly_attempt_finished':
+      return onlyKeys(payload, ['tier', 'scoreBucket', 'deepestLoop', 'attemptsBucket'])
+        && WEEKLY_TIERS.has(payload.tier)
+        && WEEKLY_SCORE_BUCKETS.has(payload.scoreBucket)
+        && validInteger(payload.deepestLoop, 0, 1000)
+        && WEEKLY_ATTEMPT_BUCKETS.has(payload.attemptsBucket);
     case 'tutorial_opened':
     case 'tutorial_skipped':
       return onlyKeys(payload, ['step']) && validInteger(payload.step, 1, 20);

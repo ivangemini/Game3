@@ -11,8 +11,13 @@ import { dismissOverlay, pressPulse, revealOverlay } from './uiMotion';
 
 const DEPTH = 1230;
 
+export type DailyRunState = 'inactive' | 'active' | 'complete';
+
 export interface DailyBoardOverlayOptions {
   readonly getSnapshot: () => DailyBoardSnapshot;
+  readonly getRunState: () => DailyRunState;
+  readonly onStartOrResumeDaily: () => void;
+  readonly onOpenWeekly: () => void;
   readonly onClaimContract: (contractId: string) => boolean;
   readonly onClaimTrackReward: (rewardId: string) => boolean;
   readonly reducedMotion: boolean;
@@ -71,6 +76,7 @@ export class DailyBoardOverlay {
     snapshot.contracts.forEach((contract, index) => this.drawContract(contract, index));
     this.drawTrack(snapshot);
     this.drawUnclaimedRewards(snapshot);
+    this.drawDailyAction();
   }
 
   private reportCompletions(snapshot: DailyBoardSnapshot): void {
@@ -102,6 +108,17 @@ export class DailyBoardOverlay {
     this.content.add(this.scene.add.text(1067, 101, `STREAK ${snapshot.streakCount} • TRACK DAY ${snapshot.rewardTrackDay}/7`, {
       fontSize: '12px', color: '#b5ff4d', fontStyle: 'bold',
     }));
+
+    const weekly = this.scene.add.rectangle(884, 95, 190, 42, 0x4a3820, 1)
+      .setStrokeStyle(2, 0xffc768).setInteractive({ useHandCursor: true });
+    const weeklyLabel = this.scene.add.text(884, 95, 'WEEKLY CHALLENGE  ›', {
+      fontSize: '10px', color: '#fff0cf', fontStyle: 'bold',
+    }).setOrigin(0.5);
+    weekly.on('pointerover', () => weekly.setFillStyle(0x654a25));
+    weekly.on('pointerout', () => weekly.setFillStyle(0x4a3820));
+    weekly.on('pointerdown', () => pressPulse(this.scene, [weekly, weeklyLabel], this.options.reducedMotion));
+    weekly.on('pointerup', () => this.options.onOpenWeekly());
+    this.content.add([weekly, weeklyLabel]);
 
     const close = this.scene.add.rectangle(1450, 95, 116, 40, 0x2b2e3a, 1)
       .setStrokeStyle(2, 0x7f8496)
@@ -265,6 +282,27 @@ export class DailyBoardOverlay {
         }).setOrigin(0.5));
       }
     }
+  }
+
+  private drawDailyAction(): void {
+    const state = this.options.getRunState();
+    const labelText = state === 'active' ? 'RETURN TO DAILY RUN' : state === 'complete' ? 'RETRY DAILY RUN' : 'START DAILY RUN';
+    const detailText = state === 'active'
+      ? "Today's deterministic run is active."
+      : "Starts today's seed and replaces the current run.";
+    const button = this.scene.add.rectangle(790, 826, 330, 46, 0x263224, 1)
+      .setStrokeStyle(2, 0xb5ff4d).setInteractive({ useHandCursor: true });
+    const label = this.scene.add.text(790, 818, labelText, {
+      fontSize: '11px', color: '#e6ffd1', fontStyle: 'bold',
+    }).setOrigin(0.5);
+    const detail = this.scene.add.text(790, 837, detailText, {
+      fontSize: '8px', color: '#96aa83',
+    }).setOrigin(0.5);
+    button.on('pointerover', () => button.setFillStyle(0x354630));
+    button.on('pointerout', () => button.setFillStyle(0x263224));
+    button.on('pointerdown', () => pressPulse(this.scene, [button, label, detail], this.options.reducedMotion));
+    button.on('pointerup', () => this.options.onStartOrResumeDaily());
+    this.content.add([button, label, detail]);
   }
 
   private drawUnclaimedRewards(snapshot: DailyBoardSnapshot): void {

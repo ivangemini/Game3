@@ -3,6 +3,11 @@ import {
   isDailyRetentionState,
   type DailyRetentionState,
 } from '../game/domain/dailyRetention';
+import {
+  DEFAULT_WEEKLY_CHALLENGE,
+  isWeeklyChallengeState,
+  type WeeklyChallengeState,
+} from '../game/domain/weeklyChallenge';
 import type { HeroId } from '../game/domain/heroes';
 import {
   CAMPAIGN_ENCOUNTER_COUNT,
@@ -84,6 +89,7 @@ export interface SaveV9 {
   readonly bestCorruptedLoop: number;
   readonly settings: SaveSettings;
   readonly dailyRetention: DailyRetentionState;
+  readonly weeklyChallenge?: WeeklyChallengeState;
   readonly heroMasteryXp: HeroMasteryXpSave;
   readonly bossHistory: readonly BossHistorySave[];
   readonly activeRun: ActiveRunSave | null;
@@ -106,6 +112,7 @@ export const DEFAULT_SAVE: SaveV9 = {
   bestCorruptedLoop: 0,
   settings: { musicVolume: 0.8, sfxVolume: 0.9, reducedMotion: false },
   dailyRetention: DEFAULT_DAILY_RETENTION,
+  weeklyChallenge: DEFAULT_WEEKLY_CHALLENGE,
   heroMasteryXp: DEFAULT_HERO_MASTERY_XP,
   bossHistory: [],
   activeRun: null,
@@ -176,6 +183,7 @@ function migrateV8ToV9(save: SaveV8): SaveV9 {
     bestCorruptedLoop: save.bestCorruptedLoop,
     settings: save.settings,
     dailyRetention: DEFAULT_DAILY_RETENTION,
+    weeklyChallenge: DEFAULT_WEEKLY_CHALLENGE,
     heroMasteryXp: DEFAULT_HERO_MASTERY_XP,
     bossHistory: [],
     activeRun: save.activeRun,
@@ -183,8 +191,12 @@ function migrateV8ToV9(save: SaveV8): SaveV9 {
 }
 
 function normalizeCurrentSave(save: SaveV9): SaveV9 {
-  const run = save.activeRun;
-  if (!run) return save;
+  const normalizedSave: SaveV9 = {
+    ...save,
+    weeklyChallenge: save.weeklyChallenge ?? DEFAULT_WEEKLY_CHALLENGE,
+  };
+  const run = normalizedSave.activeRun;
+  if (!run) return normalizedSave;
   const progress = run.progress;
   const legacyFinalIndex = LEGACY_FOUR_WORLD_CAMPAIGN_ENCOUNTER_COUNT - 1;
   const resumeIndex = LEGACY_FOUR_WORLD_CAMPAIGN_ENCOUNTER_COUNT;
@@ -192,10 +204,10 @@ function normalizeCurrentSave(save: SaveV9): SaveV9 {
     && progress.mode === 'deep-choice'
     && progress.loopNumber === 1
     && progress.campaignEncounterIndex === legacyFinalIndex;
-  if (!isLegacyFourWorldBreakpoint) return save;
+  if (!isLegacyFourWorldBreakpoint) return normalizedSave;
 
   return {
-    ...save,
+    ...normalizedSave,
     activeRun: {
       ...run,
       progress: {
@@ -377,6 +389,7 @@ function isSaveV9(value: unknown): value is SaveV9 {
     && isNonNegativeInteger(candidate.bestCorruptedLoop)
     && isSettings(candidate.settings)
     && isDailyRetentionState(candidate.dailyRetention)
+    && (candidate.weeklyChallenge === undefined || isWeeklyChallengeState(candidate.weeklyChallenge))
     && isHeroMasteryXp(candidate.heroMasteryXp)
     && isBossHistoryArray(candidate.bossHistory)
     && (candidate.activeRun === null || isActiveRunV8(candidate.activeRun));
