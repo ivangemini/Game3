@@ -2,7 +2,7 @@ import * as Phaser from 'phaser';
 
 export const PRODUCTION_PLATE_KEY = 'junkpack-production-plate';
 
-export type ProductionPlateRegion = 'hero' | 'backpack' | 'boss' | 'perk' | 'full';
+export type ProductionPlateRegion = 'hero' | 'backpack' | 'stage' | 'boss' | 'perk' | 'full';
 
 export interface ProductionPlateOptions {
   readonly region?: ProductionPlateRegion;
@@ -20,6 +20,7 @@ export interface ProductionPlateOptions {
 const REGIONS: Record<Exclude<ProductionPlateRegion, 'full'>, readonly [number, number, number, number]> = {
   hero: [0, 16, 76, 176],
   backpack: [68, 30, 160, 165],
+  stage: [218, 12, 64, 184],
   boss: [280, 30, 195, 165],
   perk: [76, 197, 326, 55],
 };
