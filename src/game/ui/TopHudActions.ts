@@ -104,18 +104,18 @@ export class TopHudActions {
       );
 
       const icon = createActionIcon(this.scene, placement);
-      const textOffset = icon ? 8 : 0;
+      const textOffset = icon ? (placement.compactLabel ? 9 : 8) : 0;
       const text = this.scene.add.text(
         placement.x + textOffset,
         placement.y,
         labelFor(placement.id, placement.compactLabel, this.options.dailyKey, this.options.dailyActive),
         {
           fontFamily: 'Arial Black, Impact, sans-serif',
-          fontSize: placement.id === 'daily' ? '10px' : '9px',
+          fontSize: placement.compactLabel ? '11px' : placement.id === 'daily' ? '10px' : '9px',
           color: palette.text,
           stroke: '#090a0e',
           strokeThickness: 3,
-          letterSpacing: 0.35,
+          letterSpacing: placement.compactLabel ? 0.15 : 0.35,
         },
       ).setOrigin(0.5);
 
@@ -211,8 +211,8 @@ export class TopHudActions {
 function createActionIcon(scene: Phaser.Scene, placement: HudActionPlacement): Phaser.GameObjects.Image | undefined {
   const texture = resolveAuthoredTexture(scene, uiArtKey(placement.id));
   if (!texture) return undefined;
-  const size = 15;
-  const left = placement.x - placement.width / 2 + 18;
+  const size = placement.compactLabel ? 18 : 15;
+  const left = placement.x - placement.width / 2 + (placement.compactLabel ? 17 : 18);
   const icon = scene.add.image(left, placement.y, texture.textureKey, texture.frame);
   const maxSide = Math.max(1, icon.width, icon.height);
   icon.setScale(size / maxSide);
@@ -236,11 +236,19 @@ function callbackFor(id: HudActionId, options: TopHudActionsOptions): () => void
 }
 
 function confirmLabelFor(id: HudActionId, compact: boolean): string {
-  if (id === 'daily') return compact ? 'TAP AGAIN' : 'TAP AGAIN • REPLACE RUN';
-  return compact ? 'CONFIRM?' : 'TAP AGAIN • RESET RUN';
+  if (id === 'daily') return compact ? 'AGAIN?' : 'TAP AGAIN • REPLACE RUN';
+  return compact ? 'SURE?' : 'TAP AGAIN • RESET RUN';
 }
 
-function labelFor(id: HudActionId, _compact: boolean, _dailyKey: string, dailyActive: boolean): string {
+function labelFor(id: HudActionId, compact: boolean, _dailyKey: string, dailyActive: boolean): string {
+  if (compact) {
+    if (id === 'daily') return dailyActive ? 'DAILY' : 'DAILY';
+    if (id === 'archive') return 'DEX';
+    if (id === 'trophies') return 'TROPHY';
+    if (id === 'help') return 'HELP';
+    if (id === 'settings') return 'SET';
+    return 'NEW';
+  }
   if (id === 'daily') return dailyActive ? 'DAILY ACTIVE' : 'CHALLENGES';
   if (id === 'archive') return 'ARCHIVE';
   if (id === 'trophies') return 'TROPHIES';
