@@ -12,7 +12,7 @@ class MemoryStorage implements Storage {
 }
 
 describe('R2 mastery/grudge persistence', () => {
-  it('round-trips non-default hero mastery and boss history in save v9', () => {
+  it('round-trips non-default hero mastery, boss history and challenge stars in save v9', () => {
     const storage = new MemoryStorage();
     const save: SaveV9 = {
       ...DEFAULT_SAVE,
@@ -20,11 +20,11 @@ describe('R2 mastery/grudge persistence', () => {
       bossHistory: [
         {
           bossId: 'tv-tyrant', wins: 3, losses: 2, fastestVictoryMs: 31_250,
-          currentWinStreak: 2, bestWinStreak: 3, revengePending: false,
+          currentWinStreak: 2, bestWinStreak: 3, revengePending: false, challengeStars: 2,
         },
         {
           bossId: 'border-shark', wins: 1, losses: 1, fastestVictoryMs: 54_900,
-          currentWinStreak: 0, bestWinStreak: 1, revengePending: true,
+          currentWinStreak: 0, bestWinStreak: 1, revengePending: true, challengeStars: 1,
         },
       ],
     };
@@ -49,6 +49,18 @@ describe('R2 mastery/grudge persistence', () => {
       bossHistory: [{
         bossId: 'tv-tyrant', wins: 1, losses: 0, fastestVictoryMs: -5,
         currentWinStreak: 1, bestWinStreak: 1, revengePending: false,
+      }],
+    }));
+    expect(loadSave(storage)).toEqual(DEFAULT_SAVE);
+  });
+
+  it('rejects out-of-range persisted boss challenge stars', () => {
+    const storage = new MemoryStorage();
+    storage.setItem('junkpack.save', JSON.stringify({
+      ...DEFAULT_SAVE,
+      bossHistory: [{
+        bossId: 'baby-moon', wins: 2, losses: 0, fastestVictoryMs: 42_000,
+        currentWinStreak: 2, bestWinStreak: 2, revengePending: false, challengeStars: 4,
       }],
     }));
     expect(loadSave(storage)).toEqual(DEFAULT_SAVE);
