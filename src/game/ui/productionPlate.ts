@@ -2,7 +2,7 @@ import * as Phaser from 'phaser';
 
 export const PRODUCTION_PLATE_KEY = 'junkpack-production-plate';
 
-export type ProductionPlateRegion = 'backpack' | 'boss' | 'full';
+export type ProductionPlateRegion = 'hero' | 'backpack' | 'boss' | 'perk' | 'full';
 
 export interface ProductionPlateOptions {
   readonly region?: ProductionPlateRegion;
@@ -14,9 +14,14 @@ export interface ProductionPlateOptions {
   readonly tint?: number;
 }
 
+// Coordinates are authored against the approved 480×254 runtime plate derived
+// from the original Junkpack concept. Keep these inside the source bounds so
+// Chromium/Firefox/WebKit all receive valid WebGL crop rectangles.
 const REGIONS: Record<Exclude<ProductionPlateRegion, 'full'>, readonly [number, number, number, number]> = {
-  backpack: [68, 36, 270, 248],
-  boss: [392, 58, 240, 238],
+  hero: [0, 16, 76, 176],
+  backpack: [68, 30, 160, 165],
+  boss: [280, 30, 195, 165],
+  perk: [76, 197, 326, 55],
 };
 
 /**
@@ -34,15 +39,17 @@ export function addProductionPlate(
 ): Phaser.GameObjects.Image | null {
   if (!scene.textures.exists(PRODUCTION_PLATE_KEY)) return null;
 
-  const image = scene.add.image(x, y, PRODUCTION_PLATE_KEY)
+  const image = scene.add.image(x, y, PRODUCTION_PLATE_KEY);
+  const region = options.region ?? 'full';
+  if (region !== 'full') image.setCrop(...REGIONS[region]);
+
+  image
     .setDisplaySize(width, height)
     .setDepth(options.depth ?? 0)
     .setAlpha(options.alpha ?? 1)
     .setAngle(options.angle ?? 0)
     .setFlip(options.flipX ?? false, options.flipY ?? false);
 
-  const region = options.region ?? 'full';
-  if (region !== 'full') image.setCrop(...REGIONS[region]);
   if (options.tint !== undefined) image.setTint(options.tint);
   return image;
 }
