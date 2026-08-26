@@ -1,0 +1,31 @@
+name: Close Completed Roadmap Sections
+
+on:
+  push:
+    branches:
+      - chore/close-completed-roadmap-sections
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chore/close-completed-roadmap-sections
+          fetch-depth: 0
+      - name: Update roadmap statuses
+        run: python .github/scripts/close_completed_roadmap_sections.py
+      - name: Remove temporary integration files
+        run: rm .github/scripts/close_completed_roadmap_sections.py .github/workflows/close-completed-roadmap-sections.yml
+      - name: Check whitespace
+        run: git diff --check
+      - name: Commit status closure
+        run: |
+          git config user.name "game3-ci"
+          git config user.email "game3-ci@users.noreply.github.com"
+          git add -A
+          git commit -m "docs: close completed retention roadmap sections"
+          git push origin HEAD:chore/close-completed-roadmap-sections
