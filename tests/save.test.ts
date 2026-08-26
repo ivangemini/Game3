@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
+import { DEFAULT_DAILY_RETENTION } from '../src/game/domain/dailyRetention';
 import { createInitialRunProgress } from '../src/game/domain/runProgression';
-import { DEFAULT_SAVE, loadSave, writeSave, type SaveV8 } from '../src/persistence/save';
+import {
+  DEFAULT_HERO_MASTERY_XP,
+  DEFAULT_SAVE,
+  loadSave,
+  writeSave,
+  type SaveV8,
+  type SaveV9,
+} from '../src/persistence/save';
 
 class MemoryStorage implements Storage {
   private readonly values = new Map<string, string>();
@@ -13,19 +21,26 @@ class MemoryStorage implements Storage {
 }
 
 describe('save persistence', () => {
-  it('round-trips active run inventory, hero, rewards, perks, events and loop progression', () => {
+  it('round-trips active run inventory, retention, hero, rewards, perks, events and loop progression', () => {
     const storage = new MemoryStorage();
-    const save: SaveV8 = {
+    const save: SaveV9 = {
       ...DEFAULT_SAVE,
       bestCorruptedLoop: 3,
+      dailyRetention: {
+        ...DEFAULT_DAILY_RETENTION,
+        streakCount: 4,
+        realityStamps: 7,
+        rewardTrackDay: 4,
+        lastQualifiedKey: '2026-08-25',
+      },
       activeRun: {
-        runSeed: 'daily-seed', shopIndex: 4, coins: 73,
+        runSeed: 'daily:2026-08-26', shopIndex: 4, coins: 73,
         soldOfferIds: ['shop-4-0-laser-cat'], nextLootSequence: 6,
         claimedEncounterIds: ['w1-tv-tyrant'],
         selectedPerkIds: ['overclock'], perkChoiceIndex: 1,
         pendingPerkOfferIds: ['laser-pet', 'chaos-license', 'scrap-plating'],
         offeredPerkEncounterIds: ['w1-tv-tyrant'],
-        progress: { mode: 'loop', campaignEncounterIndex: 11, loopNumber: 3, loopEncounterIndex: 4, score: 1550 },
+        progress: { mode: 'loop', campaignEncounterIndex: 17, loopNumber: 3, loopEncounterIndex: 4, score: 1550 },
         eventIndex: 3,
         pendingEventId: 'cat-courier',
         resolvedEventIds: ['fish-shrine', 'slime-pawnshop'],
@@ -42,8 +57,8 @@ describe('save persistence', () => {
 
   it('keeps the previous validated save as a recovery backup', () => {
     const storage = new MemoryStorage();
-    const first: SaveV8 = { ...DEFAULT_SAVE, bestCorruptedLoop: 1 };
-    const second: SaveV8 = { ...DEFAULT_SAVE, bestCorruptedLoop: 2 };
+    const first: SaveV9 = { ...DEFAULT_SAVE, bestCorruptedLoop: 1 };
+    const second: SaveV9 = { ...DEFAULT_SAVE, bestCorruptedLoop: 2 };
     writeSave(first, storage);
     writeSave(second, storage);
     expect(JSON.parse(storage.getItem('junkpack.save.backup') ?? 'null')).toEqual(first);
@@ -52,8 +67,8 @@ describe('save persistence', () => {
 
   it('recovers a corrupted primary slot from the previous valid backup', () => {
     const storage = new MemoryStorage();
-    const recoverable: SaveV8 = { ...DEFAULT_SAVE, discoveredItemIds: ['laser-cat'], bestCorruptedLoop: 2 };
-    const newer: SaveV8 = { ...DEFAULT_SAVE, discoveredItemIds: ['laser-cat', 'mutant-duck'], bestCorruptedLoop: 3 };
+    const recoverable: SaveV9 = { ...DEFAULT_SAVE, discoveredItemIds: ['laser-cat'], bestCorruptedLoop: 2 };
+    const newer: SaveV9 = { ...DEFAULT_SAVE, discoveredItemIds: ['laser-cat', 'mutant-duck'], bestCorruptedLoop: 3 };
     writeSave(recoverable, storage);
     writeSave(newer, storage);
     storage.setItem('junkpack.save', '{broken json');
@@ -63,14 +78,43 @@ describe('save persistence', () => {
 
   it('does not overwrite a good backup with an already corrupt primary slot', () => {
     const storage = new MemoryStorage();
-    const good: SaveV8 = { ...DEFAULT_SAVE, bestCorruptedLoop: 4 };
+    const good: SaveV9 = { ...DEFAULT_SAVE, bestCorruptedLoop: 4 };
     storage.setItem('junkpack.save.backup', JSON.stringify(good));
     storage.setItem('junkpack.save', '{broken json');
     writeSave({ ...DEFAULT_SAVE, bestCorruptedLoop: 5 }, storage);
     expect(JSON.parse(storage.getItem('junkpack.save.backup') ?? 'null')).toEqual(good);
   });
 
-  it('migrates v1 meta saves into v8 without inventing a run', () => {
+  it('migrates a full v8 save into v9 without losing the active build', () => {
+    const storage = new MemoryStorage();
+    const v8: SaveV8 = {
+      version: 8,
+      discoveredItemIds: ['laser-cat'],
+      discoveredRecipeIds: ['cat-gun'],
+      bestEndlessWave: 16,
+      bestCorruptedLoop: 3,
+      settings: DEFAULT_SAVE.settings,
+      activeRun: {
+        runSeed: 'daily:2026-08-25', shopIndex: 2, coins: 61,
+        soldOfferIds: ['offer-a'], backpackItems: [{
+          instanceId: 'legacy-cat', definitionId: 'laser-cat', origin: { x: 1, y: 1 }, rotation: 0,
+        }], nextLootSequence: 3,
+        claimedEncounterIds: ['w1-tv-tyrant'], selectedPerkIds: ['overclock'], perkChoiceIndex: 1,
+        pendingPerkOfferIds: [], offeredPerkEncounterIds: ['w1-tv-tyrant'],
+        progress: { mode: 'campaign', campaignEncounterIndex: 4, loopNumber: 1, loopEncounterIndex: 0, score: 700 },
+        eventIndex: 1, pendingEventId: null, resolvedEventIds: ['cat-courier'], heroId: 'engineer',
+      },
+    };
+    storage.setItem('junkpack.save', JSON.stringify(v8));
+    const migrated = loadSave(storage);
+    expect(migrated.version).toBe(9);
+    expect(migrated.activeRun).toEqual(v8.activeRun);
+    expect(migrated.dailyRetention).toEqual(DEFAULT_DAILY_RETENTION);
+    expect(migrated.heroMasteryXp).toEqual(DEFAULT_HERO_MASTERY_XP);
+    expect(migrated.bossHistory).toEqual([]);
+  });
+
+  it('migrates v1 meta saves into v9 without inventing a run', () => {
     const storage = new MemoryStorage();
     storage.setItem('junkpack.save', JSON.stringify({
       version: 1,
@@ -78,10 +122,11 @@ describe('save persistence', () => {
       settings: { musicVolume: 0.5, sfxVolume: 0.75, reducedMotion: true },
     }));
     const migrated = loadSave(storage);
-    expect(migrated.version).toBe(8);
+    expect(migrated.version).toBe(9);
     expect(migrated.discoveredItemIds).toEqual(['laser-cat']);
     expect(migrated.activeRun).toBeNull();
     expect(migrated.bestCorruptedLoop).toBe(2);
+    expect(migrated.dailyRetention).toEqual(DEFAULT_DAILY_RETENTION);
   });
 
   it('migrates v2-v4 active runs with safe progression, event and hero defaults', () => {
@@ -102,7 +147,7 @@ describe('save persistence', () => {
         },
       }));
       const migrated = loadSave(storage);
-      expect(migrated.version).toBe(8);
+      expect(migrated.version).toBe(9);
       expect(migrated.activeRun?.progress).toEqual(createInitialRunProgress());
       expect(migrated.activeRun?.eventIndex).toBe(0);
       expect(migrated.activeRun?.pendingEventId).toBeNull();
@@ -111,7 +156,7 @@ describe('save persistence', () => {
     }
   });
 
-  it('moves old v5 cashout saves into the new fourth world', () => {
+  it('moves old v5 cashout saves into the fourth campaign world', () => {
     const storage = new MemoryStorage();
     storage.setItem('junkpack.save', JSON.stringify({
       version: 5,
@@ -169,7 +214,7 @@ describe('save persistence', () => {
       },
     }));
     const migrated = loadSave(storage);
-    expect(migrated.version).toBe(8);
+    expect(migrated.version).toBe(9);
     expect(migrated.activeRun?.eventIndex).toBe(0);
     expect(migrated.activeRun?.pendingEventId).toBeNull();
     expect(migrated.activeRun?.resolvedEventIds).toEqual([]);
@@ -192,7 +237,7 @@ describe('save persistence', () => {
       },
     }));
     const migrated = loadSave(storage);
-    expect(migrated.version).toBe(8);
+    expect(migrated.version).toBe(9);
     expect(migrated.activeRun?.eventIndex).toBe(2);
     expect(migrated.activeRun?.resolvedEventIds).toEqual(['cat-courier']);
     expect(migrated.activeRun?.heroId).toBeNull();
