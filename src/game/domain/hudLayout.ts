@@ -16,7 +16,7 @@ export interface HudActionLayout {
 }
 
 const LOGICAL_WIDTH = 1600;
-const ACTION_HEIGHT = 32;
+const ACTION_HEIGHT = 34;
 
 export function createHudActionLayout(displayWidthCss: number): HudActionLayout {
   const safeDisplayWidth = Number.isFinite(displayWidthCss) ? Math.max(0, displayWidthCss) : 0;
