@@ -12,6 +12,7 @@ import {
   loopRewardMultiplier,
   type RunProgressState,
 } from '../domain/runProgression';
+import { createMaterialSurface } from './materialSurface';
 import { REQUEST_NEW_RUN_EVENT } from './runUiEvents';
 import { PANEL_VISUALS } from './visualTokens';
 
@@ -50,49 +51,56 @@ export class RunProgressPanel {
   ) {
     this.adBreakPolicy = new AdBreakPolicy({ sessionStartedAtMs: runtimeNowMs() });
     this.drawShell();
-    this.titleText = scene.add.text(left + 14, top + 13, 'RUN', {
-      fontFamily: 'Arial Black, Impact, sans-serif', fontSize: '22px', color: '#d7ff8c',
+
+    this.titleText = scene.add.text(left + 100, top + 22, 'ROUTE', {
+      fontFamily: 'Arial Black, Impact, sans-serif', fontSize: '21px', color: '#d7ff8c',
       fontStyle: 'bold', stroke: '#10120e', strokeThickness: 5,
-    });
+    }).setOrigin(0.5).setDepth(2.4);
     this.stageText = scene.add.text(left + 14, top + 50, '', {
-      fontSize: '12px', color: '#ffcf69', fontStyle: 'bold', stroke: '#141218', strokeThickness: 3,
+      fontSize: '11px', color: '#ffcf69', fontStyle: 'bold', stroke: '#141218', strokeThickness: 3,
       wordWrap: { width: 132 },
-    });
+    }).setDepth(2.4);
     this.cycleCountText = scene.add.text(left + 184, top + 52, '', {
       fontSize: '10px', color: '#d9b8ff', fontStyle: 'bold', stroke: '#141218', strokeThickness: 2,
-    }).setOrigin(1, 0);
+    }).setOrigin(1, 0).setDepth(2.4);
+
     for (let index = 0; index < CAMPAIGN_WORLDS; index += 1) {
       const segmentLeft = left + 14 + index * 28;
       this.campaignRailSegments.push(
-        scene.add.rectangle(segmentLeft, top + 82, 23, 5, 0x353946, 1)
+        scene.add.rectangle(segmentLeft, top + 82, 23, 7, 0x353946, 1)
           .setOrigin(0, 0.5)
-          .setStrokeStyle(1, 0x565d6d, 1),
+          .setStrokeStyle(1, 0x565d6d, 1)
+          .setDepth(2.4),
       );
       this.campaignRailLabels.push(
-        scene.add.text(segmentLeft + 11.5, top + 68, String(index + 1), {
-          fontSize: '8px', color: '#858c9a', fontStyle: 'bold',
-        }).setOrigin(0.5, 0),
+        scene.add.text(segmentLeft + 11.5, top + 67, String(index + 1), {
+          fontSize: '8px', color: '#858c9a', fontStyle: 'bold', stroke: '#111219', strokeThickness: 2,
+        }).setOrigin(0.5, 0).setDepth(2.5),
       );
     }
-    this.encounterText = scene.add.text(left + 14, top + 91, '', {
-      fontSize: '16px', color: '#f7f2e8', fontStyle: 'bold', stroke: '#121119', strokeThickness: 3,
+
+    this.encounterText = scene.add.text(left + 14, top + 96, '', {
+      fontFamily: 'Arial Black, Impact, sans-serif',
+      fontSize: '15px', color: '#f7f2e8', fontStyle: 'bold', stroke: '#121119', strokeThickness: 4,
       wordWrap: { width: 172 },
-    });
-    this.subtitleText = scene.add.text(left + 14, top + 132, '', {
-      fontSize: '12px', color: '#c0b9c7', lineSpacing: 3, wordWrap: { width: 172 },
-    });
-    this.rewardText = scene.add.text(left + 14, top + 193, '', {
-      fontSize: '13px', color: '#ffd56e', fontStyle: 'bold',
-    });
-    this.scoreText = scene.add.text(left + 14, top + 217, '', {
-      fontSize: '13px', color: '#d9b8ff', fontStyle: 'bold',
-    });
-    this.mutationText = scene.add.text(left + 14, top + 242, '', {
-      fontSize: '11px', color: '#8ce7ff', fontStyle: 'bold', lineSpacing: 2, wordWrap: { width: 172 },
-    });
+    }).setDepth(2.4);
+    this.subtitleText = scene.add.text(left + 14, top + 137, '', {
+      fontSize: '10px', color: '#c0b9c7', lineSpacing: 2, wordWrap: { width: 172 },
+    }).setDepth(2.4);
+    this.rewardText = scene.add.text(left + 100, top + 199, '', {
+      fontFamily: 'Arial Black, Impact, sans-serif',
+      fontSize: '12px', color: '#ffd56e', fontStyle: 'bold', stroke: '#17130b', strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(2.5);
+    this.scoreText = scene.add.text(left + 14, top + 224, '', {
+      fontSize: '11px', color: '#d9b8ff', fontStyle: 'bold', stroke: '#141218', strokeThickness: 2,
+    }).setDepth(2.4);
+    this.mutationText = scene.add.text(left + 14, top + 247, '', {
+      fontSize: '9px', color: '#8ce7ff', fontStyle: 'bold', lineSpacing: 2, wordWrap: { width: 172 },
+    }).setDepth(2.4);
     this.statusText = scene.add.text(left + 14, top + 326, '', {
-      fontSize: '11px', color: '#a49dab', lineSpacing: 2, wordWrap: { width: 172 },
-    });
+      fontSize: '9px', color: '#a49dab', lineSpacing: 2, wordWrap: { width: 172 }, fontStyle: 'bold',
+    }).setDepth(2.4);
+
     scene.events.once('shutdown', () => this.stopGameplayMarkup());
     this.refresh();
   }
@@ -103,7 +111,7 @@ export class RunProgressPanel {
     this.actionObjects.length = 0;
 
     const progress = this.options.getProgress();
-    this.scoreText.setText(`SCORE  ◆ ${progress.score}`);
+    this.scoreText.setText(`RUN SCORE  ◆ ${progress.score}`);
     const milestoneStatus = this.campaignMilestoneStatus(progress);
     this.statusText.setText((milestoneStatus ?? message ?? 'Repack and shop between encounters.').toUpperCase());
 
@@ -146,7 +154,7 @@ export class RunProgressPanel {
 
     const encounter = this.options.getEncounter();
     if (!encounter) return;
-    this.titleText.setText(progress.mode === 'loop' ? 'CORRUPTED LOOP' : 'RUN');
+    this.titleText.setText(progress.mode === 'loop' ? 'CORRUPTED ROUTE' : 'BOSS CONTRACT');
     const stage = progress.mode === 'campaign'
       ? campaignLabel(progress.campaignEncounterIndex)
       : loopLabel(progress.loopNumber, progress.loopEncounterIndex);
@@ -172,12 +180,67 @@ export class RunProgressPanel {
   private drawShell(): void {
     const cx = this.left + 100;
     const cy = this.top + 180;
-    this.scene.add.rectangle(cx + 5, cy + 7, 200, 360, PANEL_VISUALS.ink, 0.58);
-    this.scene.add.rectangle(cx, cy, 200, 360, 0x1b1c24, 1).setStrokeStyle(5, 0x646b78);
-    this.scene.add.rectangle(cx, cy, 188, 348, 0x141720, 1).setStrokeStyle(1, 0x343843);
-    this.scene.add.rectangle(cx, this.top + 30, 168, 44, 0x303728, 0.72).setStrokeStyle(2, 0x70864c);
-    this.scene.add.rectangle(cx, this.top + 181, 172, 2, 0x5e5361, 0.55);
-    this.scene.add.rectangle(cx, this.top + 233, 172, 2, 0x5e5361, 0.35);
+
+    this.scene.add.rectangle(cx + 6, cy + 8, 204, 364, PANEL_VISUALS.ink, 0.66).setDepth(0.4);
+    this.scene.add.rectangle(cx, cy, 202, 362, 0x2c2523, 1)
+      .setStrokeStyle(6, 0x735d50)
+      .setDepth(0.6);
+    this.scene.add.rectangle(cx, cy, 190, 350, 0x171a21, 1)
+      .setStrokeStyle(2, 0x555a65, 0.72)
+      .setDepth(0.8);
+    createMaterialSurface(this.scene, {
+      x: cx,
+      y: cy,
+      width: 182,
+      height: 342,
+      kind: 'scrap',
+      seed: 'run-progress:boss-contract',
+      depth: 0.9,
+      alpha: 0.72,
+    });
+
+    // Clipboard clamp / route ticket header.
+    this.scene.add.rectangle(cx + 2, this.top + 20, 150, 42, 0x0d0f14, 0.72).setDepth(1.1);
+    this.scene.add.rectangle(cx, this.top + 17, 148, 40, 0x48505a, 1)
+      .setStrokeStyle(3, 0x9da5b0)
+      .setDepth(1.2);
+    this.scene.add.rectangle(cx, this.top + 17, 88, 18, 0x17191e, 1)
+      .setStrokeStyle(1, 0xc5ccd5, 0.48)
+      .setDepth(1.3);
+
+    const bountyPlate = this.scene.add.rectangle(cx, this.top + 199, 174, 31, 0x2d241b, 1)
+      .setStrokeStyle(2, 0xb08744)
+      .setAngle(-0.4)
+      .setDepth(1.4);
+    createMaterialSurface(this.scene, {
+      x: cx,
+      y: this.top + 199,
+      width: 164,
+      height: 21,
+      kind: 'paper',
+      seed: 'run-progress:bounty-strip',
+      depth: 1.5,
+      alpha: 0.45,
+    }).setAngle(-0.4);
+    bountyPlate.setAlpha(0.94);
+
+    this.scene.add.rectangle(cx, this.top + 239, 174, 2, 0x5e5361, 0.45).setDepth(1.3);
+    this.scene.add.rectangle(cx, this.top + 294, 174, 2, 0x5e5361, 0.3).setDepth(1.3);
+
+    // Small hazard marks around the mutation block.
+    const hazard = this.scene.add.graphics().setDepth(1.6);
+    hazard.lineStyle(3, 0x5ca5b8, 0.28);
+    hazard.lineBetween(this.left + 12, this.top + 242, this.left + 12, this.top + 286);
+    hazard.lineBetween(this.left + 188, this.top + 242, this.left + 188, this.top + 286);
+
+    for (const [x, y] of [
+      [this.left + 9, this.top + 9], [this.left + 191, this.top + 9],
+      [this.left + 9, this.top + 351], [this.left + 191, this.top + 351],
+    ] as const) {
+      this.scene.add.circle(x, y, 5, 0x555b65, 1)
+        .setStrokeStyle(1, 0xbac1cb, 0.55)
+        .setDepth(1.8);
+    }
   }
 
   private campaignMilestoneStatus(progress: RunProgressState): string | null {
@@ -192,7 +255,8 @@ export class RunProgressPanel {
     const visible = progress.mode === 'campaign'
       || (progress.mode === 'deep-choice' && progress.loopNumber === 1);
     const completed = completedCampaignWorldCount(progress);
-    const currentWorld = progress.mode === 'campaign' ? (encounter?.world ?? Math.min(CAMPAIGN_WORLDS, completed + 1)) : CAMPAIGN_WORLDS;
+    const currentWorld = progress.mode === 'campaign'
+      ? (encounter?.world ?? Math.min(CAMPAIGN_WORLDS, completed + 1)) : CAMPAIGN_WORLDS;
 
     for (let index = 0; index < CAMPAIGN_WORLDS; index += 1) {
       const world = index + 1;
@@ -276,19 +340,38 @@ export class RunProgressPanel {
     stroke: number,
     onClick: () => void,
   ): void {
-    const shadow = this.scene.add.rectangle(x + 3, y + 4, 170, 32, PANEL_VISUALS.ink, 0.6);
-    const button = this.scene.add.rectangle(x, y, 170, 32, fill, 1)
+    const shadow = this.scene.add.rectangle(x + 3, y + 4, 178, 36, PANEL_VISUALS.ink, 0.68);
+    const button = this.scene.add.rectangle(x, y, 178, 36, fill, 1)
       .setStrokeStyle(3, stroke).setInteractive({ useHandCursor: true });
+    const inner = this.scene.add.rectangle(x, y, 166, 26, fill, 0.45)
+      .setStrokeStyle(1, stroke, 0.34);
     const label = this.scene.add.text(x, y, labelText, {
-      fontSize: '12px', color: '#f7f2e8', fontStyle: 'bold', stroke: '#17131b', strokeThickness: 3,
+      fontFamily: 'Arial Black, Impact, sans-serif',
+      fontSize: '11px', color: '#f7f2e8', fontStyle: 'bold', stroke: '#17131b', strokeThickness: 4,
     }).setOrigin(0.5);
-    button.on('pointerover', () => button.setAlpha(0.84));
-    button.on('pointerout', () => button.setAlpha(1));
-    button.on('pointerdown', () => { button.setScale(0.97); label.setScale(0.97); shadow.setScale(0.97); });
-    const restore = (): void => { button.setScale(1); label.setScale(1); shadow.setScale(1); };
+    button.on('pointerover', () => {
+      button.setAlpha(0.9).setStrokeStyle(4, stroke);
+      inner.setAlpha(0.72);
+    });
+    button.on('pointerout', () => {
+      button.setAlpha(1).setStrokeStyle(3, stroke);
+      inner.setAlpha(1);
+    });
+    button.on('pointerdown', () => {
+      button.setScale(0.97);
+      inner.setScale(0.97);
+      label.setScale(0.97);
+      shadow.setScale(0.97);
+    });
+    const restore = (): void => {
+      button.setScale(1);
+      inner.setScale(1);
+      label.setScale(1);
+      shadow.setScale(1);
+    };
     button.on('pointerupoutside', restore);
     button.on('pointerup', () => { restore(); onClick(); });
-    this.actionObjects.push(shadow, button, label);
+    this.actionObjects.push(shadow, button, inner, label);
   }
 }
 
