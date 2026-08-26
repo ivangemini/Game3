@@ -51,10 +51,26 @@ export class RuntimeSurfacePolishScene extends Phaser.Scene {
       'LIVE SYNERGIES',
       'CORE: CAT',
     ];
+    const legacyHeaderPrefixes = [
+      'JUNKPACK',
+      'BOSS RUSH',
+      'JUNK PILOT',
+      '♥ 96 / 100',
+      '6 WORLDS',
+    ];
 
     for (const object of scene.children.list) {
       if (!(object instanceof Phaser.GameObjects.Text)) continue;
-      if (hiddenPrefixes.some((prefix) => object.text.startsWith(prefix))) object.setVisible(false);
+      if (hiddenPrefixes.some((prefix) => object.text.startsWith(prefix))) {
+        object.setVisible(false);
+        continue;
+      }
+      // PrototypeScene still authors the old flat header at depth 0. The production
+      // presentation layer redraws the same information at depth 6+, so only hide
+      // the legacy copy rather than matching by text globally.
+      if (object.depth < 2 && legacyHeaderPrefixes.some((prefix) => object.text.startsWith(prefix))) {
+        object.setVisible(false);
+      }
     }
   }
 
