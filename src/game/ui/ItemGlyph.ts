@@ -1,6 +1,7 @@
 import * as Phaser from 'phaser';
 import type { ItemDefinition, ItemTag } from '../domain/types';
 import { requestAuthoredTexture } from './authoredArt';
+import { addProductionPlate } from './productionPlate';
 import {
   ITEM_ATLAS_TEXTURE_KEY,
   PANEL_VISUALS,
@@ -20,9 +21,10 @@ export interface ItemGlyphOptions {
  * Gameplay-size item renderer.
  *
  * Reviewed atlas art wins automatically when `junk-items` contains the stable
- * `item.<definitionId>` frame. Wave assets can also ship as standalone authored
- * SVG textures under the exact same stable key; missing art keeps the procedural
- * silhouette so content delivery never blocks gameplay rendering.
+ * `item.<definitionId>` frame. The painted production plate now supplies a
+ * material underlay while authored atlas/SVG art remains the readable silhouette.
+ * Missing authored art still keeps the procedural fallback so gameplay rendering
+ * never depends on presentation assets.
  */
 export function createItemGlyph(
   scene: Phaser.Scene,
@@ -35,13 +37,22 @@ export function createItemGlyph(
   const selected = options.selected ?? false;
   const rarity = rarityVisual(definition.rarity);
   const accent = stableItemAccent(definition.id);
+  const visualTag = primaryVisualTag(definition);
   const root = scene.add.container(x, y);
   const shadow = scene.add.rectangle(3, 5, size, size, PANEL_VISUALS.ink, 0.52).setOrigin(0.5);
-  const plate = scene.add.rectangle(0, 0, size, size, rarity.fill, 1)
+  const plate = scene.add.rectangle(0, 0, size, size, rarity.fill, 0.96)
     .setStrokeStyle(selected ? 4 : 3, selected ? 0xffffff : rarity.stroke);
-  const inset = scene.add.rectangle(0, 0, size - 10, size - 10, rarity.mid, 0.7)
+  const painted = addProductionPlate(scene, 0, 0, size - 6, size - 6, {
+    region: ['laser', 'antenna', 'battery', 'metal', 'weapon'].includes(visualTag) ? 'boss' : 'backpack',
+    alpha: options.compact ? 0.22 : 0.29,
+    flipX: stableFlip(definition.id),
+    tint: accent,
+  });
+  const inset = scene.add.rectangle(0, 0, size - 10, size - 10, rarity.mid, 0.48)
     .setStrokeStyle(1, accent, 0.75);
-  root.add([shadow, plate, inset]);
+  root.add([shadow, plate]);
+  if (painted) root.add(painted);
+  root.add(inset);
 
   const frameKey = itemArtKey(definition.id);
   const atlas = scene.textures.exists(ITEM_ATLAS_TEXTURE_KEY)
@@ -51,7 +62,7 @@ export function createItemGlyph(
     addSizedImage(scene, root, ITEM_ATLAS_TEXTURE_KEY, size, frameKey);
   } else {
     const graphics = scene.add.graphics();
-    drawTagGlyph(graphics, primaryVisualTag(definition), size * 0.31, rarity.accent, accent);
+    drawTagGlyph(graphics, visualTag, size * 0.31, rarity.accent, accent);
     root.add(graphics);
 
     const renderStandalone = (): void => {
@@ -64,12 +75,19 @@ export function createItemGlyph(
   }
 
   if (!options.compact) {
-    const tape = scene.add.rectangle(0, size * 0.34, size * 0.52, Math.max(5, size * 0.1), PANEL_VISUALS.paper, 0.9)
+    const tape = scene.add.rectangle(0, size * 0.34, size * 0.52, Math.max(5, size * 0.1), PANEL_VISUALS.paper, 0.82)
+      .setStrokeStyle(1, rarity.stroke, 0.28)
       .setAngle(-4);
     root.add(tape);
   }
 
   return root;
+}
+
+function stableFlip(id: string): boolean {
+  let hash = 0;
+  for (let index = 0; index < id.length; index += 1) hash = ((hash << 5) - hash + id.charCodeAt(index)) | 0;
+  return (hash & 1) === 1;
 }
 
 function addSizedImage(
