@@ -41,8 +41,8 @@ export class CombatFeedback {
     this.screenFlash = scene.add.rectangle(800, 450, 1600, 900, 0xffffff, 0)
       .setDepth(245)
       .setScrollFactor(0);
-    this.combatFrame = scene.add.rectangle(1140, 445, 720, 530, 0xffffff, 0)
-      .setStrokeStyle(6, 0xff91e6, 0)
+    this.combatFrame = scene.add.rectangle(1140, 445, 770, 550, 0xffffff, 0)
+      .setStrokeStyle(7, 0xff91e6, 0)
       .setDepth(244);
 
     this.particles = Array.from({ length: 30 }, () => scene.add.circle(0, 0, 5, 0xffffff, 1)
@@ -93,9 +93,15 @@ export class CombatFeedback {
         return;
       case 'combat.victory':
         this.flash(0xb5ff4d, 0.12, 190);
-        this.burst(1140, 445, 0xb5ff4d, 18, 185, cue.id);
-        this.framePulse(0xb5ff4d, 1);
-        this.bossPortraits.fade(0.45);
+        this.burst(1140, 445, 0xb5ff4d, 18, 180, cue.id);
+        this.framePulse(0xb5ff4d, 0.9);
+        return;
+      case 'boss.defeat':
+        this.flash(0xfff0a8, 0.2, 260);
+        this.burst(1140, 425, 0xff91e6, 28, 245, cue.id);
+        this.framePulse(0xffcf69, 1);
+        this.bossPortraits.defeat();
+        if (!this.reducedMotion) this.scene.cameras.main.shake(170, 0.0042);
         return;
       case 'combat.defeat':
         this.flash(0xff536c, 0.13, 230);
