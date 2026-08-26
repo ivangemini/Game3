@@ -11,7 +11,7 @@ import {
 
 const REQUIRED_UI_IDS = [
   'daily', 'archive', 'trophies', 'help', 'settings', 'reset', 'coin', 'fusion', 'pocket', 'logo-mark',
-  'contract', 'stamp',
+  'contract', 'stamp', 'world5-audit', 'world6-edge',
 ] as const;
 
 describe('authored art contract', () => {
@@ -19,7 +19,7 @@ describe('authored art contract', () => {
     expect(AUTHORED_ART_ASSETS.filter((asset) => asset.kind === 'item')).toHaveLength(60);
     expect(AUTHORED_ART_ASSETS.filter((asset) => asset.kind === 'hero')).toHaveLength(4);
     expect(AUTHORED_ART_ASSETS.filter((asset) => asset.kind === 'boss')).toHaveLength(6);
-    expect(AUTHORED_ART_ASSETS.filter((asset) => asset.kind === 'ui')).toHaveLength(12);
+    expect(AUTHORED_ART_ASSETS.filter((asset) => asset.kind === 'ui')).toHaveLength(14);
     expect(new Set(AUTHORED_ART_ASSETS.map((asset) => asset.key)).size).toBe(AUTHORED_ART_ASSETS.length);
     expect(new Set(AUTHORED_ART_ASSETS.map((asset) => asset.url)).size).toBe(AUTHORED_ART_ASSETS.length);
   });
