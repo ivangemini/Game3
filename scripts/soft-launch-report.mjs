@@ -85,7 +85,15 @@ export function renderMarkdown(summary) {
   const returnBuckets = Object.entries(summary.returnAgeBuckets ?? {});
   const reviewSignals = buildReviewSignals(summary);
   const daily = summary.dailyRetention ?? emptyDailyRetention();
+  const mastery = summary.heroMastery ?? emptyHeroMastery();
+  const grudges = summary.bossGrudges ?? emptyBossGrudges();
   const dailyStreakBuckets = Object.entries(daily.streakBuckets ?? {});
+  const masteryLevelUpsByHero = Object.entries(mastery.levelUpsByHero ?? {});
+  const masteryMaxByHero = Object.entries(mastery.maxObservedLevelByHero ?? {});
+  const grudgeBossIds = [...new Set([
+    ...Object.keys(grudges.startsByBoss ?? {}),
+    ...Object.keys(grudges.resolutionsByBoss ?? {}),
+  ])].sort();
   const lines = [
     '# Junkpack Soft-launch Report',
     '',
@@ -129,10 +137,37 @@ export function renderMarkdown(summary) {
     '',
     'Daily streak buckets are local progression-state samples from sessions that opened the board; they are not D1/D7 retention measurements.',
     '',
-    '## Encounter pacing',
+    '## Mastery & revenge retention',
+    '',
+    `- Sessions with a Hero Mastery level-up: **${percent(mastery.sessionLevelUpRate)}** (${mastery.sessionsLevelingUp}/${summary.sessions}).`,
+    `- Mastery level-ups: **${mastery.levelUpEvents}** · cosmetic milestones crossed: **${mastery.cosmeticRewardUnlocks}** · max observed emitted level: **${mastery.maxObservedLevel}**.`,
+    masteryLevelUpsByHero.length > 0
+      ? `- Level-up events by hero: ${masteryLevelUpsByHero.map(([hero, count]) => `${hero} **${count}**`).join(' · ')}.`
+      : '- Level-up events by hero: no mastery level-up events in this export.',
+    masteryMaxByHero.length > 0
+      ? `- Max observed emitted level by hero: ${masteryMaxByHero.map(([hero, level]) => `${hero} **${level}**`).join(' · ')}.`
+      : '- Max observed emitted level by hero: no mastery level-up events in this export.',
+    `- Grudge start reach: **${percent(grudges.grudgeStartSessionRate)}** (${grudges.sessionsStartingGrudge}/${summary.sessions} sessions; ${grudges.grudgeStarts} starts).`,
+    `- Grudge resolve reach: **${percent(grudges.grudgeResolveSessionRate)}** (${grudges.sessionsResolvingGrudge}/${summary.sessions} sessions; ${grudges.grudgeResolutions} resolutions).`,
+    `- Aggregate resolve/start volume ratio: **${percent(grudges.aggregateResolveToStartRatio)}** (${grudges.grudgeResolutions}/${grudges.grudgeStarts}).`,
+    '',
+    'Because analytics uses ephemeral session IDs, aggregate grudge resolve/start volume is not a player-level revenge conversion rate. A revenge may start in one session and resolve in another, so use this ratio only as a trend signal alongside the per-boss volumes below.',
     '',
   ];
 
+  if (grudgeBossIds.length === 0) {
+    lines.push('No boss-grudge transitions in this export.');
+  } else {
+    lines.push('| Boss family | Grudges started | Grudges resolved | Aggregate ratio |');
+    lines.push('| --- | ---: | ---: | ---: |');
+    for (const bossId of grudgeBossIds) {
+      const starts = finiteCount(grudges.startsByBoss?.[bossId]);
+      const resolutions = finiteCount(grudges.resolutionsByBoss?.[bossId]);
+      lines.push(`| ${escapeCell(bossId)} | ${starts} | ${resolutions} | ${percent(starts > 0 ? resolutions / starts : 0)} |`);
+    }
+  }
+
+  lines.push('', '## Encounter pacing', '');
   if (summary.combats.length === 0) {
     lines.push('No completed combats in this export.');
   } else {
@@ -251,6 +286,32 @@ function emptyDailyRetention() {
     contractClaims: 0,
     trackRewardClaims: 0,
     streakBuckets: {},
+  };
+}
+
+function emptyHeroMastery() {
+  return {
+    sessionsLevelingUp: 0,
+    sessionLevelUpRate: 0,
+    levelUpEvents: 0,
+    cosmeticRewardUnlocks: 0,
+    maxObservedLevel: 0,
+    levelUpsByHero: {},
+    maxObservedLevelByHero: {},
+  };
+}
+
+function emptyBossGrudges() {
+  return {
+    sessionsStartingGrudge: 0,
+    grudgeStartSessionRate: 0,
+    sessionsResolvingGrudge: 0,
+    grudgeResolveSessionRate: 0,
+    grudgeStarts: 0,
+    grudgeResolutions: 0,
+    aggregateResolveToStartRatio: 0,
+    startsByBoss: {},
+    resolutionsByBoss: {},
   };
 }
 
