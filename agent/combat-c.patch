@@ -1,0 +1,141 @@
+diff --git a/src/game/ui/CombatPanel.ts b/src/game/ui/CombatPanel.ts
+index 3630cd9..22da90a 100644
+--- a/src/game/ui/CombatPanel.ts
++++ b/src/game/ui/CombatPanel.ts
+@@ -396,10 +475,135 @@ export class CombatPanel {
+     this.bossStatusText.setText('').setColor('#f08cff');
+     this.setLateWorldHazardVisual(null);
+     this.lateWorldPressure = null;
+-    if (won && this.setup && this.isBoss(this.setup.enemy)) this.onBossVictory?.(encounterId, enemyId);
++    const bossVictory = won && this.setup ? this.isBoss(this.setup.enemy) : false;
++    if (bossVictory) this.onBossVictory?.(encounterId, enemyId);
++    this.finishCombatFocus(won, bossVictory);
+     this.onOutcome?.({ encounterId, enemyId, outcome: event.outcome });
+   }
+ 
++  private enterCombatFocus(enemy: EnemyCombatDefinition, boss: boolean): void {
++    const accent = boss ? this.bossAccent(enemy) : 0xb5ff4d;
++    this.focusTitle.setPosition(800, 57);
++    this.focusHint.setPosition(800, 101);
++    this.hidePreparationVeil();
++    this.focusTitle.setText(boss ? `BOSS // ${enemy.name.toUpperCase()}` : `FIGHT // ${enemy.name.toUpperCase()}`).setColor(boss ? '#ff91e6' : '#d8ff96');
++    this.focusHint.setText(boss
++      ? `${this.bossRuleSymbol(enemy)}  ${this.bossSystems(enemy).join(' + ')}   •   READ THE TELEGRAPH ON YOUR BUILD`
++      : 'BACKPACK SNAPSHOT LOCKED   •   WATCH TRIGGERS   •   LET THE BUILD FIRE');
++    this.stageShell.setAlpha(1).setStrokeStyle(5, accent, 0.92);
++    for (const object of [this.focusRight, this.focusBottom, this.focusTop, this.focusTitle, this.focusHint]) {
++      this.scene.tweens.killTweensOf(object);
++      object.setVisible(true);
++      if (!this.reducedMotion) object.setAlpha(0);
++    }
++    if (!this.reducedMotion) {
++      this.scene.tweens.add({
++        targets: [this.focusRight, this.focusBottom, this.focusTop],
++        alpha: { from: 0, to: 1 },
++        duration: 150,
++        ease: 'Quad.Out',
++      });
++      this.scene.tweens.add({
++        targets: [this.focusTitle, this.focusHint],
++        alpha: { from: 0, to: 1 },
++        y: '-=4',
++        duration: 180,
++        ease: 'Cubic.Out',
++      });
++    }
++  }
++
++  private finishCombatFocus(won: boolean, boss: boolean): void {
++    const delay = won ? (boss ? 520 : 360) : 260;
++    this.focusTitle.setText(won ? (boss ? 'BOSS DOWN' : 'CLEAR') : 'DEFEAT')
++      .setColor(won ? '#b5ff4d' : '#ff7185');
++    this.focusHint.setText(won
++      ? (boss ? 'RULE BROKEN   •   REWARD SECURED   •   RETURNING TO THE BACKPACK' : 'REWARD SECURED   •   REPACK FOR THE NEXT THREAT')
++      : 'THE BUILD FAILED   •   REPACK, SHOP OR FUSE, THEN RETRY');
++    this.scene.time.delayedCall(this.reducedMotion ? 120 : delay, () => {
++      const targets = [this.focusRight, this.focusBottom, this.focusTop, this.focusTitle, this.focusHint];
++      if (this.reducedMotion) {
++        for (const object of targets) object.setVisible(false).setAlpha(1);
++      } else {
++        this.scene.tweens.add({
++          targets, alpha: 0, duration: 150, ease: 'Quad.Out',
++          onComplete: () => { for (const object of targets) object.setVisible(false).setAlpha(1); },
++        });
++      }
++      this.stageShell.setAlpha(0.78).setStrokeStyle(4, 0x4a3154, 0.72);
++      this.showPreparationVeil();
++    });
++  }
++
++  private hidePreparationVeil(): void {
++    const objects = [this.prepVeil, this.prepVeilInner, this.prepVeilTitle, this.prepVeilHint, this.prepVeilRule];
++    for (const object of objects) {
++      this.scene.tweens.killTweensOf(object);
++      object.setVisible(false).setAlpha(1);
++    }
++  }
++
++  private showPreparationVeil(): void {
++    const objects = [this.prepVeil, this.prepVeilInner, this.prepVeilTitle, this.prepVeilHint, this.prepVeilRule];
++    for (const object of objects) {
++      this.scene.tweens.killTweensOf(object);
++      object.setVisible(true);
++      if (!this.reducedMotion) object.setAlpha(0);
++    }
++    if (!this.reducedMotion) {
++      this.scene.tweens.add({ targets: objects, alpha: 1, duration: 170, ease: 'Quad.Out' });
++    }
++  }
++
++  private showBossReveal(enemy: EnemyCombatDefinition): void {
++    const accent = this.bossAccent(enemy);
++    const curtain = this.scene.add.rectangle(1140, 432, 650, 176, 0x090a0f, 0.94)
++      .setStrokeStyle(5, accent, 0.95).setDepth(205);
++    const kicker = this.scene.add.text(1140, 388, 'BOSS ENCOUNTER', {
++      fontFamily: 'Arial Black, Impact, sans-serif', fontSize: this.compactHud ? '21px' : '17px', color: '#ffcf69',
++      fontStyle: 'bold', letterSpacing: 2,
++    }).setOrigin(0.5).setDepth(206);
++    const title = this.scene.add.text(1140, 425, enemy.name.toUpperCase(), {
++      fontFamily: 'Arial Black, Impact, sans-serif', fontSize: this.compactHud ? '36px' : '30px', color: '#fff4f8',
++      fontStyle: 'bold', stroke: '#090a0f', strokeThickness: 6,
++    }).setOrigin(0.5).setDepth(206);
++    const rule = this.scene.add.text(1140, 466, `${this.bossRuleSymbol(enemy)}  ${this.bossSystems(enemy).join(' + ')}`, {
++      fontSize: this.compactHud ? '19px' : '14px', color: '#ffd9f7', fontStyle: 'bold',
++    }).setOrigin(0.5).setDepth(206);
++    const revealObjects = [curtain, kicker, title, rule];
++    if (!this.reducedMotion) {
++      for (const object of revealObjects) object.setScale(0.96).setAlpha(0);
++      this.scene.tweens.add({ targets: revealObjects, scaleX: 1, scaleY: 1, alpha: 1, duration: 150, ease: 'Back.Out' });
++    }
++    this.scene.time.delayedCall(this.reducedMotion ? 260 : 520, () => {
++      if (this.reducedMotion) { for (const object of revealObjects) object.destroy(); return; }
++      this.scene.tweens.add({ targets: revealObjects, alpha: 0, y: '-=8', duration: 150, ease: 'Quad.In', onComplete: () => { for (const object of revealObjects) object.destroy(); } });
++    });
++  }
++
++  private bossRuleSymbol(enemy: EnemyCombatDefinition): string {
++    if (duplicateDebtDefinitionForEnemyId(enemy.id)) return '≡ AUDIT';
++    if (edgeRentDefinitionForEnemyId(enemy.id)) return '◩ BORDER';
++    if (timeTaxDefinitionForEnemyId(enemy.id)) return '◷ TIMER';
++    if (clutterCrushDefinitionForEnemyId(enemy.id)) return '▦ CLUTTER';
++    if (enemy.tagInterference) return '◐ ECLIPSE';
++    if (enemy.rowInterference) return '↯ MAGNET';
++    if (enemy.cellInterference) return '● SLIME';
++    if (enemy.interference) return '▣ SIGNAL';
++    return '◆ BOSS';
++  }
++
++  private bossAccent(enemy: EnemyCombatDefinition): number {
++    if (duplicateDebtDefinitionForEnemyId(enemy.id)) return 0xff9b5f;
++    if (edgeRentDefinitionForEnemyId(enemy.id)) return 0x58d7ff;
++    if (timeTaxDefinitionForEnemyId(enemy.id)) return 0xffcf69;
++    if (clutterCrushDefinitionForEnemyId(enemy.id)) return 0x7de6ff;
++    if (enemy.tagInterference) return 0xd18cff;
++    if (enemy.rowInterference) return 0x58d7ff;
++    if (enemy.cellInterference) return 0x76ff5b;
++    return 0xff91e6;
++  }
++
+   private setBackpackLocked(locked: boolean): void {
+     for (const object of this.backpackLockObjects) object.destroy();
+     this.backpackLockObjects.length = 0;
