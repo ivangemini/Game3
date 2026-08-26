@@ -24,20 +24,22 @@ export function createHudActionLayout(displayWidthCss: number): HudActionLayout 
 
   const actions: readonly HudActionPlacement[] = mode === 'wide'
     ? [
-        action('daily', 255, 130, 205, true),
-        action('help', 930, 130, 96, true),
-        action('settings', 1038, 130, 106, true),
-        action('archive', 1164, 130, 126, true),
-        action('trophies', 1307, 130, 138, true),
-        action('reset', 1460, 130, 126, true),
+        action('daily', 255, 130, 205, false),
+        action('help', 930, 130, 96, false),
+        action('settings', 1038, 130, 106, false),
+        action('archive', 1164, 130, 126, false),
+        action('trophies', 1307, 130, 138, false),
+        action('reset', 1460, 130, 126, false),
       ]
     : [
-        action('daily', 228, 126, 194, true),
-        action('help', 1050, 112, 96, true),
-        action('settings', 1160, 112, 112, true),
-        action('archive', 1290, 112, 126, true),
-        action('reset', 1445, 112, 150, true),
-        action('trophies', 1368, 150, 304, true),
+        // Compact landscape keeps the center/logo clear and uses one icon-first
+        // utility rail rather than the old two-row web-toolbar silhouette.
+        action('daily', 228, 126, 174, true),
+        action('help', 1020, 112, 74, true),
+        action('settings', 1104, 112, 84, true),
+        action('archive', 1200, 112, 96, true),
+        action('trophies', 1303, 112, 98, true),
+        action('reset', 1425, 112, 126, true),
       ];
 
   return { mode, actions };
