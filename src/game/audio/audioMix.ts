@@ -113,11 +113,16 @@ export function audioCooldownKey(cue: AudioCue): string {
 }
 
 export function musicDuckForCue(cue: AudioCue): MusicDuckProfile | null {
+  // Telegraphs and boss defeat own the mix. They are sparse, must-read signals,
+  // so the procedural bed gets out of the way more decisively than for hits.
+  if (cue.id === 'boss.defeat' || (cue.group === 'boss' && cue.id.endsWith('.telegraph'))) {
+    return { target: 0.22, attackMs: 20, holdMs: 260, releaseMs: 520 };
+  }
   if (cue.priority >= 4) {
     return { target: 0.34, attackMs: 28, holdMs: 210, releaseMs: 420 };
   }
-  if (cue.priority === 3 && (cue.group === 'boss' || cue.id === 'player.hit')) {
-    return { target: 0.58, attackMs: 24, holdMs: 120, releaseMs: 300 };
+  if (cue.priority === 3 && (cue.group === 'boss' || cue.group === 'outcome' || cue.id === 'player.hit' || cue.id === 'ui.reward')) {
+    return { target: 0.58, attackMs: 24, holdMs: 140, releaseMs: 320 };
   }
   return null;
 }
