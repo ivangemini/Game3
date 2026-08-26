@@ -1,10 +1,10 @@
 # Game3 Roadmap
 
 ## Current execution priority
-1. **Retention Wave R3:** Weekly Challenge + personal weekly history/tiers; no backend leaderboard until real behavior justifies it.
-2. **Release acceptance:** physical-device presentation/performance review and real Yandex/CrazyGames tester compliance.
-3. **R2 measurement:** use real Archive/fusion/mastery behavior to decide whether conditional/forbidden fusion content is justified.
-4. Real traffic then decides whether the next investment is balance, additional gameplay content, social competition or another retention layer.
+1. **Release acceptance:** physical-device presentation/performance review and real Yandex/CrazyGames tester compliance.
+2. **R1–R3 measurement:** use real Daily, mastery, Archive and Weekly behavior to validate retention lift and tune thresholds/rewards.
+3. **Evidence-gated gameplay multipliers:** world-specific event flavor, late-boss escalation or conditional fusion expansion only where real six-world/retention data shows a need.
+4. Real traffic decides whether the next major investment is balance, additional gameplay content, social competition or backend services.
 
 **Completed parallel milestone:** Worlds 5–6 now teach their final-boss counterplay through deterministic duplicate/perimeter pressure, authored visual language and no extra campaign length.
 
@@ -141,15 +141,16 @@
 
 **R2 gate:** complete in code. Hero Mastery, revenge, six-family counterplay challenge stars and Archive discovery breadcrumbs are implemented without permanent power creep. Conditional recipe expansion remains an evidence-gated future content decision, not unfinished R2 scope.
 
-### R3 — Weekly replay layer [PLANNED]
-- [ ] Deterministic **Weekly Challenge** with one weekly seed plus a curated rule/loadout constraint assembled from existing systems.
-- [ ] Personal Bronze/Silver/Gold/Reality-Broken score tiers tuned by simulation first and real traffic later.
-- [ ] Local weekly history for recent weeks: best score, deepest checkpoint, hero/rule and earned tier.
-- [ ] Weekly reward track remains cosmetic/collection-focused and cannot invalidate normal-run balance.
-- [ ] Weekly challenge telemetry: entry rate, completion, score distribution, retry count and tier distribution.
-- [ ] Defer global leaderboard/backend identity until weekly participation and replay rates justify the added platform/backend complexity.
+### R3 — Weekly replay layer [DONE]
+- [x] Deterministic **Weekly Challenge** uses an ISO-UTC `weekly:YYYY-Www` seed and one of 8 curated fixed hero + starting-perk loadouts assembled from existing launch systems.
+- [x] Personal Bronze/Silver/Gold/Reality-Broken score tiers at 2,500 / 5,000 / 8,000 / 11,000 points; thresholds are explicit launch targets and remain tunable from real traffic.
+- [x] Local **12-week history** stores attempts, best score, deepest loop, fixed hero/perk constraint, best tier and earned cosmetic reward IDs; retries are unlimited and best results never downgrade.
+- [x] Weekly tier rewards are cosmetic/collection-facing only (`Bronze Receipt`, `Silver Static`, `Gold Glitch`, `Reality Broken`) and cannot invalidate normal-run combat balance.
+- [x] Existing Daily HUD slot is now a **Challenges** entry point for Daily + Weekly, avoiding a seventh permanent mobile HUD action; Weekly reuses the full six-world shop/fusion/event/boss/loop pipeline.
+- [x] Weekly challenge telemetry + soft-launch report cover entry, board reach, finished attempts, bounded retry/score buckets and tier distribution using ephemeral session IDs rather than persistent player identity.
+- [x] Global leaderboard/backend identity is deliberately deferred until Weekly participation and retry behavior justify the platform/backend complexity.
 
-**R3 gate:** the game has a daily reason to return, a multi-week personal progression reason to continue, and a weekly standardized challenge reason to replay.
+**R3 gate:** complete in code. The game now has a daily return loop, multi-week mastery/discovery progression and a standardized weekly replay target with local history and cosmetic tiers. Real portal traffic is the next gate before leaderboard/backend investment or threshold/reward retuning.
 
 ### Parallel gameplay lane — late-world identity [IN PROGRESS]
 - [x] Give **World 5** a stronger authored gameplay identity that previews Copycat Auditor concepts through lighter ordinary/elite encounter pressure rather than duplicating the boss mechanic verbatim.
@@ -223,7 +224,8 @@
 - [x] User-directed pre-traffic content expansion (**Wave 5 combinatorial depth + six-world/18-encounter base campaign; loops remain compact at 12 encounters**)
 - [x] P5R R1 retention foundation completed before broad traffic: Daily Contracts, Reality Rules, v9 persistence, streak/track claims and privacy-minimal Daily funnel are automated-test/browser validated.
 - [x] P5R R2 mastery/revenge/discovery foundation: 4×20 Hero Mastery, 28 cosmetic milestones, six-family grudge history/revenge, Trophy UI, Junk Archive silhouettes/traces/almost-solved breadcrumbs and bounded transition/exposure telemetry/report aggregation.
+- [x] P5R R3 Weekly replay layer: ISO-week challenge seed, 8 curated hero+perk loadouts, four personal score tiers, 12-week local history, cosmetic rewards and privacy-minimal entry/retry/score/tier reporting.
 - [ ] release candidate to first portals
-- [ ] measure tutorial/help usage/hero choice/first boss/six-world campaign duration/world continuation/event choice/fusion usage/daily participation/contract completion/mastery level-up reach/grudge start-resolve volumes/Archive reach/Recipe Book reach/almost-solved exposure/loop-entry/loop-completion/return behavior on real traffic
+- [ ] measure tutorial/help usage/hero choice/first boss/six-world campaign duration/world continuation/event choice/fusion usage/daily participation/contract completion/mastery level-up reach/grudge start-resolve volumes/Archive reach/Recipe Book reach/almost-solved exposure/**Weekly entry, completion, retries, score/tier distribution**/loop-entry/loop-completion/return behavior on real traffic
 - [ ] tune difficulty/economy/ad pacing and retention objective/reward cadence from real data
 - [ ] choose further gameplay/content expansion from six-world funnel + contract/mastery/grudge/archive/weekly engagement signals rather than raw content-count goals
