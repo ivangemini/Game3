@@ -71,6 +71,18 @@ export interface BossGrudgeMetric {
   readonly resolutionsByBoss: Readonly<Record<string, number>>;
 }
 
+export interface ArchiveDiscoveryMetric {
+  readonly sessionsViewingArchive: number;
+  readonly archiveViewSessionRate: number;
+  readonly sessionsViewingRecipes: number;
+  readonly recipeViewSessionRate: number;
+  readonly recipeTabViews: number;
+  readonly sessionsViewingAlmostSolved: number;
+  readonly almostSolvedExposureRateAmongRecipeViewers: number;
+  readonly maxTracedRecipesObserved: number;
+  readonly maxAlmostSolvedRecipesObserved: number;
+}
+
 export interface SoftLaunchSummary {
   readonly sessions: number;
   readonly returningSessions: number;
@@ -104,6 +116,7 @@ export interface SoftLaunchSummary {
   readonly dailyRetention: DailyRetentionMetric;
   readonly heroMastery: HeroMasteryMetric;
   readonly bossGrudges: BossGrudgeMetric;
+  readonly archiveDiscovery: ArchiveDiscoveryMetric;
   readonly tutorialOpened: number;
   readonly tutorialCompleted: number;
   readonly tutorialSkipped: number;
@@ -144,6 +157,9 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
   let maxObservedMasteryLevel = 0;
   let bossGrudgeStarts = 0;
   let bossGrudgeResolutions = 0;
+  let archiveRecipeTabViews = 0;
+  let maxTracedRecipesObserved = 0;
+  let maxAlmostSolvedRecipesObserved = 0;
   let tutorialOpened = 0;
   let tutorialCompleted = 0;
   let tutorialSkipped = 0;
@@ -175,6 +191,9 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
   const masteryLevelUpSessions = new Set<string>();
   const grudgeStartSessions = new Set<string>();
   const grudgeResolveSessions = new Set<string>();
+  const archiveViewSessions = new Set<string>();
+  const archiveRecipeViewSessions = new Set<string>();
+  const archiveAlmostSolvedSessions = new Set<string>();
   const firstHeroAt = new Map<string, number>();
   const firstCombatAt = new Map<string, number>();
   const firstBossAt = new Map<string, number>();
@@ -207,9 +226,7 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
       case 'daily_board_opened': {
         const payload = event.payload as { streakBucket: string };
         dailyBoardSessions.add(event.sessionId);
-        if (!dailyStreakBucketBySession.has(event.sessionId)) {
-          dailyStreakBucketBySession.set(event.sessionId, payload.streakBucket);
-        }
+        if (!dailyStreakBucketBySession.has(event.sessionId)) dailyStreakBucketBySession.set(event.sessionId, payload.streakBucket);
         break;
       }
       case 'daily_contract_completed': {
@@ -248,6 +265,20 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
           bossGrudgeResolutions += 1;
           grudgeResolutionsByBoss[payload.bossId] = (grudgeResolutionsByBoss[payload.bossId] ?? 0) + 1;
           grudgeResolveSessions.add(event.sessionId);
+        }
+        break;
+      }
+      case 'archive_tab_viewed': {
+        const payload = event.payload as { tab: 'items' | 'recipes'; tracedRecipes: number; almostSolvedRecipes: number };
+        const traced = Math.max(0, Math.floor(finiteNonNegative(payload.tracedRecipes)));
+        const almostSolved = Math.max(0, Math.floor(finiteNonNegative(payload.almostSolvedRecipes)));
+        archiveViewSessions.add(event.sessionId);
+        maxTracedRecipesObserved = Math.max(maxTracedRecipesObserved, traced);
+        maxAlmostSolvedRecipesObserved = Math.max(maxAlmostSolvedRecipesObserved, almostSolved);
+        if (payload.tab === 'recipes') {
+          archiveRecipeTabViews += 1;
+          archiveRecipeViewSessions.add(event.sessionId);
+          if (almostSolved > 0) archiveAlmostSolvedSessions.add(event.sessionId);
         }
         break;
       }
@@ -298,13 +329,7 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
       case 'combat_finished': {
         const payload = event.payload as { encounterId: string; outcome: 'victory' | 'defeat'; durationMs: number };
         const duration = finiteNonNegative(payload.durationMs);
-        const metric = combats.get(payload.encounterId) ?? {
-          attempts: 0,
-          victories: 0,
-          defeats: 0,
-          durationTotal: 0,
-          durations: [],
-        };
+        const metric = combats.get(payload.encounterId) ?? { attempts: 0, victories: 0, defeats: 0, durationTotal: 0, durations: [] };
         metric.attempts += 1;
         if (payload.outcome === 'victory') metric.victories += 1;
         else metric.defeats += 1;
@@ -318,9 +343,7 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
             const completedAt = campaignWorldCompletedAt[campaignWorldIndex];
             if (completedAt) rememberEarliest(completedAt, event.sessionId, event.timestampMs);
           }
-          if (payload.encounterId === FINAL_CAMPAIGN_BOSS_ENCOUNTER_ID) {
-            rememberEarliest(baseCampaignCompletedAt, event.sessionId, event.timestampMs);
-          }
+          if (payload.encounterId === FINAL_CAMPAIGN_BOSS_ENCOUNTER_ID) rememberEarliest(baseCampaignCompletedAt, event.sessionId, event.timestampMs);
         }
         break;
       }
@@ -332,21 +355,16 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
   for (const bucket of sessionAgeBySession.values()) returnAgeBuckets[bucket] = (returnAgeBuckets[bucket] ?? 0) + 1;
 
   let sessionsWithAgeBucket = 0;
-  for (const sessionId of sessionStartedAt.keys()) {
-    if (sessionAgeBySession.has(sessionId)) sessionsWithAgeBucket += 1;
-  }
+  for (const sessionId of sessionStartedAt.keys()) if (sessionAgeBySession.has(sessionId)) sessionsWithAgeBucket += 1;
 
   const dailyStreakBuckets: Record<string, number> = {};
-  for (const bucket of dailyStreakBucketBySession.values()) {
-    dailyStreakBuckets[bucket] = (dailyStreakBuckets[bucket] ?? 0) + 1;
-  }
+  for (const bucket of dailyStreakBucketBySession.values()) dailyStreakBuckets[bucket] = (dailyStreakBuckets[bucket] ?? 0) + 1;
 
   const timeToHero = sessionLatencies(sessionStartedAt, firstHeroAt);
   const timeToFirstCombat = sessionLatencies(sessionStartedAt, firstCombatAt);
   const timeToFirstBoss = milestoneLatencies(runStartedAt, sessionStartedAt, firstBossAt);
   const baseCampaignDurations = milestoneLatencies(runStartedAt, sessionStartedAt, baseCampaignCompletedAt);
-  const campaignWorldDurations = campaignWorldCompletedAt.map((completedAt) =>
-    milestoneLatencies(runStartedAt, sessionStartedAt, completedAt));
+  const campaignWorldDurations = campaignWorldCompletedAt.map((completedAt) => milestoneLatencies(runStartedAt, sessionStartedAt, completedAt));
   const campaignWorlds: CampaignWorldMetric[] = campaignWorldDurations.map((durations, index) => {
     const previousCount = index > 0 ? (campaignWorldDurations[index - 1]?.length ?? 0) : 0;
     return {
@@ -354,9 +372,7 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
       bossEncounterId: CAMPAIGN_BOSS_ENCOUNTER_IDS[index] ?? `world-${index + 1}`,
       sessionsCleared: durations.length,
       sessionClearRate: ratio(durations.length, sessions),
-      previousWorldContinuationRate: index === 0 || previousCount === 0
-        ? null
-        : ratio(durations.length, previousCount),
+      previousWorldContinuationRate: index === 0 || previousCount === 0 ? null : ratio(durations.length, previousCount),
       averageTimeFromRunStartMs: average(durations),
       medianTimeFromRunStartMs: percentile(durations, 0.5),
       p90TimeFromRunStartMs: percentile(durations, 0.9),
@@ -427,6 +443,17 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
       aggregateResolveToStartRatio: ratio(bossGrudgeResolutions, bossGrudgeStarts),
       startsByBoss: sortRecord(grudgeStartsByBoss),
       resolutionsByBoss: sortRecord(grudgeResolutionsByBoss),
+    },
+    archiveDiscovery: {
+      sessionsViewingArchive: archiveViewSessions.size,
+      archiveViewSessionRate: ratio(archiveViewSessions.size, sessions),
+      sessionsViewingRecipes: archiveRecipeViewSessions.size,
+      recipeViewSessionRate: ratio(archiveRecipeViewSessions.size, sessions),
+      recipeTabViews: archiveRecipeTabViews,
+      sessionsViewingAlmostSolved: archiveAlmostSolvedSessions.size,
+      almostSolvedExposureRateAmongRecipeViewers: ratio(archiveAlmostSolvedSessions.size, archiveRecipeViewSessions.size),
+      maxTracedRecipesObserved,
+      maxAlmostSolvedRecipesObserved,
     },
     tutorialOpened,
     tutorialCompleted,
