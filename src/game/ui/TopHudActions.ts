@@ -1,6 +1,7 @@
 import * as Phaser from 'phaser';
 import { createHudActionLayout, type HudActionId, type HudActionPlacement } from '../domain/hudLayout';
 import { resolveAuthoredTexture, uiArtKey } from './authoredArt';
+import { createMaterialSurface } from './materialSurface';
 import { REQUEST_NEW_RUN_EVENT } from './runUiEvents';
 
 export interface TopHudActionsOptions {
@@ -17,6 +18,8 @@ export interface TopHudActionsOptions {
 interface ActionVisual {
   readonly placement: HudActionPlacement;
   readonly rect: Phaser.GameObjects.Rectangle;
+  readonly shadow: Phaser.GameObjects.Rectangle;
+  readonly highlight: Phaser.GameObjects.Rectangle;
   readonly text: Phaser.GameObjects.Text;
   readonly icon?: Phaser.GameObjects.Image;
 }
@@ -66,6 +69,14 @@ export class TopHudActions {
     const layout = createHudActionLayout(this.displayWidthCss);
     for (const placement of layout.actions) {
       const palette = paletteFor(placement.id, placement.id === 'daily' && this.options.dailyActive);
+      const shadow = this.scene.add.rectangle(
+        placement.x + 3,
+        placement.y + 4,
+        placement.width,
+        placement.height,
+        0x050609,
+        0.7,
+      );
       const rect = this.scene.add.rectangle(
         placement.x,
         placement.y,
@@ -73,44 +84,94 @@ export class TopHudActions {
         placement.height,
         palette.fill,
         1,
-      ).setStrokeStyle(2, palette.stroke).setInteractive({ useHandCursor: true });
+      ).setStrokeStyle(3, palette.stroke).setInteractive({ useHandCursor: true });
+      const wear = createMaterialSurface(this.scene, {
+        x: placement.x,
+        y: placement.y,
+        width: placement.width - 8,
+        height: placement.height - 6,
+        kind: 'scrap',
+        seed: `hud-action:${placement.id}:${layout.mode}`,
+        alpha: 0.52,
+      });
+      const highlight = this.scene.add.rectangle(
+        placement.x,
+        placement.y - placement.height / 2 + 3,
+        placement.width - 10,
+        2,
+        palette.stroke,
+        0.36,
+      );
 
       const icon = createActionIcon(this.scene, placement);
-      const textOffset = icon ? (placement.compactLabel ? 7 : 9) : 0;
+      const textOffset = icon ? 8 : 0;
       const text = this.scene.add.text(
         placement.x + textOffset,
         placement.y,
         labelFor(placement.id, placement.compactLabel, this.options.dailyKey, this.options.dailyActive),
         {
-          fontSize: placement.compactLabel ? '10px' : '11px',
+          fontFamily: 'Arial Black, Impact, sans-serif',
+          fontSize: placement.id === 'daily' ? '10px' : '9px',
           color: palette.text,
-          fontStyle: 'bold',
+          stroke: '#090a0e',
+          strokeThickness: 3,
+          letterSpacing: 0.35,
         },
       ).setOrigin(0.5);
 
-      rect.on('pointerover', () => rect.setFillStyle(palette.hover));
-      rect.on('pointerout', () => rect.setFillStyle(palette.fill));
-      rect.on('pointerdown', () => {
-        rect.setScale(0.97);
-        text.setScale(0.97);
-        icon?.setScale(0.97 * iconBaseScale(placement));
+      const fastenerLeft = this.scene.add.circle(
+        placement.x - placement.width / 2 + 7,
+        placement.y,
+        2.2,
+        0xa9afb8,
+        0.75,
+      );
+      const fastenerRight = this.scene.add.circle(
+        placement.x + placement.width / 2 - 7,
+        placement.y,
+        2.2,
+        0xa9afb8,
+        0.75,
+      );
+
+      rect.on('pointerover', () => {
+        rect.setFillStyle(palette.hover).setStrokeStyle(4, palette.activeStroke);
+        highlight.setFillStyle(palette.activeStroke, 0.7);
       });
-      const restore = (): void => {
-        rect.setScale(1);
-        text.setScale(1);
-        icon?.setScale(iconBaseScale(placement));
-      };
+      rect.on('pointerout', () => {
+        rect.setFillStyle(palette.fill).setStrokeStyle(3, palette.stroke);
+        highlight.setFillStyle(palette.stroke, 0.36);
+      });
+      rect.on('pointerdown', () => this.setPressed(placement, rect, shadow, highlight, text, icon, true));
+      const restore = (): void => this.setPressed(placement, rect, shadow, highlight, text, icon, false);
       rect.on('pointerupoutside', restore);
       rect.on('pointerup', () => {
         restore();
         this.activate(placement, text);
       });
 
-      this.root.add([rect]);
+      this.root.add([shadow, rect, wear, highlight]);
       if (icon) this.root.add(icon);
-      this.root.add(text);
-      this.visuals.set(placement.id, { placement, rect, text, icon });
+      this.root.add([text, fastenerLeft, fastenerRight]);
+      this.visuals.set(placement.id, { placement, rect, shadow, highlight, text, icon });
     }
+  }
+
+  private setPressed(
+    placement: HudActionPlacement,
+    rect: Phaser.GameObjects.Rectangle,
+    shadow: Phaser.GameObjects.Rectangle,
+    highlight: Phaser.GameObjects.Rectangle,
+    text: Phaser.GameObjects.Text,
+    icon: Phaser.GameObjects.Image | undefined,
+    pressed: boolean,
+  ): void {
+    const scale = pressed ? 0.965 : 1;
+    rect.setScale(scale);
+    shadow.setScale(scale);
+    highlight.setScale(scale);
+    text.setScale(scale);
+    icon?.setScale(scale * iconBaseScale(placement));
   }
 
   private activate(placement: HudActionPlacement, text: Phaser.GameObjects.Text): void {
@@ -129,6 +190,8 @@ export class TopHudActions {
     this.clearConfirmation();
     this.armedAction = placement.id;
     text.setText(confirmLabelFor(placement.id, placement.compactLabel));
+    const visual = this.visuals.get(placement.id);
+    visual?.rect.setStrokeStyle(4, 0xff9a72);
     this.confirmTimer = this.scene.time.delayedCall(CONFIRM_WINDOW_MS, () => this.clearConfirmation());
   }
 
@@ -140,6 +203,8 @@ export class TopHudActions {
     if (!armed) return;
     const visual = this.visuals.get(armed);
     if (!visual) return;
+    const palette = paletteFor(armed, armed === 'daily' && this.options.dailyActive);
+    visual.rect.setStrokeStyle(3, palette.stroke);
     visual.text.setText(labelFor(armed, visual.placement.compactLabel, this.options.dailyKey, this.options.dailyActive));
   }
 }
@@ -147,16 +212,16 @@ export class TopHudActions {
 function createActionIcon(scene: Phaser.Scene, placement: HudActionPlacement): Phaser.GameObjects.Image | undefined {
   const texture = resolveAuthoredTexture(scene, uiArtKey(placement.id));
   if (!texture) return undefined;
-  const size = placement.compactLabel ? 16 : 18;
-  const left = placement.x - placement.width / 2 + (placement.compactLabel ? 15 : 17);
+  const size = 15;
+  const left = placement.x - placement.width / 2 + 18;
   const icon = scene.add.image(left, placement.y, texture.textureKey, texture.frame);
   const maxSide = Math.max(1, icon.width, icon.height);
   icon.setScale(size / maxSide);
   return icon;
 }
 
-function iconBaseScale(placement: HudActionPlacement): number {
-  return (placement.compactLabel ? 16 : 18) / 128;
+function iconBaseScale(_placement: HudActionPlacement): number {
+  return 15 / 128;
 }
 
 function readDisplayWidth(scene: Phaser.Scene): number {
@@ -180,30 +245,28 @@ function confirmLabelFor(id: HudActionId, compact: boolean): string {
   return compact ? 'CONFIRM?' : 'TAP AGAIN • RESET RUN';
 }
 
-function labelFor(id: HudActionId, compact: boolean, _dailyKey: string, dailyActive: boolean): string {
-  if (id === 'daily') {
-    if (compact) return dailyActive ? 'CHALLENGE • D' : 'CHALLENGES';
-    return dailyActive ? 'CHALLENGES • DAILY ACTIVE' : 'DAILY + WEEKLY CHALLENGES';
-  }
-  if (id === 'archive') return compact ? 'ARCHIVE' : 'JUNK ARCHIVE';
-  if (id === 'trophies') return compact ? 'TROPHIES' : 'TROPHY SHELF';
-  if (id === 'help') return compact ? 'HELP' : 'HOW TO PLAY';
-  if (id === 'settings') return compact ? 'SET' : 'SETTINGS';
-  return compact ? 'RESET' : 'NEW RUN / RESET';
+function labelFor(id: HudActionId, _compact: boolean, _dailyKey: string, dailyActive: boolean): string {
+  if (id === 'daily') return dailyActive ? 'DAILY ACTIVE' : 'CHALLENGES';
+  if (id === 'archive') return 'ARCHIVE';
+  if (id === 'trophies') return 'TROPHIES';
+  if (id === 'help') return 'HELP';
+  if (id === 'settings') return 'SETTINGS';
+  return 'NEW RUN';
 }
 
 function paletteFor(id: HudActionId, activeDaily: boolean): Readonly<{
   fill: number;
   hover: number;
   stroke: number;
+  activeStroke: number;
   text: string;
 }> {
   if (id === 'daily') return activeDaily
-    ? { fill: 0x314421, hover: 0x415b2b, stroke: 0xb5ff4d, text: '#dfffba' }
-    : { fill: 0x263224, hover: 0x354630, stroke: 0x71994a, text: '#c8e6a8' };
-  if (id === 'archive') return { fill: 0x33243f, hover: 0x493258, stroke: 0xb26bd0, text: '#f4dfff' };
-  if (id === 'trophies') return { fill: 0x2a2233, hover: 0x3b2e48, stroke: 0x8b6aa2, text: '#e7c8f5' };
-  if (id === 'help') return { fill: 0x202c34, hover: 0x2e3d48, stroke: 0x6b93a6, text: '#d1edf7' };
-  if (id === 'settings') return { fill: 0x252b34, hover: 0x343d49, stroke: 0x7b8fa6, text: '#d7e7f6' };
-  return { fill: 0x252631, hover: 0x363843, stroke: 0x777381, text: '#d2ced7' };
+    ? { fill: 0x354124, hover: 0x45562d, stroke: 0x93c94e, activeStroke: 0xbaff57, text: '#e4ffc5' }
+    : { fill: 0x2e3527, hover: 0x3c472e, stroke: 0x6f8f4d, activeStroke: 0xa4d969, text: '#d8e8c5' };
+  if (id === 'archive') return { fill: 0x342a3b, hover: 0x483750, stroke: 0x8f5ba5, activeStroke: 0xc57ae2, text: '#f1dcf7' };
+  if (id === 'trophies') return { fill: 0x352b25, hover: 0x4a392d, stroke: 0x9b754f, activeStroke: 0xe0ad69, text: '#f7e7cb' };
+  if (id === 'help') return { fill: 0x263137, hover: 0x33424a, stroke: 0x5f8394, activeStroke: 0x83cce8, text: '#d9f0f7' };
+  if (id === 'settings') return { fill: 0x2c3037, hover: 0x3a414b, stroke: 0x727f90, activeStroke: 0xa5b7ca, text: '#e1e8f0' };
+  return { fill: 0x352528, hover: 0x4a3035, stroke: 0x8a555e, activeStroke: 0xff8a76, text: '#f2d9d5' };
 }
