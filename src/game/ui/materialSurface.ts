@@ -15,19 +15,21 @@ export interface MaterialSurfaceOptions {
 
 /**
  * Lightweight deterministic material detail for large UI surfaces.
- * It deliberately adds only sparse marks so gameplay silhouettes and text stay dominant.
+ * Geometry is authored in local coordinates so callers can safely rotate/scale the result.
+ * The marks stay deliberately sparse so gameplay silhouettes and text remain dominant.
  */
 export function createMaterialSurface(
   scene: Phaser.Scene,
   options: MaterialSurfaceOptions,
 ): Phaser.GameObjects.Graphics {
   const graphics = scene.add.graphics();
+  graphics.setPosition(options.x, options.y);
   graphics.setDepth(options.depth ?? 0);
   graphics.setAlpha(options.alpha ?? 1);
 
   const random = seededRandom(options.seed);
-  const left = options.x - options.width / 2;
-  const top = options.y - options.height / 2;
+  const left = -options.width / 2;
+  const top = -options.height / 2;
   const inset = Math.max(5, Math.min(options.width, options.height) * 0.035);
   const minX = left + inset;
   const maxX = left + options.width - inset;
