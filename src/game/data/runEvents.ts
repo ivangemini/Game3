@@ -47,6 +47,7 @@ export const PROTOTYPE_RUN_EVENTS: readonly RunEventDefinition[] = [
   },
   {
     id: 'duck-tax-office',
+    preferredWorlds: [5],
     title: 'DUCK TAX OFFICE',
     body: 'Three ducks behind a folding table claim you owe “interdimensional quack tax.” Their paperwork looks official enough.',
     choices: [

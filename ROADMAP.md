@@ -156,7 +156,7 @@
 - [x] Give **World 5** a stronger authored gameplay identity that previews Copycat Auditor concepts through lighter ordinary/elite encounter pressure rather than duplicating the boss mechanic verbatim.
 - [x] Give **World 6** a stronger authored gameplay identity that previews perimeter/space pressure before Border Shark.
 - [x] Add deterministic pre-fight teaching, affected-item highlights, district palettes and authored World 5/6 hazard emblems with Reduced Motion-safe presentation.
-- [ ] Add world-specific event weighting/flavor where it increases campaign identity while preserving deterministic reload behavior.
+- [x] Add world-specific event weighting/flavor (**World 5 biases audit/bureaucracy events; World 6 biases outer-district infrastructure events at 3× weight; event count/rewards/save schema stay unchanged and pending event IDs remain reload-stable**).
 - [ ] Evaluate a second escalation phase for Copycat Auditor and Border Shark so the late campaign feels climactic, with deterministic telegraphs and at least two viable counters.
 - [ ] Feed new late-world mechanics into Daily Contract / Weekly Challenge archetypes so gameplay additions multiply retention content instead of becoming isolated one-off encounters.
 - [x] Do **not** expand the base campaign beyond 6 worlds / 18 encounters before real pacing and continuation data indicates a need.

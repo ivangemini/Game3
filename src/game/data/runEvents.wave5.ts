@@ -3,6 +3,7 @@ import type { RunEventDefinition } from '../domain/runEvents';
 export const WAVE5_RUN_EVENTS: readonly RunEventDefinition[] = [
   {
     id: 'taxidermy-wifi-cafe',
+    preferredWorlds: [6],
     title: 'TAXIDERMY WI-FI CAFE',
     body: 'A cafe full of stuffed routers serves espresso through Ethernet cables. The password is screaming softly.',
     choices: [
@@ -24,6 +25,7 @@ export const WAVE5_RUN_EVENTS: readonly RunEventDefinition[] = [
   },
   {
     id: 'moon-laundromat',
+    preferredWorlds: [6],
     title: 'EMERGENCY MOON LAUNDROMAT',
     body: 'Every washing machine is labelled DELICATES / HAZMAT / LUNAR DUST. None of them contain water.',
     choices: [
@@ -45,6 +47,7 @@ export const WAVE5_RUN_EVENTS: readonly RunEventDefinition[] = [
   },
   {
     id: 'banana-compliance-desk',
+    preferredWorlds: [5],
     title: 'BANANA COMPLIANCE DESK',
     body: 'A government desk asks whether your fruit has passed tactical, magnetic and broadcast certification. It has not.',
     choices: [
@@ -87,6 +90,7 @@ export const WAVE5_RUN_EVENTS: readonly RunEventDefinition[] = [
   },
   {
     id: 'forbidden-printer-support',
+    preferredWorlds: [5],
     title: 'FORBIDDEN PRINTER SUPPORT',
     body: 'A support kiosk promises to fix any printer issue except the printer being alive, venomous or unionized.',
     choices: [

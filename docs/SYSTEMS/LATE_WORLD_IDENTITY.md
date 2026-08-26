@@ -37,6 +37,17 @@ The boss keeps the stronger existing rule: periodic telegraph + direct duplicate
 ### Border Shark — Edge Rent
 The boss keeps the stronger existing rule: periodic telegraph + direct perimeter rent damage. World 6 therefore teaches the geometry twice before the final test.
 
+## Event affinity
+
+The strange-event pool remains the same **15 authored events**. Campaign Worlds 5–6 now bias selection toward existing events whose fiction reinforces the district the player is in, instead of adding bespoke one-off encounters or increasing run length.
+
+- **World 5 / Duplicate District:** `Duck Tax Office`, `Banana Compliance Desk`, `Forbidden Printer Support`.
+- **World 6 / Perimeter District:** `Pigeon Signal Tower`, `Taxidermy Wi-Fi Cafe`, `Emergency Moon Laundromat`.
+
+Each preferred event has selection weight **3** versus **1** for a generic event. Immediate-repeat prevention is applied before weighting. Worlds 1–4 keep the original unweighted selection behavior. Corrupted Loop worlds remain unweighted because their local world indices are 1–4 and their identity already comes from stacked mutations/anomalies.
+
+Selection still uses the existing seeded `runSeed + eventIndex` RNG and persists only the chosen `pendingEventId`. Therefore reloading cannot reroll the event or change its outcome. The feature changes flavor frequency, not rewards, event count, save schema or campaign duration.
+
 ## Snapshot contract
 
 Late-world pressure is evaluated from `CombatBuildItem` data after hero/perk/synergy build creation and before `createCombatState()`.

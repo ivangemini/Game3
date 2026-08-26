@@ -542,7 +542,13 @@ export class PrototypeScene extends Phaser.Scene {
         let scheduledEventId: string | null = null;
         if (current.slot === 1 && activeRun.pendingEventId === null) {
           const previousEventId = activeRun.resolvedEventIds[activeRun.resolvedEventIds.length - 1] ?? null;
-          scheduledEventId = selectRunEvent(PROTOTYPE_RUN_EVENTS, activeRun.runSeed, activeRun.eventIndex, previousEventId).id;
+          scheduledEventId = selectRunEvent(
+            PROTOTYPE_RUN_EVENTS,
+            activeRun.runSeed,
+            activeRun.eventIndex,
+            previousEventId,
+            current.world,
+          ).id;
         }
         activeRun = { ...activeRun, pendingEventId: scheduledEventId ?? activeRun.pendingEventId };
         if (current.kind === 'boss') recordDailyCounter('bossVictories');

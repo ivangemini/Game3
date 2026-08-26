@@ -23,6 +23,7 @@ export interface RunEventDefinition {
   readonly title: string;
   readonly body: string;
   readonly choices: readonly RunEventChoice[];
+  readonly preferredWorlds?: readonly number[];
 }
 
 export interface RunEventResolution {
@@ -34,11 +35,20 @@ export interface RunEventResolution {
   readonly resultText: string;
 }
 
+export const PREFERRED_WORLD_EVENT_WEIGHT = 3;
+
+export function runEventSelectionWeight(event: RunEventDefinition, world?: number): number {
+  if (typeof world !== 'number' || !Number.isFinite(world)) return 1;
+  const safeWorld = Math.max(1, Math.floor(world));
+  return event.preferredWorlds?.includes(safeWorld) ? PREFERRED_WORLD_EVENT_WEIGHT : 1;
+}
+
 export function selectRunEvent(
   events: readonly RunEventDefinition[],
   runSeed: string | number,
   eventIndex: number,
   previousEventId?: string | null,
+  world?: number,
 ): RunEventDefinition {
   if (events.length === 0) throw new RangeError('Cannot select from an empty run-event pool');
   const safeIndex = Math.max(0, Math.floor(eventIndex));
@@ -46,7 +56,10 @@ export function selectRunEvent(
   const eligible = ordered.length > 1 && previousEventId
     ? ordered.filter((event) => event.id !== previousEventId)
     : ordered;
-  return createSeededRng(`${String(runSeed)}:event:${safeIndex}`).pick(eligible);
+  const weighted = eligible.flatMap((event) =>
+    Array.from({ length: runEventSelectionWeight(event, world) }, () => event),
+  );
+  return createSeededRng(`${String(runSeed)}:event:${safeIndex}`).pick(weighted);
 }
 
 export function resolveRunEventChoice(
