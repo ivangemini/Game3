@@ -49,6 +49,28 @@ export interface DailyRetentionMetric {
   readonly streakBuckets: Readonly<Record<string, number>>;
 }
 
+export interface HeroMasteryMetric {
+  readonly sessionsLevelingUp: number;
+  readonly sessionLevelUpRate: number;
+  readonly levelUpEvents: number;
+  readonly cosmeticRewardUnlocks: number;
+  readonly maxObservedLevel: number;
+  readonly levelUpsByHero: Readonly<Record<string, number>>;
+  readonly maxObservedLevelByHero: Readonly<Record<string, number>>;
+}
+
+export interface BossGrudgeMetric {
+  readonly sessionsStartingGrudge: number;
+  readonly grudgeStartSessionRate: number;
+  readonly sessionsResolvingGrudge: number;
+  readonly grudgeResolveSessionRate: number;
+  readonly grudgeStarts: number;
+  readonly grudgeResolutions: number;
+  readonly aggregateResolveToStartRatio: number;
+  readonly startsByBoss: Readonly<Record<string, number>>;
+  readonly resolutionsByBoss: Readonly<Record<string, number>>;
+}
+
 export interface SoftLaunchSummary {
   readonly sessions: number;
   readonly returningSessions: number;
@@ -80,6 +102,8 @@ export interface SoftLaunchSummary {
   readonly standardRunsStarted: number;
   readonly dailyRunsStarted: number;
   readonly dailyRetention: DailyRetentionMetric;
+  readonly heroMastery: HeroMasteryMetric;
+  readonly bossGrudges: BossGrudgeMetric;
   readonly tutorialOpened: number;
   readonly tutorialCompleted: number;
   readonly tutorialSkipped: number;
@@ -115,6 +139,11 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
   let dailyContractCompletions = 0;
   let dailyContractClaims = 0;
   let dailyTrackRewardClaims = 0;
+  let masteryLevelUpEvents = 0;
+  let masteryCosmeticRewardUnlocks = 0;
+  let maxObservedMasteryLevel = 0;
+  let bossGrudgeStarts = 0;
+  let bossGrudgeResolutions = 0;
   let tutorialOpened = 0;
   let tutorialCompleted = 0;
   let tutorialSkipped = 0;
@@ -129,6 +158,10 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
   let cashoutScoreTotal = 0;
   const sessionAgeBySession = new Map<string, string>();
   const heroSelections: Record<string, number> = {};
+  const masteryLevelUpsByHero: Record<string, number> = {};
+  const masteryMaxLevelByHero: Record<string, number> = {};
+  const grudgeStartsByBoss: Record<string, number> = {};
+  const grudgeResolutionsByBoss: Record<string, number> = {};
   const loopEntries: Record<string, number> = {};
   const combats = new Map<string, CombatAccumulator>();
   const sessionStartedAt = new Map<string, number>();
@@ -139,6 +172,9 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
   const dailyContractClaimedSessions = new Set<string>();
   const dailyTrackClaimedSessions = new Set<string>();
   const dailyStreakBucketBySession = new Map<string, string>();
+  const masteryLevelUpSessions = new Set<string>();
+  const grudgeStartSessions = new Set<string>();
+  const grudgeResolveSessions = new Set<string>();
   const firstHeroAt = new Map<string, number>();
   const firstCombatAt = new Map<string, number>();
   const firstBossAt = new Map<string, number>();
@@ -189,6 +225,30 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
       case 'daily_track_claimed': {
         dailyTrackRewardClaims += 1;
         dailyTrackClaimedSessions.add(event.sessionId);
+        break;
+      }
+      case 'hero_mastery_level_up': {
+        const payload = event.payload as { heroId: string; level: number; rewardCount: number };
+        const level = Math.max(0, Math.floor(finiteNonNegative(payload.level)));
+        masteryLevelUpEvents += 1;
+        masteryCosmeticRewardUnlocks += Math.max(0, Math.floor(finiteNonNegative(payload.rewardCount)));
+        maxObservedMasteryLevel = Math.max(maxObservedMasteryLevel, level);
+        masteryLevelUpsByHero[payload.heroId] = (masteryLevelUpsByHero[payload.heroId] ?? 0) + 1;
+        masteryMaxLevelByHero[payload.heroId] = Math.max(masteryMaxLevelByHero[payload.heroId] ?? 0, level);
+        masteryLevelUpSessions.add(event.sessionId);
+        break;
+      }
+      case 'boss_grudge_changed': {
+        const payload = event.payload as { bossId: string; state: 'started' | 'resolved' };
+        if (payload.state === 'started') {
+          bossGrudgeStarts += 1;
+          grudgeStartsByBoss[payload.bossId] = (grudgeStartsByBoss[payload.bossId] ?? 0) + 1;
+          grudgeStartSessions.add(event.sessionId);
+        } else {
+          bossGrudgeResolutions += 1;
+          grudgeResolutionsByBoss[payload.bossId] = (grudgeResolutionsByBoss[payload.bossId] ?? 0) + 1;
+          grudgeResolveSessions.add(event.sessionId);
+        }
         break;
       }
       case 'tutorial_opened': tutorialOpened += 1; break;
@@ -347,6 +407,26 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
       contractClaims: dailyContractClaims,
       trackRewardClaims: dailyTrackRewardClaims,
       streakBuckets: sortRecord(dailyStreakBuckets),
+    },
+    heroMastery: {
+      sessionsLevelingUp: masteryLevelUpSessions.size,
+      sessionLevelUpRate: ratio(masteryLevelUpSessions.size, sessions),
+      levelUpEvents: masteryLevelUpEvents,
+      cosmeticRewardUnlocks: masteryCosmeticRewardUnlocks,
+      maxObservedLevel: maxObservedMasteryLevel,
+      levelUpsByHero: sortRecord(masteryLevelUpsByHero),
+      maxObservedLevelByHero: sortRecord(masteryMaxLevelByHero),
+    },
+    bossGrudges: {
+      sessionsStartingGrudge: grudgeStartSessions.size,
+      grudgeStartSessionRate: ratio(grudgeStartSessions.size, sessions),
+      sessionsResolvingGrudge: grudgeResolveSessions.size,
+      grudgeResolveSessionRate: ratio(grudgeResolveSessions.size, sessions),
+      grudgeStarts: bossGrudgeStarts,
+      grudgeResolutions: bossGrudgeResolutions,
+      aggregateResolveToStartRatio: ratio(bossGrudgeResolutions, bossGrudgeStarts),
+      startsByBoss: sortRecord(grudgeStartsByBoss),
+      resolutionsByBoss: sortRecord(grudgeResolutionsByBoss),
     },
     tutorialOpened,
     tutorialCompleted,
