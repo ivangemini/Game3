@@ -33,6 +33,8 @@ export class RuntimeHudLegibilityScene extends Phaser.Scene {
       .setDepth(-1000);
     this.lastScanAt = -Infinity;
 
+    this.cleanLegacyPresentation(scene);
+
     // RuntimePresentationScene used to show a decorative fixed 96/100 HP value.
     // Cover that false state with a truthful loadout plate; real HP remains in CombatPanel.
     const plate = scene.add.rectangle(151, 73, 198, 46, 0x15171d, 1)
@@ -65,6 +67,40 @@ export class RuntimeHudLegibilityScene extends Phaser.Scene {
       this.marker = null;
       this.target = null;
     });
+  }
+
+  private cleanLegacyPresentation(scene: Phaser.Scene): void {
+    for (const object of scene.children.list) {
+      if (!(object instanceof Phaser.GameObjects.Text) || !object.active) continue;
+      const text = object.text.trim();
+      const upper = text.toUpperCase();
+
+      // CombatPanel's original flat header is fully superseded by the authored
+      // BOSS ARENA chrome. Keeping both created a real two-line collision at 1024×576.
+      if (upper === 'LIVE COMBAT' || upper.startsWith('BUILD + HERO + PERKS SNAPSHOT AT FIGHT START')) {
+        object.setVisible(false);
+        continue;
+      }
+
+      // Preserve the live backpack status object because it later carries useful
+      // placement/error feedback. Only tighten its idle copy and move it clear of
+      // the LIVE LINKS hardware below the bag.
+      if (upper.startsWith('DRAG JUNK •')) {
+        const lockedMatch = upper.match(/(\d+) POCKET CELL/);
+        const locked = lockedMatch?.[1] ?? '3';
+        object
+          .setText(`REPACK LIVE • ${locked} POCKET${locked === '1' ? '' : 'S'} LOCKED`)
+          .setFontSize(12)
+          .setY(object.y - 9);
+        continue;
+      }
+      if (upper.startsWith('FULL BAG OPEN •')) {
+        object
+          .setText('BAG OPEN • SIDE-CONTACT = POWER')
+          .setFontSize(12)
+          .setY(object.y - 9);
+      }
+    }
   }
 
   private boostCompactActions(scene: Phaser.Scene): void {
