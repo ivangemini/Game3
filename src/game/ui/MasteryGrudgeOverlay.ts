@@ -1,5 +1,6 @@
 import * as Phaser from 'phaser';
 import { PROTOTYPE_HERO_MAP } from '../data/heroes';
+import { bossMasteryChallengeNextGoal, bossMasteryChallengeTitle } from '../domain/bossMasteryChallenges';
 import { createBossGrudgeSnapshots, type BossHistoryState } from '../domain/bossGrudges';
 import { createHeroMasterySnapshot, type HeroMasteryXpState } from '../domain/heroMastery';
 import type { HeroId } from '../domain/heroes';
@@ -56,7 +57,7 @@ export class MasteryGrudgeOverlay {
       fontSize: '11px', color: '#aaa5b2', fontStyle: 'bold',
     }));
     this.addTab(98, 'HERO MASTERY', 'heroes');
-    this.addTab(326, 'BOSS GRUDGES', 'bosses');
+    this.addTab(326, 'BOSS MASTERY', 'bosses');
     if (this.options.onOpenArchiveTrophies) this.addArchiveButton(554);
     const close = this.scene.add.rectangle(1450, 93, 116, 40, 0x2b2e3a, 1).setStrokeStyle(2, 0x7f8496).setInteractive({ useHandCursor: true });
     const label = this.scene.add.text(1450, 93, 'CLOSE  ×', { fontSize: '13px', color: '#f7f2e8', fontStyle: 'bold' }).setOrigin(0.5);
@@ -132,29 +133,42 @@ export class MasteryGrudgeOverlay {
       const x = 92 + (index % 3) * 475;
       const y = 202 + Math.floor(index / 3) * 300;
       const revenge = boss.revengePending;
-      const stroke = revenge ? 0xff6f61 : boss.masteryTier >= 3 ? 0xffd56e : 0x5f6472;
+      const challengeComplete = boss.challengeStars >= 3;
+      const stroke = revenge ? 0xff6f61 : challengeComplete ? 0xffd56e : boss.masteryTier >= 3 ? 0xb884ee : 0x5f6472;
       const card = this.scene.add.rectangle(x + 220, y + 130, 440, 260, revenge ? 0x2c1d23 : 0x1b1d24, 1).setStrokeStyle(revenge ? 4 : 3, stroke);
       this.content.add(card);
       const key = bossArtKeyForEnemyId(boss.bossId);
-      if (key) this.content.add(createAuthoredPortraitSlot(this.scene, key, x + 84, y + 92, 126, 126, DEPTH + 2));
-      this.content.add(this.scene.add.text(x + 160, y + 36, displayName(boss.bossId), {
-        fontFamily: 'Arial Black, Impact, sans-serif', fontSize: '16px', color: '#f7f2e8', stroke: '#111218', strokeThickness: 3,
+      if (key) this.content.add(createAuthoredPortraitSlot(this.scene, key, x + 84, y + 82, 118, 118, DEPTH + 2));
+      this.content.add(this.scene.add.text(x + 155, y + 28, displayName(boss.bossId), {
+        fontFamily: 'Arial Black, Impact, sans-serif', fontSize: '15px', color: '#f7f2e8', stroke: '#111218', strokeThickness: 3,
       }));
-      this.content.add(this.scene.add.text(x + 160, y + 68, `W ${boss.wins} • L ${boss.losses} • STREAK ${boss.currentWinStreak} / ${boss.bestWinStreak}`, {
+      this.content.add(this.scene.add.text(x + 155, y + 58, `W ${boss.wins} • L ${boss.losses} • STREAK ${boss.currentWinStreak} / ${boss.bestWinStreak}`, {
         fontSize: '9px', color: '#aeb4c0', fontStyle: 'bold',
       }));
-      this.content.add(this.scene.add.text(x + 160, y + 94,
+      this.content.add(this.scene.add.text(x + 155, y + 82,
         boss.fastestVictoryMs === null ? 'FASTEST • —' : `FASTEST • ${formatDuration(boss.fastestVictoryMs)}`,
         { fontSize: '9px', color: '#8ceeff', fontStyle: 'bold' },
       ));
-      const stars = '★'.repeat(boss.masteryTier) + '☆'.repeat(3 - boss.masteryTier);
-      this.content.add(this.scene.add.text(x + 25, y + 172, `BOSS MASTERY  ${stars}`, {
-        fontSize: '13px', color: boss.masteryTier >= 3 ? '#ffd56e' : '#ff91e6', fontStyle: 'bold',
+
+      const rivalryStars = '★'.repeat(boss.masteryTier) + '☆'.repeat(3 - boss.masteryTier);
+      this.content.add(this.scene.add.text(x + 25, y + 122, `RIVALRY  ${rivalryStars}`, {
+        fontSize: '10px', color: boss.masteryTier >= 3 ? '#d9b2ff' : '#aeb4c0', fontStyle: 'bold',
       }));
-      this.content.add(this.scene.add.text(x + 25, y + 207, boss.nextGoal, {
-        fontSize: '10px', color: revenge ? '#ff9c91' : '#aeb4c0', fontStyle: 'bold', wordWrap: { width: 385 },
+      if (revenge) this.addRevengePulse(x + 335, y + 122);
+      else this.content.add(this.scene.add.text(x + 25, y + 143, boss.nextGoal, {
+        fontSize: '8px', color: '#858b98', fontStyle: 'bold', wordWrap: { width: 385 },
       }));
-      if (revenge) this.addRevengePulse(x + 335, y + 174);
+
+      const challengeStars = '★'.repeat(boss.challengeStars) + '☆'.repeat(3 - boss.challengeStars);
+      this.content.add(this.scene.add.text(x + 25, y + 169, `COUNTERPLAY  ${challengeStars}`, {
+        fontSize: '13px', color: challengeComplete ? '#ffd56e' : '#ff91e6', fontStyle: 'bold',
+      }));
+      this.content.add(this.scene.add.text(x + 25, y + 194, bossMasteryChallengeTitle(boss.bossId).toUpperCase(), {
+        fontSize: '9px', color: '#d7c4e6', fontStyle: 'bold',
+      }));
+      this.content.add(this.scene.add.text(x + 25, y + 216, bossMasteryChallengeNextGoal(boss.bossId, boss.challengeStars), {
+        fontSize: '9px', color: challengeComplete ? '#ffd56e' : '#b8beca', fontStyle: 'bold', wordWrap: { width: 385 },
+      }));
     });
   }
 

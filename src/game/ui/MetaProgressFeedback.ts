@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import { telemetry } from '../../analytics/Telemetry';
 import { PROTOTYPE_HEROES } from '../data/heroes';
-import { BOSS_FAMILY_IDS } from '../domain/bossGrudges';
+import { BOSS_FAMILY_IDS, type BossChallengeStars, type BossFamilyId } from '../domain/bossGrudges';
 import { HERO_MASTERY_REWARDS } from '../domain/heroMastery';
 import { resolveAuthoredTexture, uiArtKey } from './authoredArt';
 
@@ -39,6 +39,16 @@ export class MetaProgressFeedback {
 
     const bossId = BOSS_FAMILY_IDS.find((id) => displayBossName(id) === bossName);
     if (bossId) telemetry.track('boss_grudge_changed', { bossId, state: resolved ? 'resolved' : 'started' });
+  }
+
+  bossMastery(bossId: BossFamilyId, stars: BossChallengeStars): void {
+    const marks = '★'.repeat(stars) + '☆'.repeat(3 - stars);
+    this.reveal(
+      stars >= 3 ? 'BOSS COUNTERPLAY MASTERED' : 'COUNTERPLAY STAR EARNED',
+      `${displayBossName(bossId).toUpperCase()} • ${marks}`,
+      0xffd56e,
+      'mastery',
+    );
   }
 
   private reveal(kicker: string, detail: string, color: number, iconId: 'mastery' | 'grudge'): void {
