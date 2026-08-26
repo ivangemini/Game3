@@ -1,9 +1,15 @@
 export type ReturnAgeBucket = 'new' | 'under-24h' | '1-2d' | '3-7d' | '8-30d' | '30d-plus' | 'unknown';
+export type DailyStreakBucket = '0' | '1-2' | '3-6' | '7-13' | '14+';
 
 export interface TelemetryEventMap {
   readonly session_start: { readonly returning: boolean; readonly platform: string; readonly viewportMode: string };
   readonly session_age: { readonly bucket: ReturnAgeBucket };
   readonly run_started: { readonly mode: 'standard' | 'daily' };
+  readonly daily_rule_started: { readonly ruleId: string };
+  readonly daily_board_opened: { readonly ruleId: string; readonly streakBucket: DailyStreakBucket };
+  readonly daily_contract_completed: { readonly archetype: string; readonly target: number };
+  readonly daily_contract_claimed: { readonly archetype: string; readonly streakBucket: DailyStreakBucket; readonly rewardTrackDay: number };
+  readonly daily_track_claimed: { readonly milestone: number; readonly cycle: number; readonly stampReward: number };
   readonly tutorial_opened: { readonly step: number };
   readonly tutorial_completed: { readonly stepCount: number };
   readonly tutorial_skipped: { readonly step: number };
