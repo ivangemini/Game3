@@ -24,6 +24,7 @@ export const WAVE4_RUN_EVENTS: readonly RunEventDefinition[] = [
   },
   {
     id: 'pigeon-signal-tower',
+    preferredWorlds: [6],
     title: 'PIGEON SIGNAL TOWER',
     body: 'A rooftop telecom company staffed entirely by pigeons offers suspiciously competitive roaming plans.',
     choices: [
