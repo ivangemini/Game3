@@ -1,7 +1,8 @@
 diff --git a/src/game/ui/BackpackSkin.ts b/src/game/ui/BackpackSkin.ts
+index fa0c8d2..28df75e 100644
 --- a/src/game/ui/BackpackSkin.ts
 +++ b/src/game/ui/BackpackSkin.ts
-@@ -17,18 +17,26 @@ export class BackpackSkin {
+@@ -17,12 +17,20 @@ export class BackpackSkin {
      const cx = gridLeft + width / 2;
      const cy = gridTop + height / 2;
  
@@ -23,20 +24,20 @@ diff --git a/src/game/ui/BackpackSkin.ts b/src/game/ui/BackpackSkin.ts
 +    scene.add.rectangle(cx, cy, width + 42, height + 42, PANEL_VISUALS.leather, 0.26)
        .setStrokeStyle(3, 0xc08a62, 0.6)
        .setDepth(-2);
-@@ -39,7 +47,7 @@ export class BackpackSkin {
+ 
+@@ -34,7 +42,7 @@ export class BackpackSkin {
        kind: 'leather',
        seed: `backpack:${widthCells}x${heightCells}:${cellSize}`,
        depth: -1.6,
 -      alpha: 0.95,
 +      alpha: 0.36,
      });
+ 
+     const cornerScuffs = scene.add.graphics().setDepth(-1.4);
 diff --git a/src/game/ui/BossPortraitLayer.ts b/src/game/ui/BossPortraitLayer.ts
 --- a/src/game/ui/BossPortraitLayer.ts
 +++ b/src/game/ui/BossPortraitLayer.ts
-@@ -45,7 +45,14 @@ export class BossPortraitLayer {
-       });
-       const inner = this.scene.add.rectangle(0, 0, 372, 272, 0x101219, 1)
-         .setStrokeStyle(3, 0x737985, 0.5);
+@@ -50,1 +50,6 @@
 -      const image = this.scene.add.image(0, 0, texture.textureKey, texture.frame).setDisplaySize(360, 264);
 +      const useRasterTyrant = key.includes('tv-tyrant') && this.scene.textures.exists('junkpack-production-plate');
 +      const image = useRasterTyrant
@@ -44,4 +45,3 @@ diff --git a/src/game/ui/BossPortraitLayer.ts b/src/game/ui/BossPortraitLayer.ts
 +          .setCrop(392, 58, 240, 238)
 +          .setDisplaySize(372, 282)
 +        : this.scene.add.image(0, 0, texture.textureKey, texture.frame).setDisplaySize(360, 264);
-       const screenWear = createMaterialSurface(this.scene, {
