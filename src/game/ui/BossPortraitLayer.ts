@@ -1,6 +1,7 @@
 import * as Phaser from 'phaser';
 import { bossArtKeyForEnemyId, requestAuthoredTexture, resolveAuthoredTexture } from './authoredArt';
 import { bossMotionSpecForArtKey, type BossMotionSpec } from './bossPresentation';
+import { createMaterialSurface } from './materialSurface';
 
 export class BossPortraitLayer {
   private root: Phaser.GameObjects.Container | null = null;
@@ -30,10 +31,39 @@ export class BossPortraitLayer {
       if (!texture) return;
       this.destroyRoot();
       const root = this.scene.add.container(this.x, this.y).setDepth(32);
-      const backing = this.scene.add.rectangle(0, 0, 276, 208, 0x17131d, 1)
-        .setStrokeStyle(4, this.activeSpec?.accent ?? 0xa85ad1);
-      const image = this.scene.add.image(0, 0, texture.textureKey, texture.frame).setDisplaySize(268, 201);
-      root.add([backing, image]);
+      const accent = this.activeSpec?.accent ?? 0xa85ad1;
+      const backing = this.scene.add.rectangle(4, 6, 286, 214, 0x090a0f, 0.62)
+        .setStrokeStyle(2, 0x090a0f, 0.65);
+      const frame = this.scene.add.rectangle(0, 0, 278, 206, 0x252832, 1)
+        .setStrokeStyle(5, accent);
+      const frameWear = createMaterialSurface(this.scene, {
+        x: 0,
+        y: 0,
+        width: 268,
+        height: 196,
+        kind: 'scrap',
+        seed: `boss-frame:${key}`,
+        alpha: 0.72,
+      });
+      const inner = this.scene.add.rectangle(0, 0, 258, 192, 0x101219, 1)
+        .setStrokeStyle(2, 0x737985, 0.5);
+      const image = this.scene.add.image(0, 0, texture.textureKey, texture.frame).setDisplaySize(250, 186);
+      const screenWear = createMaterialSurface(this.scene, {
+        x: 0,
+        y: 0,
+        width: 244,
+        height: 180,
+        kind: key.includes('tv-tyrant') ? 'screen' : 'scrap',
+        seed: `boss-portrait:${key}`,
+        alpha: key.includes('tv-tyrant') ? 0.82 : 0.22,
+      });
+      const fasteners = [
+        this.scene.add.circle(-128, -92, 4.5, 0x5a606c, 1).setStrokeStyle(1.5, 0xbac1cc, 0.6),
+        this.scene.add.circle(128, -92, 4.5, 0x5a606c, 1).setStrokeStyle(1.5, 0xbac1cc, 0.6),
+        this.scene.add.circle(-128, 92, 4.5, 0x5a606c, 1).setStrokeStyle(1.5, 0xbac1cc, 0.6),
+        this.scene.add.circle(128, 92, 4.5, 0x5a606c, 1).setStrokeStyle(1.5, 0xbac1cc, 0.6),
+      ];
+      root.add([backing, frame, frameWear, inner, image, screenWear, ...fasteners]);
       this.root = root;
       if (!this.reducedMotion) {
         root.setScale(0.94);
