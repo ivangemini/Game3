@@ -148,34 +148,170 @@ export function estimatedCueDurationMs(cue: AudioCue): number {
 
 function bossPatch(id: AudioCueId, pitch: (hz: number) => number): SynthPatch {
   const telegraph = id.endsWith('.telegraph');
-  const familyOffset = bossFamilyPitchOffset(id);
-  if (telegraph) {
-    return patch(
-      [
-        tone('sawtooth', pitch(150 + familyOffset), pitch(245 + familyOffset), 0, 220, 0.03),
-        tone('sine', pitch(75 + familyOffset / 2), pitch(95 + familyOffset / 2), 80, 210, 0.024),
-      ],
-      [noise('bandpass', 340 + familyOffset * 4, 1600 + familyOffset * 5, 1.1, 0, 250, 0.018)],
-    );
-  }
-  return patch(
-    [
-      tone('square', pitch(88 + familyOffset / 3), pitch(44), 0, 205, 0.06),
-      tone('triangle', pitch(190 + familyOffset), pitch(72), 0, 175, 0.035),
-    ],
-    [noise('lowpass', 2100 + familyOffset * 5, 180, 0.7, 0, 190, 0.055)],
-  );
-}
 
-function bossFamilyPitchOffset(id: AudioCueId): number {
-  if (id.includes('slime')) return -18;
-  if (id.includes('magnet')) return 34;
-  if (id.includes('eclipse')) return 52;
-  if (id.includes('time-tax')) return 12;
-  if (id.includes('clutter')) return -8;
-  if (id.includes('duplicate-debt')) return 24;
-  if (id.includes('edge-rent')) return 42;
-  return 0;
+  if (id.includes('.jam.')) {
+    return telegraph
+      ? patch(
+        [
+          tone('square', pitch(170), pitch(510), 0, 155, 0.027),
+          tone('square', pitch(760), pitch(420), 105, 120, 0.018),
+        ],
+        [noise('highpass', 1400, 5200, 1.4, 0, 215, 0.02)],
+      )
+      : patch(
+        [
+          tone('square', pitch(125), pitch(48), 0, 165, 0.055),
+          tone('sawtooth', pitch(690), pitch(92), 0, 135, 0.032),
+        ],
+        [noise('bandpass', 3800, 480, 1.8, 0, 180, 0.052)],
+      );
+  }
+
+  if (id.includes('.slime.')) {
+    return telegraph
+      ? patch(
+        [
+          tone('sine', pitch(190), pitch(82), 0, 235, 0.033),
+          tone('triangle', pitch(270), pitch(125), 75, 195, 0.019),
+        ],
+        [noise('lowpass', 720, 145, 0.9, 0, 250, 0.026)],
+      )
+      : patch(
+        [
+          tone('sine', pitch(118), pitch(42), 0, 215, 0.047),
+          tone('triangle', pitch(235), pitch(74), 20, 165, 0.025),
+        ],
+        [noise('lowpass', 980, 110, 1.2, 0, 205, 0.052)],
+      );
+  }
+
+  if (id.includes('.magnet.')) {
+    return telegraph
+      ? patch(
+        [
+          tone('sawtooth', pitch(135), pitch(620), 0, 235, 0.028),
+          tone('square', pitch(310), pitch(510), 55, 165, 0.017),
+        ],
+        [noise('bandpass', 720, 3400, 1.7, 0, 245, 0.02)],
+      )
+      : patch(
+        [
+          tone('sawtooth', pitch(760), pitch(68), 0, 190, 0.052),
+          tone('square', pitch(420), pitch(88), 25, 140, 0.026),
+        ],
+        [noise('highpass', 4600, 880, 0.8, 0, 180, 0.04)],
+      );
+  }
+
+  if (id.includes('.eclipse.')) {
+    return telegraph
+      ? patch(
+        [
+          tone('sine', pitch(560), pitch(150), 0, 285, 0.031),
+          tone('triangle', pitch(280), pitch(132), 85, 235, 0.024),
+        ],
+        [noise('lowpass', 980, 170, 0.6, 65, 230, 0.017)],
+      )
+      : patch(
+        [
+          tone('triangle', pitch(245), pitch(48), 0, 245, 0.048),
+          tone('sine', pitch(860), pitch(105), 20, 225, 0.027),
+        ],
+        [noise('bandpass', 1500, 220, 1.1, 0, 235, 0.037)],
+      );
+  }
+
+  if (id.includes('.time-tax.')) {
+    return telegraph
+      ? patch(
+        [
+          tone('square', pitch(720), pitch(630), 0, 42, 0.021),
+          tone('square', pitch(720), pitch(630), 82, 42, 0.021),
+          tone('square', pitch(720), pitch(600), 164, 52, 0.026),
+          tone('sine', pitch(150), pitch(110), 0, 235, 0.018),
+        ],
+        [noise('highpass', 2600, 3900, 0.7, 0, 220, 0.011)],
+      )
+      : patch(
+        [
+          tone('square', pitch(760), pitch(420), 0, 56, 0.029),
+          tone('triangle', pitch(128), pitch(52), 34, 205, 0.052),
+        ],
+        [noise('lowpass', 1500, 180, 0.75, 28, 190, 0.047)],
+      );
+  }
+
+  if (id.includes('.clutter.')) {
+    return telegraph
+      ? patch(
+        [
+          tone('triangle', pitch(118), pitch(78), 0, 260, 0.038),
+          tone('sine', pitch(62), pitch(48), 40, 250, 0.025),
+        ],
+        [noise('lowpass', 620, 95, 0.6, 0, 275, 0.036)],
+      )
+      : patch(
+        [
+          tone('square', pitch(76), pitch(34), 0, 225, 0.064),
+          tone('triangle', pitch(165), pitch(55), 0, 165, 0.033),
+        ],
+        [noise('lowpass', 1800, 95, 0.9, 0, 220, 0.063)],
+      );
+  }
+
+  if (id.includes('.duplicate-debt.')) {
+    return telegraph
+      ? patch(
+        [
+          tone('triangle', pitch(245), pitch(330), 0, 80, 0.025),
+          tone('triangle', pitch(245), pitch(330), 112, 80, 0.025),
+          tone('square', pitch(92), pitch(74), 0, 215, 0.022),
+        ],
+        [noise('bandpass', 930, 1450, 1.1, 0, 205, 0.016)],
+      )
+      : patch(
+        [
+          tone('square', pitch(112), pitch(49), 0, 105, 0.052),
+          tone('square', pitch(112), pitch(49), 118, 105, 0.052),
+          tone('triangle', pitch(330), pitch(92), 20, 190, 0.026),
+        ],
+        [noise('lowpass', 2200, 220, 0.8, 0, 230, 0.055)],
+      );
+  }
+
+  if (id.includes('.edge-rent.')) {
+    return telegraph
+      ? patch(
+        [
+          tone('sawtooth', pitch(128), pitch(570), 0, 260, 0.032),
+          tone('triangle', pitch(260), pitch(430), 75, 190, 0.02),
+        ],
+        [noise('highpass', 1200, 4100, 0.85, 0, 250, 0.022)],
+      )
+      : patch(
+        [
+          tone('sawtooth', pitch(610), pitch(62), 0, 205, 0.058),
+          tone('square', pitch(210), pitch(54), 18, 150, 0.031),
+        ],
+        [noise('bandpass', 3300, 310, 0.95, 0, 205, 0.059)],
+      );
+  }
+
+  return telegraph
+    ? patch(
+      [
+        tone('sawtooth', pitch(150), pitch(245), 0, 220, 0.03),
+        tone('sine', pitch(75), pitch(95), 80, 210, 0.024),
+      ],
+      [noise('bandpass', 340, 1600, 1.1, 0, 250, 0.018)],
+    )
+    : patch(
+      [
+        tone('square', pitch(88), pitch(44), 0, 205, 0.06),
+        tone('triangle', pitch(190), pitch(72), 0, 175, 0.035),
+      ],
+      [noise('lowpass', 2100, 180, 0.7, 0, 190, 0.055)],
+    );
 }
 
 function patch(

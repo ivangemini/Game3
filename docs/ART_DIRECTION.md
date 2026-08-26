@@ -23,6 +23,10 @@ Gameplay chrome should feel physically assembled:
 - fusion = illegal improvised machine / purple coil language;
 - item labels = worn tape/paper rather than generic floating dashboard labels.
 
+Large structural surfaces now use sparse deterministic material overlays rather than perfectly flat fills: leather grain/scuffs, painted-scrap scratches, paper wear and CRT scanline/glitch marks are generated as lightweight Phaser graphics with stable seeds. These overlays are presentation-only, add no texture requests and must remain subtle enough that text and gameplay silhouettes stay dominant.
+
+The backpack shell combines this material pass with explicit stitched edges, corner scuffs, strap wear and rivets. Hero-select cards use the same shared material language so the first-run choice no longer reads as a generic flat dashboard.
+
 ## UI language
 Chunky readable display type for headings; high-legibility text for stats. Thick but consistent outlines, tactile cards, modest shadows, strong selected/invalid states. No generic flat web-dashboard look.
 

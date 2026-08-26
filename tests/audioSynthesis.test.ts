@@ -17,12 +17,19 @@ const REPRESENTATIVE_IDS: readonly AudioCueId[] = [
   'boss.jam.telegraph',
   'boss.jam.impact',
   'boss.slime.telegraph',
+  'boss.slime.impact',
+  'boss.magnet.telegraph',
   'boss.magnet.impact',
   'boss.eclipse.telegraph',
+  'boss.eclipse.impact',
+  'boss.time-tax.telegraph',
   'boss.time-tax.impact',
   'boss.clutter.telegraph',
+  'boss.clutter.impact',
+  'boss.duplicate-debt.telegraph',
   'boss.duplicate-debt.impact',
   'boss.edge-rent.telegraph',
+  'boss.edge-rent.impact',
   'combat.victory',
   'combat.defeat',
   'ui.purchase',
@@ -32,6 +39,17 @@ const REPRESENTATIVE_IDS: readonly AudioCueId[] = [
   'ui.error',
   'ui.confirm',
   'ui.pocket',
+];
+
+const BOSS_TELEGRAPHS: readonly AudioCueId[] = [
+  'boss.jam.telegraph',
+  'boss.slime.telegraph',
+  'boss.magnet.telegraph',
+  'boss.eclipse.telegraph',
+  'boss.time-tax.telegraph',
+  'boss.clutter.telegraph',
+  'boss.duplicate-debt.telegraph',
+  'boss.edge-rent.telegraph',
 ];
 
 function cue(id: AudioCueId, sourceId = 'stable-source'): AudioCue {
@@ -90,6 +108,18 @@ describe('audio synthesis patches', () => {
     const impact = synthPatchForCue(cue('boss.eclipse.impact'));
     const maxGain = (layers: typeof telegraph.layers): number => Math.max(...layers.map((layer) => layer.gain));
     expect(maxGain(impact.layers)).toBeGreaterThan(maxGain(telegraph.layers));
+  });
+
+  it('gives every launch boss pressure family a distinct telegraph signature', () => {
+    const signatures = BOSS_TELEGRAPHS.map((id) => {
+      const bossPatch = synthPatchForCue(cue(id));
+      return JSON.stringify({
+        durationMs: bossPatch.durationMs,
+        tones: bossPatch.layers.map((layer) => [layer.wave, layer.startHz, layer.endHz, layer.startOffsetMs, layer.durationMs]),
+        noise: bossPatch.noiseLayers.map((layer) => [layer.filterType, layer.startHz, layer.endHz, layer.durationMs]),
+      });
+    });
+    expect(new Set(signatures).size).toBe(BOSS_TELEGRAPHS.length);
   });
 
   it('gives fusion a longer staged cue than ordinary purchase feedback', () => {

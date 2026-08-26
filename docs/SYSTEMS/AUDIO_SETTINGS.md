@@ -27,6 +27,21 @@ Semantic cue families now cover combat plus run UI actions:
 
 The mixer keeps a 10-voice budget, honors cue cooldowns and can evict lower-priority voices for high-information events. Final recorded samples can replace procedural patches without changing cue producers.
 
+### Boss sonic identities
+
+The launch boss-pressure families no longer share one generic telegraph/impact patch with only a pitch offset. `audioSynthesis.ts` now gives each family a deterministic procedural identity while preserving the same semantic cue contract:
+
+- TV/channel jam: brittle CRT square-wave glitch and bright static;
+- slime: low sine bends and wet low-pass noise;
+- magnet scramble: rising electromagnetic saw sweeps and high-frequency discharge;
+- eclipse: long descending tonal shadow with restrained filtered noise;
+- Deadline Snail/time tax: explicit clock-like triple ticks before a low impact;
+- Closet Monster/clutter: heavy low-frequency rumble and slam;
+- Copycat Auditor/duplicate debt: paired stamp motifs in both telegraph and impact;
+- Border Shark/edge rent: accelerating edge-charge sweep into a sharp bite-like impact.
+
+Source IDs still apply the existing small deterministic pitch variation, so repeated encounters remain stable while avoiding exact machine-gun repetition. Automated synthesis tests assert finite patches, impact/telegraph dynamics and distinct launch-family telegraph signatures.
+
 ## Procedural music foundation
 
 `musicPattern.ts` provides deterministic menu/combat/boss steps. `GameAudio` schedules a lightweight music bed after audio unlock:
@@ -36,7 +51,7 @@ The mixer keeps a 10-voice budget, honors cue cooldowns and can evict lower-prio
 
 `combat.start` switches the music mode; victory/defeat returns to menu. The scheduler does not advance gameplay time and emits no notes while the AudioContext is suspended.
 
-This is a functional prototype music layer, not final composition. Final launch work still includes authored/recorded music assets, mix tuning, transitions/ducking and portal/ad lifecycle coordination.
+This remains a functional procedural music layer rather than the final authored composition. Final launch work still includes optional authored/recorded music assets or stems, speaker/headphone mix tuning and real portal/ad mix acceptance.
 
 ## Non-combat visual feedback
 
