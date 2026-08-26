@@ -20,7 +20,7 @@ export type AudioCueId =
   | 'boss.time-tax.telegraph' | 'boss.time-tax.impact' | 'boss.clutter.telegraph' | 'boss.clutter.impact'
   | 'boss.duplicate-debt.telegraph' | 'boss.duplicate-debt.impact'
   | 'boss.edge-rent.telegraph' | 'boss.edge-rent.impact'
-  | 'combat.victory' | 'combat.defeat'
+  | 'combat.victory' | 'combat.defeat' | 'boss.defeat'
   | UiAudioCueId;
 
 export interface AudioCue {
@@ -41,7 +41,7 @@ export function uiAudioCue(id: UiAudioCueId, sourceId?: string): AudioCue {
     'ui.purchase': [2, 90],
     'ui.reroll': [1, 120],
     'ui.fusion': [4, 300],
-    'ui.reward': [2, 120],
+    'ui.reward': [3, 180],
     'ui.error': [2, 160],
     'ui.confirm': [1, 80],
     'ui.pocket': [4, 400],
@@ -63,42 +63,46 @@ export function audioCueForCombatEvent(event: CombatPresentationEvent): AudioCue
     case 'poison-applied': return cue('poison.apply', event.atMs, 1, 'status', 130, event.itemInstanceId);
     case 'shield-gained': return cue('shield.gain', event.atMs, 2, 'status', 160, event.itemInstanceId);
     case 'player-damaged': return cue('player.hit', event.atMs, 3, 'impact', 110);
-    case 'boss-telegraph': return cue('boss.jam.telegraph', event.atMs, 3, 'boss', 260, event.itemInstanceId);
+    case 'boss-telegraph': return cue('boss.jam.telegraph', event.atMs, 4, 'boss', 280, event.itemInstanceId);
     case 'boss-jammed': return cue('boss.jam.impact', event.atMs, 4, 'boss', 220, event.itemInstanceId);
-    case 'boss-cell-telegraph': return cue('boss.slime.telegraph', event.atMs, 3, 'boss', 260);
+    case 'boss-cell-telegraph': return cue('boss.slime.telegraph', event.atMs, 4, 'boss', 280);
     case 'boss-cell-slimed': return cue('boss.slime.impact', event.atMs, 4, 'boss', 220);
-    case 'boss-row-telegraph': return cue('boss.magnet.telegraph', event.atMs, 3, 'boss', 280);
+    case 'boss-row-telegraph': return cue('boss.magnet.telegraph', event.atMs, 4, 'boss', 300);
     case 'boss-row-scrambled': return cue('boss.magnet.impact', event.atMs, 4, 'boss', 240);
-    case 'boss-tag-telegraph': return cue('boss.eclipse.telegraph', event.atMs, 3, 'boss', 300, event.tag);
+    case 'boss-tag-telegraph': return cue('boss.eclipse.telegraph', event.atMs, 4, 'boss', 320, event.tag);
     case 'boss-tag-eclipsed': return cue('boss.eclipse.impact', event.atMs, 4, 'boss', 260, event.tag);
-    case 'outcome': return cue(event.outcome === 'victory' ? 'combat.victory' : 'combat.defeat', event.atMs, 4, 'outcome', 0);
+    case 'outcome': return cue(event.outcome === 'victory' ? 'combat.victory' : 'combat.defeat', event.atMs, event.outcome === 'victory' ? 3 : 4, 'outcome', 0);
     default: { const exhaustive: never = event; return exhaustive; }
   }
 }
 
 export function audioCueForTimeTaxEvent(event: TimeTaxPresentationEvent): AudioCue {
   return event.kind === 'boss-time-tax-telegraph'
-    ? cue('boss.time-tax.telegraph', event.atMs, 3, 'boss', 300, event.itemInstanceId)
+    ? cue('boss.time-tax.telegraph', event.atMs, 4, 'boss', 320, event.itemInstanceId)
     : cue('boss.time-tax.impact', event.atMs, 4, 'boss', 260, event.itemInstanceId);
 }
 
 export function audioCueForClutterCrushEvent(event: ClutterCrushPresentationEvent): AudioCue {
   return event.kind === 'boss-clutter-telegraph'
-    ? cue('boss.clutter.telegraph', event.atMs, 3, 'boss', 320)
+    ? cue('boss.clutter.telegraph', event.atMs, 4, 'boss', 340)
     : cue('boss.clutter.impact', event.atMs, 4, 'boss', 280);
 }
 
 export function audioCueForDuplicateDebtEvent(event: DuplicateDebtPresentationEvent): AudioCue {
   const sourceId = event.definitionId ?? undefined;
   return event.kind === 'boss-duplicate-telegraph'
-    ? cue('boss.duplicate-debt.telegraph', event.atMs, 3, 'boss', 320, sourceId)
+    ? cue('boss.duplicate-debt.telegraph', event.atMs, 4, 'boss', 340, sourceId)
     : cue('boss.duplicate-debt.impact', event.atMs, 4, 'boss', 280, sourceId);
 }
 
 export function audioCueForEdgeRentEvent(event: EdgeRentPresentationEvent): AudioCue {
   return event.kind === 'boss-edge-telegraph'
-    ? cue('boss.edge-rent.telegraph', event.atMs, 3, 'boss', 340)
+    ? cue('boss.edge-rent.telegraph', event.atMs, 4, 'boss', 360)
     : cue('boss.edge-rent.impact', event.atMs, 4, 'boss', 300);
+}
+
+export function bossDefeatAudioCue(atMs: number, enemyId: string): AudioCue {
+  return cue('boss.defeat', atMs, 4, 'outcome', 520, enemyId);
 }
 
 function cue(id: AudioCueId, atMs: number, priority: AudioCuePriority, group: AudioCueGroup, cooldownMs: number, sourceId?: string): AudioCue {
