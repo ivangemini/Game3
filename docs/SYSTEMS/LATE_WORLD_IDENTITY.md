@@ -48,6 +48,16 @@ Each preferred event has selection weight **3** versus **1** for a generic event
 
 Selection still uses the existing seeded `runSeed + eventIndex` RNG and persists only the chosen `pendingEventId`. Therefore reloading cannot reroll the event or change its outcome. The feature changes flavor frequency, not rewards, event count, save schema or campaign duration.
 
+## Retention reuse
+
+Late-world mechanics also feed the existing retention surfaces instead of remaining one-off campaign content:
+
+- Daily progression contracts can now roll **PASS THE FINAL AUDIT** (clear World 5) or **PAY NO BORDER RENT** (clear World 6). They reuse the existing `campaignWorlds` metric, so there is no save migration or extra counter.
+- Every Weekly fixed loadout now carries one deterministic late-world focus: **Duplicate Discipline** for World 5 or **Centerline Discipline** for World 6. The board explains the relevant Final Audit / Border Lockdown counter before the run starts.
+- The eight launch Weekly loadouts are split 4/4 between the two focuses while keeping their existing hero/perk IDs and ordering, preserving old Weekly history validation.
+
+These goals do not add combat power or bonus currency; they make the same six-world mechanics serve campaign mastery, Daily completion and Weekly planning.
+
 ## Snapshot contract
 
 Late-world pressure is evaluated from `CombatBuildItem` data after hero/perk/synergy build creation and before `createCombatState()`.

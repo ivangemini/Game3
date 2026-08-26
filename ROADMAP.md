@@ -158,10 +158,10 @@
 - [x] Add deterministic pre-fight teaching, affected-item highlights, district palettes and authored World 5/6 hazard emblems with Reduced Motion-safe presentation.
 - [x] Add world-specific event weighting/flavor (**World 5 biases audit/bureaucracy events; World 6 biases outer-district infrastructure events at 3× weight; event count/rewards/save schema stay unchanged and pending event IDs remain reload-stable**).
 - [x] Add second escalation phases for Copycat Auditor / Border Shark (**cycle 2+ Final Audit raises duplicate debt 4→6 per extra copy; Border Lockdown raises edge rent 2→3 per perimeter item; both are explicitly telegraphed, chunk-invariant, and retain arrangement + shield counterplay**).
-- [ ] Feed new late-world mechanics into Daily Contract / Weekly Challenge archetypes so gameplay additions multiply retention content instead of becoming isolated one-off encounters.
+- [x] Feed late-world mechanics into retention (**Daily progression pool now includes World 5/6 clear contracts via existing campaign-world progress; all 8 Weekly loadouts expose a deterministic 4/4 Duplicate Discipline vs Centerline Discipline focus without new power or save fields**).
 - [x] Do **not** expand the base campaign beyond 6 worlds / 18 encounters before real pacing and continuation data indicates a need.
 
-**Parallel-lane rule:** core late-world identity is complete. Remaining items are optional multipliers and should not displace R2 discovery/R3 unless real six-world data identifies a late-campaign problem.
+**Parallel-lane rule:** complete in code. Worlds 5–6 now teach, flavor, escalate and reappear in Daily/Weekly planning without adding campaign length or permanent power. Further late-world expansion is evidence-gated behind real six-world traffic.
 
 ## P6 — Presentation pass [IN PROGRESS]
 - [x] Responsive web-shell foundation (**safe-area insets, portrait orientation gate, compact-landscape viewport profile and resize/orientation sync**)

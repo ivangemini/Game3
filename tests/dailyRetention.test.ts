@@ -35,6 +35,17 @@ describe('daily retention', () => {
     expect(nextDay.map((contract) => contract.id)).not.toEqual(first.map((contract) => contract.id));
   });
 
+  it('rotates deep-campaign World 5/6 goals into the Daily progression pool without new counters', () => {
+    const templateIds = new Set<string>();
+    const start = Date.UTC(2026, 0, 1);
+    for (let offset = 0; offset < 366; offset += 1) {
+      const key = new Date(start + offset * 86_400_000).toISOString().slice(0, 10);
+      templateIds.add(generateDailyContracts(key)[0]!.templateId);
+    }
+    expect(templateIds).toContain('world-5');
+    expect(templateIds).toContain('world-6');
+  });
+
   it('ships a 12-rule pool and keeps every daily rule inside safety bounds', () => {
     expect(DAILY_REALITY_RULES).toHaveLength(12);
     expect(new Set(DAILY_REALITY_RULES.map((rule) => rule.id)).size).toBe(12);

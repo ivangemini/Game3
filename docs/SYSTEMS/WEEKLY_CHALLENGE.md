@@ -29,6 +29,8 @@ Each week deterministically selects one of eight authored launch constraints. Th
 
 A Weekly attempt starts with this fixed hero/perk instead of opening Hero Choice. The run then follows the same deterministic campaign pipeline as Standard/Daily play. Hero starting-coin bonuses are still applied so the authored hero contract is preserved.
 
+Each fixed loadout also carries a deterministic late-world focus shown on the Weekly Board. Four loadouts point at World 5 **Duplicate Discipline** (prepare for Final Audit) and four point at World 6 **Centerline Discipline** (prepare for Border Lockdown). This is a planning/mastery goal only: it does not change score math, rewards, save history fields or combat stats.
+
 ## Personal tiers
 
 | Tier | Score | Cosmetic record |

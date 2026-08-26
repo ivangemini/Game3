@@ -150,6 +150,8 @@ const PROGRESSION_CONTRACTS: readonly ContractTemplate[] = [
   { id: 'boss-2', archetype: 'boss', metric: 'bossVictories', title: 'MANAGEMENT PROBLEM', description: 'Defeat 2 bosses in today\'s Daily Run.', target: 2 },
   { id: 'world-2', archetype: 'world', metric: 'campaignWorlds', title: 'KEEP THE RECEIPT', description: 'Clear World 2 before cashing out.', target: 2 },
   { id: 'world-3', archetype: 'world', metric: 'campaignWorlds', title: 'THREE-WORLD WARRANTY', description: 'Clear World 3 in today\'s run.', target: 3 },
+  { id: 'world-5', archetype: 'world', metric: 'campaignWorlds', title: 'PASS THE FINAL AUDIT', description: 'Clear World 5 / Duplicate District in today\'s Daily Run.', target: 5 },
+  { id: 'world-6', archetype: 'world', metric: 'campaignWorlds', title: 'PAY NO BORDER RENT', description: 'Clear World 6 / Perimeter District in today\'s Daily Run.', target: 6 },
   { id: 'score-1200', archetype: 'score', metric: 'score', title: 'NUMBER GO UP', description: 'Reach 1,200 run score.', target: 1200 },
   { id: 'loop-entry', archetype: 'loop', metric: 'loopEntered', title: 'VOID OVERTIME', description: 'Clear the campaign and enter Corrupted Loop 2.', target: 1 },
 ];
