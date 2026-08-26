@@ -3,6 +3,7 @@ import { telemetry } from '../../analytics/Telemetry';
 import { findAvailableFusions, type FusionCandidate, type FusionRecipe } from '../domain/fusions';
 import type { ItemDefinition, PlacedItem } from '../domain/types';
 import { createItemGlyph } from './ItemGlyph';
+import { createMaterialSurface } from './materialSurface';
 import { PANEL_VISUALS, rarityVisual } from './visualTokens';
 
 export type FusionFeedbackEvent =
@@ -100,8 +101,36 @@ export class FusionPanel {
       .setStrokeStyle(4, 0x8e55ac);
     this.scene.add.rectangle(this.left + 100, this.top + 58, 188, 104, 0x171522, 1)
       .setStrokeStyle(1, 0x3f3149);
+    createMaterialSurface(this.scene, {
+      x: this.left + 100,
+      y: this.top + 58,
+      width: 182,
+      height: 98,
+      kind: 'scrap',
+      seed: 'fusion-lab:chassis',
+      alpha: 0.68,
+    });
+
+    const coil = this.scene.add.graphics();
+    coil.lineStyle(2, PANEL_VISUALS.neonPurple, 0.32);
+    for (let index = 0; index < 4; index += 1) {
+      const y = this.top + 31 + index * 8;
+      coil.lineBetween(this.left + 152, y, this.left + 184, y + (index % 2 === 0 ? 5 : -5));
+    }
+    coil.lineStyle(1, 0x63d9ff, 0.24);
+    coil.lineBetween(this.left + 149, this.top + 36, this.left + 187, this.top + 54);
+
     this.scene.add.rectangle(this.left + 100, this.top + 13, 158, 25, 0x4d3156, 1)
       .setStrokeStyle(2, 0xc981e4).setAngle(1.2);
+    createMaterialSurface(this.scene, {
+      x: this.left + 100,
+      y: this.top + 13,
+      width: 148,
+      height: 17,
+      kind: 'paper',
+      seed: 'fusion-lab:title-plate',
+      alpha: 0.46,
+    }).setAngle(1.2);
     this.scene.add.text(this.left + 100, this.top + 12, 'FUSION LAB', {
       fontFamily: 'Arial Black, Impact, sans-serif', fontSize: '15px', color: '#f4ccff',
       stroke: '#1b1020', strokeThickness: 4,
