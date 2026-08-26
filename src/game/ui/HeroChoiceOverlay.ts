@@ -15,129 +15,67 @@ export class HeroChoiceOverlay {
     private readonly onSelected: (heroId: HeroId) => void,
   ) {}
 
-  isVisible(): boolean {
-    return this.visible;
-  }
+  isVisible(): boolean { return this.visible; }
 
   show(): void {
     this.hide();
     if (this.heroes.length === 0) return;
     this.visible = true;
 
-    const backdrop = this.scene.add.rectangle(800, 450, 1600, 900, 0x07080d, 0.82)
-      .setInteractive()
-      .setDepth(220);
-    const panel = this.scene.add.rectangle(800, 450, 1240, 520, 0x171922, 0.88)
-      .setStrokeStyle(6, 0xb5ff4d)
-      .setDepth(221);
-    const paintedPanel = addProductionPlate(this.scene, 800, 450, 1218, 498, {
-      region: 'full',
-      depth: 221.05,
-      alpha: 0.28,
-    });
-    const panelWear = createMaterialSurface(this.scene, {
-      x: 800,
-      y: 450,
-      width: 1218,
-      height: 498,
-      kind: 'scrap',
-      seed: 'hero-choice:panel',
-      depth: 221.2,
-      alpha: 0.34,
-    });
-    const title = this.scene.add.text(800, 215, 'CHOOSE YOUR JUNK PILOT', {
-      fontFamily: 'Arial Black, Impact, sans-serif',
-      fontSize: '32px',
-      color: '#fff2a8',
-      stroke: '#11121a',
-      strokeThickness: 6,
-    }).setOrigin(0.5).setDepth(222);
-    const subtitle = this.scene.add.text(800, 258, 'ONE TAP → STRAIGHT INTO THE RUN  •  HELP OPENS THE FIELD MANUAL ANYTIME', {
-      fontSize: '14px', color: '#e0d8e5', fontStyle: 'bold', stroke: '#11121a', strokeThickness: 2,
-    }).setOrigin(0.5).setDepth(222);
-    this.objects.push(backdrop, panel, panelWear, title, subtitle);
-    if (paintedPanel) this.objects.push(paintedPanel);
+    const backdrop = this.scene.add.rectangle(800, 450, 1600, 900, 0x07080d, 0.34).setInteractive().setDepth(220);
+    const art = addProductionPlate(this.scene, 800, 450, 1600, 900, { region: 'full', depth: 220.05, alpha: 0.78 });
+    const shade = this.scene.add.rectangle(800, 450, 1600, 900, 0x07080d, 0.18).setDepth(220.1);
+    const titlePlate = createMaterialSurface(this.scene, { x: 800, y: 122, width: 650, height: 116, kind: 'scrap', seed: 'hero-lineup:title', depth: 221, alpha: 0.88 });
+    const title = this.scene.add.text(800, 100, 'CHOOSE YOUR JUNK PILOT', {
+      fontFamily: 'Arial Black, Impact, sans-serif', fontSize: '42px', color: '#fff0a8', stroke: '#17100d', strokeThickness: 9,
+    }).setOrigin(0.5).setAngle(-1).setDepth(223);
+    const subtitle = this.scene.add.text(800, 151, 'PICK A PILOT  •  RAID THE JUNKYARD  •  BREAK THE BOSSES', {
+      fontFamily: 'Arial Black, Impact, sans-serif', fontSize: '15px', color: '#b5ff4d', stroke: '#17100d', strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(223);
+    this.objects.push(backdrop, shade, titlePlate, title, subtitle);
+    if (art) this.objects.push(art);
 
     this.heroes.slice(0, 4).forEach((hero, index) => {
-      const x = 365 + index * 290;
-      const card = this.scene.add.rectangle(x, 480, 254, 326, 0x22242e, 0.82)
-        .setStrokeStyle(4, 0x7e9360)
-        .setInteractive({ useHandCursor: true })
-        .setDepth(222);
-      const paintedCard = addProductionPlate(this.scene, x, 480, 238, 310, {
-        region: 'hero',
-        depth: 222.05,
-        alpha: index === 0 ? 0.62 : 0.34,
-        flipX: index >= 2,
-        tint: index === 1 ? 0xd9f6ff : index === 2 ? 0xf3ddff : undefined,
+      const x = 330 + index * 315;
+      const y = 478 + (index % 2 === 0 ? -7 : 8);
+      const angle = [-2.4, 1.5, -1.2, 2.1][index] ?? 0;
+      const shadow = this.scene.add.rectangle(x + 9, y + 12, 270, 430, 0x050508, 0.58).setAngle(angle).setDepth(221.4);
+      const card = this.scene.add.rectangle(x, y, 270, 430, 0x3a2b20, 0.42)
+        .setStrokeStyle(6, index === 0 ? 0xb5ff4d : 0xd0a66b, 0.9).setAngle(angle).setInteractive({ useHandCursor: true }).setDepth(222);
+      const painted = addProductionPlate(this.scene, x, y, 256, 416, {
+        region: index === 0 ? 'hero' : index === 3 ? 'perk' : 'backpack', depth: 222.05, alpha: index === 0 ? 0.88 : 0.62, flipX: index >= 2,
+        tint: index === 1 ? 0xe2f7ff : index === 2 ? 0xf4e2ff : undefined,
       });
-      const cardWear = createMaterialSurface(this.scene, {
-        x,
-        y: 480,
-        width: 238,
-        height: 310,
-        kind: 'paper',
-        seed: `hero-choice:${hero.id}`,
-        depth: 222.1,
-        alpha: 0.3,
-      });
-      const tape = this.scene.add.rectangle(x, 319, 116, 19, 0xe8d8ae, 0.9)
-        .setStrokeStyle(1, 0x8b7351, 0.65)
-        .setAngle(index % 2 === 0 ? -2.2 : 1.8)
-        .setDepth(223);
-      const tapeWear = createMaterialSurface(this.scene, {
-        x,
-        y: 319,
-        width: 108,
-        height: 13,
-        kind: 'paper',
-        seed: `hero-choice:tape:${hero.id}`,
-        depth: 223.1,
-        alpha: 0.6,
-      });
-      const titleText = this.scene.add.text(x, 334, hero.title.toUpperCase(), {
-        fontSize: '11px', color: '#b5ff4d', fontStyle: 'bold', stroke: '#11121a', strokeThickness: 3,
-      }).setOrigin(0.5).setDepth(224);
-      const name = this.scene.add.text(x, 365, hero.name.toUpperCase(), {
-        fontFamily: 'Arial Black, Impact, sans-serif',
-        fontSize: '22px', color: '#fff8ec', fontStyle: 'bold', align: 'center',
-        stroke: '#11121a', strokeThickness: 4, wordWrap: { width: 220 },
-      }).setOrigin(0.5).setDepth(224);
-      const portrait = createAuthoredPortraitSlot(this.scene, heroArtKey(hero.id), x, 438, 124, 124, 223);
-      const portraitFrame = this.scene.add.rectangle(x, 438, 136, 136, 0x090a0f, 0.04)
-        .setStrokeStyle(2, index % 2 === 0 ? 0xb5ff4d : 0xc36cff, 0.72)
-        .setDepth(223.4);
-      const description = this.scene.add.text(x, 541, hero.description, {
-        fontSize: '12px', color: '#f0e9f2', align: 'center', lineSpacing: 3,
-        stroke: '#11121a', strokeThickness: 2, wordWrap: { width: 216 },
-      }).setOrigin(0.5).setDepth(224);
-      const pick = this.scene.add.text(x, 622, 'PICK & PLAY', {
-        fontSize: '13px', color: '#dfffc5', fontStyle: 'bold', stroke: '#11121a', strokeThickness: 3,
-      }).setOrigin(0.5).setDepth(224);
+      painted?.setAngle(angle);
+      const wear = createMaterialSurface(this.scene, { x, y, width: 256, height: 416, kind: index === 0 ? 'leather' : 'paper', seed: `hero-lineup:${hero.id}`, depth: 222.2, alpha: 0.42 });
+      wear.setAngle(angle);
+      const tape = this.scene.add.rectangle(x, y - 215, 128, 24, 0xe8d29c, 0.96).setStrokeStyle(2, 0x6d4c2d, 0.8).setAngle(angle + (index % 2 ? -4 : 4)).setDepth(224);
+      const portrait = createAuthoredPortraitSlot(this.scene, heroArtKey(hero.id), x, y - 72, 178, 178, 223);
+      portrait.setAngle(angle * 0.3);
+      const portraitFrame = this.scene.add.rectangle(x, y - 72, 194, 194, 0x090a0f, 0.04).setStrokeStyle(5, index === 0 ? 0xb5ff4d : 0xc36cff, 0.82).setAngle(angle).setDepth(223.4);
+      const name = this.scene.add.text(x, y + 54, hero.name.toUpperCase(), {
+        fontFamily: 'Arial Black, Impact, sans-serif', fontSize: '25px', color: '#fff8e9', stroke: '#17100d', strokeThickness: 6, align: 'center', wordWrap: { width: 226 },
+      }).setOrigin(0.5).setAngle(angle).setDepth(224);
+      const role = this.scene.add.text(x, y + 91, hero.title.toUpperCase(), {
+        fontFamily: 'Arial Black, Impact, sans-serif', fontSize: '12px', color: '#b5ff4d', stroke: '#17100d', strokeThickness: 4,
+      }).setOrigin(0.5).setAngle(angle).setDepth(224);
+      const description = this.scene.add.text(x, y + 137, hero.description, {
+        fontSize: '12px', color: '#fff5df', align: 'center', lineSpacing: 3, stroke: '#17100d', strokeThickness: 3, wordWrap: { width: 218 },
+      }).setOrigin(0.5).setAngle(angle).setDepth(224);
+      const pickPlate = this.scene.add.rectangle(x, y + 190, 166, 38, 0x17100d, 0.82).setStrokeStyle(3, 0xb5ff4d, 0.85).setAngle(angle).setDepth(223.5);
+      const pick = this.scene.add.text(x, y + 190, 'GRAB & GO!', { fontFamily: 'Arial Black, Impact, sans-serif', fontSize: '15px', color: '#fff3b2', stroke: '#17100d', strokeThickness: 4 }).setOrigin(0.5).setAngle(angle).setDepth(224);
 
-      card.on('pointerover', () => {
-        card.setFillStyle(0x303341, 0.72);
-        portrait.setScale(1.04);
-        paintedCard?.setAlpha(index === 0 ? 0.72 : 0.46);
-      });
-      card.on('pointerout', () => {
-        card.setFillStyle(0x22242e, 0.82);
-        portrait.setScale(1);
-        paintedCard?.setAlpha(index === 0 ? 0.62 : 0.34);
-      });
-      card.on('pointerdown', () => {
-        card.setScale(0.97);
-        portrait.setScale(0.98);
-      });
+      card.on('pointerover', () => { card.setScale(1.045); portrait.setScale(1.07); painted?.setAlpha(0.94); });
+      card.on('pointerout', () => { card.setScale(1); portrait.setScale(1); painted?.setAlpha(index === 0 ? 0.88 : 0.62); });
+      card.on('pointerdown', () => { card.setScale(0.98); portrait.setScale(1.02); });
       card.on('pointerup', () => {
-        card.setScale(1);
-        portrait.setScale(1.04);
+        card.setScale(1.045); portrait.setScale(1.07);
         if (!this.visible) return;
         telemetry.track('hero_selected', { heroId: hero.id });
         this.onSelected(hero.id);
       });
-      this.objects.push(card, cardWear, tape, tapeWear, titleText, name, portrait, portraitFrame, description, pick);
-      if (paintedCard) this.objects.push(paintedCard);
+      this.objects.push(shadow, card, wear, tape, portrait, portraitFrame, name, role, description, pickPlate, pick);
+      if (painted) this.objects.push(painted);
     });
   }
 
