@@ -1,11 +1,12 @@
 # Game3 Roadmap
 
 ## Current execution priority
-1. **Late-world gameplay identity:** make Worlds 5–6 teach their boss counterplay before Copycat Auditor / Border Shark, with authored visual language and no extra campaign length.
-2. **Retention Wave R2:** Hero Mastery + Boss Grudges/Mastery + deeper Fusion Archive discovery goals, using the v9 foundations already shipped in R1.
-3. **Retention Wave R3:** Weekly Challenge + personal weekly history/tiers; no backend leaderboard until real behavior justifies it.
-4. **Release acceptance:** physical-device presentation/performance review and real Yandex/CrazyGames tester compliance.
-5. Real traffic then decides whether the next investment is balance, additional gameplay content, social competition or another retention layer.
+1. **Finish Retention Wave R2 mastery challenges:** add arrangement-specific Boss Mastery challenges on top of the now-live mastery/grudge history; the Archive silhouette/trace/almost-solved discovery layer is implemented and ready for real engagement measurement.
+2. **Retention Wave R3:** Weekly Challenge + personal weekly history/tiers; no backend leaderboard until real behavior justifies it.
+3. **Release acceptance:** physical-device presentation/performance review and real Yandex/CrazyGames tester compliance.
+4. Real traffic then decides whether the next investment is balance, additional gameplay content, social competition or another retention layer.
+
+**Completed parallel milestone:** Worlds 5–6 now teach their final-boss counterplay through deterministic duplicate/perimeter pressure, authored visual language and no extra campaign length.
 
 **Product rule:** retention rewards should primarily create goals, expression, discovery and replay variety. Avoid permanent damage/HP/stat inflation from streaks or mastery because it would weaken backpack skill, boss counterplay and balance readability.
 
@@ -69,6 +70,8 @@
 - [x] World 6 sequence: Edge Eel Syndicate → Rent Collector Crab → Border Shark
 - [x] Unique encounter IDs, per-encounter rewards and score progression
 - [x] Difficulty/reward escalation across all six campaign worlds
+- [x] World 5 teach→test→boss duplicate-pressure identity before Copycat Auditor
+- [x] World 6 teach→test→boss perimeter-pressure identity before Border Shark
 - [x] Campaign clear decision after encounter 18: Escape/Cash Out or Go Deeper with the same build
 - [x] Corrupted Loops intentionally remain **4 worlds / 12 encounters** using the same build
 - [x] Loop depth scales enemy HP/damage/speed and base payout
@@ -123,18 +126,20 @@
 
 **R1 gate:** implemented and automated-browser validated. A returning player can understand today's goal/rule, progress it in the normal deterministic run and retain it across reloads without permanent power creep. Real retention lift still requires portal traffic.
 
-### R2 — Mastery, revenge and discovery [PLANNED]
-- [ ] **Hero Mastery** tracks for all 4 heroes, initially targeting ~20 mastery levels per hero.
-- [ ] Hero mastery XP from meaningful run accomplishments rather than raw idle time; rewards focus on portraits, frames, backpack cosmetics, VFX variants, titles and challenge unlocks.
-- [ ] Mastery UI shows next reward, current level and hero-specific challenge prompts without requiring a separate backend/account.
-- [ ] **Boss Grudges:** persist boss-family wins/losses, current revenge target, best win streak and fastest valid kill where available.
-- [ ] Revenge objective after a boss defeat; next valid victory resolves the grudge and grants a bounded cosmetic/collection reward rather than combat power.
-- [ ] **Boss Mastery challenges** across the six families: arrangement/counterplay goals tied to each boss rule, with multi-star completion tiers.
-- [ ] Expand Junk Archive discovery UX: stronger unknown silhouettes, partial ingredient hints, discovered-condition notes and “almost solved” recipe breadcrumbs using the existing recipe pool first.
+### R2 — Mastery, revenge and discovery [IN PROGRESS]
+- [x] **Hero Mastery** tracks for all 4 heroes with **20 levels per hero**.
+- [x] Hero mastery XP comes from meaningful run accomplishments rather than raw idle time; rewards are cosmetic titles, portrait frames, trails and VFX variants rather than permanent combat stats.
+- [x] Mastery UI in the existing TROPHIES path shows current level/XP, next threshold, next cosmetic reward and unlocked milestone count without requiring a backend/account.
+- [x] **Boss Grudges:** persist six-family wins/losses, pending revenge, fastest valid victory, current win streak and best win streak.
+- [x] Revenge lifecycle after a boss defeat: the next valid victory against that family resolves the grudge, with restrained authored feedback and no combat-power compensation.
+- [x] Derived three-tier Boss Mastery foundation from wins/streak history without another persistence field.
+- [ ] **Boss Mastery challenges** across the six families: arrangement/counterplay goals tied to each boss rule, with multi-star completion tiers beyond the current history-derived foundation.
+- [x] Expand Junk Archive discovery UX: unknown item silhouettes, partial ingredient traces, exact-pair `ALMOST SOLVED` breadcrumbs and forbidden second-stage presentation using the existing 24-recipe pool first; hidden results remain classified until fusion.
 - [ ] Add conditional/forbidden fusion discoveries only after the current 24-recipe archive proves that hint-driven discovery increases replay intent.
-- [ ] Telemetry/report support for hero mastery progression, revenge conversion and archive-hint engagement.
+- [x] Privacy-minimal telemetry + soft-launch report support for Hero Mastery level-up reach/cosmetic milestones and Boss Grudge start/resolve volumes, including explicit protection against mislabeling ephemeral-session volume ratios as player-level conversion.
+- [x] Archive-hint engagement telemetry/reporting: Archive reach, Recipe Book reach, ALMOST SOLVED exposure and aggregate clue counts; no recipe/item identities are transmitted.
 
-**R2 gate:** after finishing several normal runs, a player still has at least three visible unfinished goal types: hero mastery, boss revenge/mastery and collection/discovery.
+**R2 gate:** mastery, revenge and discovery breadcrumbs are implemented. The remaining authored R2 gameplay layer is arrangement-specific Boss Mastery challenges; conditional recipe expansion is deliberately gated on real Archive/fusion engagement data rather than content-count pressure.
 
 ### R3 — Weekly replay layer [PLANNED]
 - [ ] Deterministic **Weekly Challenge** with one weekly seed plus a curated rule/loadout constraint assembled from existing systems.
@@ -147,14 +152,15 @@
 **R3 gate:** the game has a daily reason to return, a multi-week personal progression reason to continue, and a weekly standardized challenge reason to replay.
 
 ### Parallel gameplay lane — late-world identity [IN PROGRESS]
-- [ ] Give **World 5** a stronger authored gameplay identity that previews Copycat Auditor concepts through lighter ordinary/elite encounter pressure rather than duplicating the boss mechanic verbatim.
-- [ ] Give **World 6** a stronger authored gameplay identity that previews perimeter/space pressure before Border Shark.
+- [x] Give **World 5** a stronger authored gameplay identity that previews Copycat Auditor concepts through lighter ordinary/elite encounter pressure rather than duplicating the boss mechanic verbatim.
+- [x] Give **World 6** a stronger authored gameplay identity that previews perimeter/space pressure before Border Shark.
+- [x] Add deterministic pre-fight teaching, affected-item highlights, district palettes and authored World 5/6 hazard emblems with Reduced Motion-safe presentation.
 - [ ] Add world-specific event weighting/flavor where it increases campaign identity while preserving deterministic reload behavior.
 - [ ] Evaluate a second escalation phase for Copycat Auditor and Border Shark so the late campaign feels climactic, with deterministic telegraphs and at least two viable counters.
 - [ ] Feed new late-world mechanics into Daily Contract / Weekly Challenge archetypes so gameplay additions multiply retention content instead of becoming isolated one-off encounters.
 - [x] Do **not** expand the base campaign beyond 6 worlds / 18 encounters before real pacing and continuation data indicates a need.
 
-**Parallel-lane rule:** retention work remains the primary sequence. Gameplay work may proceed alongside R2/R3 when it reuses the same domains, creates new challenge/contract combinations or fixes a measured weak point in the six-world funnel.
+**Parallel-lane rule:** core late-world identity is complete. Remaining items are optional multipliers and should not displace R2 discovery/R3 unless real six-world data identifies a late-campaign problem.
 
 ## P6 — Presentation pass [IN PROGRESS]
 - [x] Responsive web-shell foundation (**safe-area insets, portrait orientation gate, compact-landscape viewport profile and resize/orientation sync**)
@@ -169,7 +175,7 @@
 - [x] Authored item art wave 2 (**20 additional item SVGs: remaining original shop/base set + 8 high-salience first-stage fusion results; total item-art coverage reached 32/60**)
 - [x] Complete authored item catalog (**60/60 items: 36/36 shop/base + 24/24 fusion, including all 4 second-stage evolutions; exact catalog parity enforced by CI**)
 - [x] Packed production item + portrait atlases (**deterministic build creates 60-frame 1280×1280 `junk-items` + 10-frame 1280×720 `junk-portraits`**)
-- [x] Core UI atlas + authored HUD/retention symbols (**12-frame 640×384 `junk-ui`; core actions + coin/fusion/pocket/logo + Daily contract/stamp sources; 82 authored runtime SVG sources still collapse into 3 atlas requests**)
+- [x] Core UI atlas + authored HUD/retention/late-world symbols (**16-frame `junk-ui`: core actions + coin/fusion/pocket/logo + Daily contract/stamp + World 5/6 hazard + mastery/grudge; 86 authored runtime SVG sources still collapse into 3 atlas requests**)
 - [ ] Final physical-device visual review refinements (**automated Chromium/Firefox/WebKit matrix is green; physical iOS/Android small-text/touch/crop review remains**)
 - [x] Combat semantic feedback foundation (**30-object particle pool, item/status rings, hit bursts, boss-frame pulses, outcome flashes, restrained shake, reduced-motion fallback**)
 - [x] Non-combat run feedback foundation (**shop purchase/reward/reroll/error SFX hooks, fusion reveal, event-drop toast, pocket-unlock feedback**)
@@ -194,7 +200,7 @@
 - [x] Cloud/leaderboard launch decision (**deferred for soft launch; add only when retention/competitive behavior justifies backend/platform hooks**)
 
 ## P8 — QA, balance & performance
-- [x] Automated deterministic tests for core run/fusion/event/hero/boss/Daily-retention domains
+- [x] Automated deterministic tests for core run/fusion/event/hero/boss/Daily-retention/Hero-Mastery/Boss-Grudge/Archive-discovery/late-world-pressure domains
 - [x] Seeded pacing target simulation with percentile bands and target hit rates (**18-encounter campaign + 12-encounter loops modeled separately**)
 - [x] Seeded combat/build simulation reports across weak/typical/strong power bands and boss checkpoints, including boss-rule wrappers
 - [x] Campaign balance sampling excludes second-stage fusion results; loop checkpoints may sample them
@@ -216,7 +222,8 @@
 - [x] Six-world continuation funnel foundation (**world-by-world boss clear, continuation and run-start-anchored timing derived from existing privacy-minimal combat telemetry**)
 - [x] User-directed pre-traffic content expansion (**Wave 5 combinatorial depth + six-world/18-encounter base campaign; loops remain compact at 12 encounters**)
 - [x] P5R R1 retention foundation completed before broad traffic: Daily Contracts, Reality Rules, v9 persistence, streak/track claims and privacy-minimal Daily funnel are automated-test/browser validated.
+- [x] P5R R2 mastery/revenge/discovery foundation: 4×20 Hero Mastery, 28 cosmetic milestones, six-family grudge history/revenge, Trophy UI, Junk Archive silhouettes/traces/almost-solved breadcrumbs and bounded transition/exposure telemetry/report aggregation.
 - [ ] release candidate to first portals
-- [ ] measure tutorial/help usage/hero choice/first boss/six-world campaign duration/world continuation/event choice/fusion usage/daily participation/contract completion/loop-entry/loop-completion/return behavior on real traffic
+- [ ] measure tutorial/help usage/hero choice/first boss/six-world campaign duration/world continuation/event choice/fusion usage/daily participation/contract completion/mastery level-up reach/grudge start-resolve volumes/Archive reach/Recipe Book reach/almost-solved exposure/loop-entry/loop-completion/return behavior on real traffic
 - [ ] tune difficulty/economy/ad pacing and retention objective/reward cadence from real data
-- [ ] choose further gameplay/content expansion from six-world funnel + contract/mastery/weekly engagement signals rather than raw content-count goals
+- [ ] choose further gameplay/content expansion from six-world funnel + contract/mastery/grudge/archive/weekly engagement signals rather than raw content-count goals

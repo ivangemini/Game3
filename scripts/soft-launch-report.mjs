@@ -58,24 +58,14 @@ export function buildReviewSignals(summary) {
   if (firstBossSample < FIRST_BOSS_PACING_SAMPLE) {
     signals.push(`[DATA] First-boss pacing: ${firstBossSample}/${FIRST_BOSS_PACING_SAMPLE} reached sessions; hold tuning until the operational sample floor is met.`);
   } else {
-    signals.push(pacingSignal(
-      'First-boss pacing',
-      summary.medianTimeToFirstBossMs,
-      FIRST_BOSS_MIN_MS,
-      FIRST_BOSS_MAX_MS,
-    ));
+    signals.push(pacingSignal('First-boss pacing', summary.medianTimeToFirstBossMs, FIRST_BOSS_MIN_MS, FIRST_BOSS_MAX_MS));
   }
 
   const campaignSample = finiteCount(summary.sessionsCompletingBaseCampaign);
   if (campaignSample < BASE_CAMPAIGN_PACING_SAMPLE) {
     signals.push(`[DATA] Base-campaign pacing: ${campaignSample}/${BASE_CAMPAIGN_PACING_SAMPLE} completions; hold tuning until the operational sample floor is met.`);
   } else {
-    signals.push(pacingSignal(
-      'Base-campaign pacing',
-      summary.medianBaseCampaignDurationMs,
-      BASE_CAMPAIGN_MIN_MS,
-      BASE_CAMPAIGN_MAX_MS,
-    ));
+    signals.push(pacingSignal('Base-campaign pacing', summary.medianBaseCampaignDurationMs, BASE_CAMPAIGN_MIN_MS, BASE_CAMPAIGN_MAX_MS));
   }
 
   return signals;
@@ -85,7 +75,16 @@ export function renderMarkdown(summary) {
   const returnBuckets = Object.entries(summary.returnAgeBuckets ?? {});
   const reviewSignals = buildReviewSignals(summary);
   const daily = summary.dailyRetention ?? emptyDailyRetention();
+  const mastery = summary.heroMastery ?? emptyHeroMastery();
+  const grudges = summary.bossGrudges ?? emptyBossGrudges();
+  const archive = summary.archiveDiscovery ?? emptyArchiveDiscovery();
   const dailyStreakBuckets = Object.entries(daily.streakBuckets ?? {});
+  const masteryLevelUpsByHero = Object.entries(mastery.levelUpsByHero ?? {});
+  const masteryMaxByHero = Object.entries(mastery.maxObservedLevelByHero ?? {});
+  const grudgeBossIds = [...new Set([
+    ...Object.keys(grudges.startsByBoss ?? {}),
+    ...Object.keys(grudges.resolutionsByBoss ?? {}),
+  ])].sort();
   const lines = [
     '# Junkpack Soft-launch Report',
     '',
@@ -129,9 +128,50 @@ export function renderMarkdown(summary) {
     '',
     'Daily streak buckets are local progression-state samples from sessions that opened the board; they are not D1/D7 retention measurements.',
     '',
-    '## Encounter pacing',
+    '## Mastery & revenge retention',
+    '',
+    `- Sessions with a Hero Mastery level-up: **${percent(mastery.sessionLevelUpRate)}** (${mastery.sessionsLevelingUp}/${summary.sessions}).`,
+    `- Mastery level-ups: **${mastery.levelUpEvents}** · cosmetic milestones crossed: **${mastery.cosmeticRewardUnlocks}** · max observed emitted level: **${mastery.maxObservedLevel}**.`,
+    masteryLevelUpsByHero.length > 0
+      ? `- Level-up events by hero: ${masteryLevelUpsByHero.map(([hero, count]) => `${hero} **${count}**`).join(' · ')}.`
+      : '- Level-up events by hero: no mastery level-up events in this export.',
+    masteryMaxByHero.length > 0
+      ? `- Max observed emitted level by hero: ${masteryMaxByHero.map(([hero, level]) => `${hero} **${level}**`).join(' · ')}.`
+      : '- Max observed emitted level by hero: no mastery level-up events in this export.',
+    `- Grudge start reach: **${percent(grudges.grudgeStartSessionRate)}** (${grudges.sessionsStartingGrudge}/${summary.sessions} sessions; ${grudges.grudgeStarts} starts).`,
+    `- Grudge resolve reach: **${percent(grudges.grudgeResolveSessionRate)}** (${grudges.sessionsResolvingGrudge}/${summary.sessions} sessions; ${grudges.grudgeResolutions} resolutions).`,
+    `- Aggregate resolve/start volume ratio: **${percent(grudges.aggregateResolveToStartRatio)}** (${grudges.grudgeResolutions}/${grudges.grudgeStarts}).`,
+    '',
+    'Because analytics uses ephemeral session IDs, aggregate grudge resolve/start volume is not a player-level revenge conversion rate. A revenge may start in one session and resolve in another, so use this ratio only as a trend signal alongside the per-boss volumes below.',
     '',
   ];
+
+  if (grudgeBossIds.length === 0) {
+    lines.push('No boss-grudge transitions in this export.');
+  } else {
+    lines.push('| Boss family | Grudges started | Grudges resolved | Aggregate ratio |');
+    lines.push('| --- | ---: | ---: | ---: |');
+    for (const bossId of grudgeBossIds) {
+      const starts = finiteCount(grudges.startsByBoss?.[bossId]);
+      const resolutions = finiteCount(grudges.resolutionsByBoss?.[bossId]);
+      lines.push(`| ${escapeCell(bossId)} | ${starts} | ${resolutions} | ${percent(starts > 0 ? resolutions / starts : 0)} |`);
+    }
+  }
+
+  lines.push(
+    '',
+    '## Archive discovery',
+    '',
+    `- Junk Archive reach: **${percent(archive.archiveViewSessionRate)}** (${archive.sessionsViewingArchive}/${summary.sessions} sessions).`,
+    `- Recipe Book reach: **${percent(archive.recipeViewSessionRate)}** (${archive.sessionsViewingRecipes}/${summary.sessions} sessions; ${archive.recipeTabViews} recipe-tab views).`,
+    `- Sessions seeing at least one ALMOST SOLVED recipe: **${percent(archive.almostSolvedExposureRateAmongRecipeViewers)}** (${archive.sessionsViewingAlmostSolved}/${archive.sessionsViewingRecipes} Recipe Book sessions).`,
+    `- Maximum clue state observed in one Archive view: **${archive.maxTracedRecipesObserved} traced** · **${archive.maxAlmostSolvedRecipesObserved} almost solved**.`,
+    '',
+    'Archive events contain only tab name and aggregate clue counts. They do not transmit recipe IDs, item IDs or the hidden result, and the exposure rate is an ephemeral-session UX signal rather than a cross-session discovery cohort.',
+    '',
+    '## Encounter pacing',
+    '',
+  );
 
   if (summary.combats.length === 0) {
     lines.push('No completed combats in this export.');
@@ -151,9 +191,7 @@ export function renderMarkdown(summary) {
     lines.push('| World | Boss | Cleared | Session clear | From previous | p50 from run start | p90 |');
     lines.push('| ---: | --- | ---: | ---: | ---: | ---: | ---: |');
     for (const world of campaignWorlds) {
-      const continuation = world.previousWorldContinuationRate === null
-        ? '—'
-        : percent(world.previousWorldContinuationRate);
+      const continuation = world.previousWorldContinuationRate === null ? '—' : percent(world.previousWorldContinuationRate);
       lines.push(`| ${world.world} | ${escapeCell(world.bossEncounterId)} | ${world.sessionsCleared} | ${percent(world.sessionClearRate)} | ${continuation} | ${duration(world.medianTimeFromRunStartMs)} | ${duration(world.p90TimeFromRunStartMs)} |`);
     }
   }
@@ -171,11 +209,7 @@ async function loadSummarizer() {
   const sourcePath = path.join(process.cwd(), 'src', 'analytics', 'TelemetrySummary.ts');
   const source = await fs.readFile(sourcePath, 'utf8');
   const compiled = ts.transpileModule(source, {
-    compilerOptions: {
-      module: ts.ModuleKind.ESNext,
-      target: ts.ScriptTarget.ES2022,
-      verbatimModuleSyntax: true,
-    },
+    compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022, verbatimModuleSyntax: true },
     fileName: sourcePath,
   }).outputText;
   const url = `data:text/javascript;base64,${Buffer.from(compiled, 'utf8').toString('base64')}`;
@@ -203,7 +237,6 @@ async function runCli() {
 
   if (jsonPath) await writeOutput(jsonPath, `${JSON.stringify(summary, null, 2)}\n`);
   if (markdownPath) await writeOutput(markdownPath, markdown);
-
   if (!jsonPath && !markdownPath) process.stdout.write(markdown);
   console.error(`[analytics] summarized ${events.length} events across ${summary.sessions} sessions`);
 }
@@ -238,19 +271,42 @@ function sessionAgeCoverage(summary) {
 
 function emptyDailyRetention() {
   return {
-    sessionsStartingDaily: 0,
-    dailyStartSessionRate: 0,
-    sessionsOpeningBoard: 0,
-    boardOpenRateAmongDailySessions: 0,
-    sessionsCompletingContract: 0,
-    contractCompletionRateAmongDailySessions: 0,
-    sessionsClaimingContract: 0,
-    contractClaimRateAmongCompletedSessions: 0,
-    sessionsClaimingTrackReward: 0,
-    contractCompletions: 0,
-    contractClaims: 0,
-    trackRewardClaims: 0,
+    sessionsStartingDaily: 0, dailyStartSessionRate: 0,
+    sessionsOpeningBoard: 0, boardOpenRateAmongDailySessions: 0,
+    sessionsCompletingContract: 0, contractCompletionRateAmongDailySessions: 0,
+    sessionsClaimingContract: 0, contractClaimRateAmongCompletedSessions: 0,
+    sessionsClaimingTrackReward: 0, contractCompletions: 0, contractClaims: 0, trackRewardClaims: 0,
     streakBuckets: {},
+  };
+}
+
+function emptyHeroMastery() {
+  return {
+    sessionsLevelingUp: 0, sessionLevelUpRate: 0, levelUpEvents: 0, cosmeticRewardUnlocks: 0,
+    maxObservedLevel: 0, levelUpsByHero: {}, maxObservedLevelByHero: {},
+  };
+}
+
+function emptyBossGrudges() {
+  return {
+    sessionsStartingGrudge: 0, grudgeStartSessionRate: 0,
+    sessionsResolvingGrudge: 0, grudgeResolveSessionRate: 0,
+    grudgeStarts: 0, grudgeResolutions: 0, aggregateResolveToStartRatio: 0,
+    startsByBoss: {}, resolutionsByBoss: {},
+  };
+}
+
+function emptyArchiveDiscovery() {
+  return {
+    sessionsViewingArchive: 0,
+    archiveViewSessionRate: 0,
+    sessionsViewingRecipes: 0,
+    recipeViewSessionRate: 0,
+    recipeTabViews: 0,
+    sessionsViewingAlmostSolved: 0,
+    almostSolvedExposureRateAmongRecipeViewers: 0,
+    maxTracedRecipesObserved: 0,
+    maxAlmostSolvedRecipesObserved: 0,
   };
 }
 

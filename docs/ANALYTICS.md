@@ -66,6 +66,8 @@ The `telemetry/` and `reports/` directories are gitignored so raw session export
 - `run_started` — standard or Daily run.
 - `tutorial_opened`, `tutorial_completed`, `tutorial_skipped` — opt-in Field Manual funnel.
 - `hero_selected` — run hero choice.
+- `hero_mastery_level_up` — low-volume mastery transition with one of the four hero IDs, emitted level 2–20 and count of cosmetic milestones crossed by that award. Raw XP ticks are intentionally not emitted.
+- `boss_grudge_changed` — one of the six authored boss families with `started` or `resolved`; repeated losses while a grudge is already active do not emit duplicate start transitions.
 - `shop_purchase` — successful item purchase and price.
 - `shop_reroll` — successful paid or rewarded reroll.
 - `combat_started`, `combat_finished` — encounter funnel, result and actual wall-clock combat duration.
@@ -75,7 +77,7 @@ The `telemetry/` and `reports/` directories are gitignored so raw session export
 - `run_cashout` — safe exit depth and score.
 - `ad_result` — result of the explicit shop rewarded placement or natural cycle-boundary interstitial.
 
-Only successful game-state mutations are tracked for purchase, reroll, event and fusion events; blocked clicks are intentionally excluded.
+Only successful game-state mutations are tracked for purchase, reroll, event and fusion events; blocked clicks are intentionally excluded. Mastery/grudge telemetry is intentionally transition-only so retention measurement does not become a high-volume action log.
 
 ## Generate a soft-launch report
 
@@ -117,6 +119,30 @@ This avoids counting time spent on a portal page before a new run begins as camp
 
 For the first balance pass, treat median as the central pacing signal and p90 as the long-tail regression signal. Do not tune from a single encounter with only a handful of attempts; compare reach, attempt count, win rate and duration together. A high p90 with a healthy median usually indicates a long-tail problem rather than a globally slow encounter.
 
+## Mastery and grudge measurement semantics
+
+R2 deliberately keeps the same privacy boundary instead of introducing a persistent analytics identity solely to measure meta progression.
+
+The summary/report therefore measures Hero Mastery through:
+
+- sessions containing at least one mastery level-up;
+- total level-up transition events;
+- cosmetic milestone crossings carried by those events;
+- maximum emitted mastery level overall and per hero;
+- level-up event mix across the four heroes.
+
+Boss Grudges are measured through:
+
+- sessions containing a new grudge start;
+- sessions containing a grudge resolution;
+- total starts and resolutions;
+- start/resolution counts per boss family;
+- aggregate `resolutions / starts` volume ratio.
+
+The aggregate grudge ratio is **not** a player-level revenge conversion rate. A grudge can start in one ephemeral session and resolve in a later one, and the system intentionally cannot link those sessions to the same person. Use the ratio as a directional trend signal together with boss-specific volumes, combat defeat rates and coarse return-age mix. Do not claim that a specific percentage of players returned for revenge from this metric.
+
+Similarly, `maxObservedLevel` is the highest level carried by a level-up event in the export, not a complete distribution of every player's current mastery state. This avoids sending a persistent profile snapshot every session merely to improve analytics convenience.
+
 ## Sample-aware review signals
 
 The Markdown report includes operational review signals so a small export does not trigger premature balance changes:
@@ -126,6 +152,8 @@ The Markdown report includes operational review signals so a small export does n
 - base-campaign pacing gate: at least **15** completed six-world campaigns before comparing p50 against the 32–42 minute target.
 
 Below a gate the report emits `[DATA]` and explicitly recommends holding tuning. Once the sample floor is met it emits `[ON TARGET]` or `[WATCH]` against the already-defined pacing targets. These floors are conservative operational review thresholds, not statistical-significance tests and not proof of causality. Balance changes still require looking at the full funnel, encounter attempts/win rates, p90 tails and the actual change made between samples.
+
+R2 mastery/grudge metrics intentionally have no `[ON TARGET]` launch thresholds yet. Before real portal traffic there is no defensible baseline for what share of sessions should level up or resolve a grudge. Establish distributions first, then define review bands from observed behavior rather than inventing retention targets in advance.
 
 ## Primary soft-launch questions
 
@@ -138,8 +166,10 @@ Below a gate the report emits `[DATA]` and explicitly recommends holding tuning.
 7. What share of completed campaigns choose another loop versus cash-out?
 8. Is rewarded reroll completion healthy without becoming required for progression?
 9. Does the coarse return-age mix improve after balance/content changes without degrading the core funnel?
+10. How often do sessions cross Hero Mastery levels and cosmetic milestones, and is the activity spread across all four heroes?
+11. Which bosses generate grudges, and do aggregate resolution volumes rise as players learn those boss rules?
 
-`src/analytics/TelemetrySummary.ts` provides a deterministic first-pass aggregator. In addition to rates/counts it reports return-age instrumentation coverage, average/median/p90 time-to-hero, time-to-first-combat, time-to-first-boss, six-world base-campaign duration and per-encounter combat duration. Median is the default central pacing signal; p90 is the long-tail regression signal; averages remain useful for continuity with earlier reports but should not be tuned in isolation.
+`src/analytics/TelemetrySummary.ts` provides a deterministic first-pass aggregator. In addition to rates/counts it reports return-age instrumentation coverage, average/median/p90 time-to-hero, time-to-first-combat, time-to-first-boss, six-world base-campaign duration, per-encounter combat duration, Hero Mastery transition reach and privacy-safe Boss Grudge transition volumes. Median is the default central pacing signal; p90 is the long-tail regression signal; averages remain useful for continuity with earlier reports but should not be tuned in isolation.
 
 ## Guardrails
 
