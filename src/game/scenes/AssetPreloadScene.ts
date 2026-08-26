@@ -25,6 +25,10 @@ export class AssetPreloadScene extends Phaser.Scene {
       this.fileText?.setText(this.errorCount > 0 ? `${this.errorCount} ASSET ERROR${this.errorCount === 1 ? '' : 'S'} • SAFE FALLBACKS ACTIVE` : 'ATLASES PACKED • REALITY UNSTABLE');
     });
 
+    if (!this.textures.exists('junkpack-production-plate')) {
+      this.load.image('junkpack-production-plate', '/assets/art/production/junkpack-concept-plate.webp');
+    }
+
     for (const atlas of RUNTIME_ATLASES) {
       if (this.textures.exists(atlas.textureKey)) continue;
       this.load.atlas(atlas.textureKey, atlas.imageUrl, atlas.dataUrl);

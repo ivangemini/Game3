@@ -132,7 +132,7 @@ describe('Deadline Snail Time Tax', () => {
       itemInstanceId: 'fast-carry',
       impactAtMs: 4800,
       triggerIntervalMs: 1000,
-    })).toMatchObject({ id: 'boss.time-tax.telegraph', priority: 3, group: 'boss' });
+    })).toMatchObject({ id: 'boss.time-tax.telegraph', priority: 4, group: 'boss' });
     expect(audioCueForTimeTaxEvent({
       kind: 'boss-time-tax-impact',
       atMs: 4800,

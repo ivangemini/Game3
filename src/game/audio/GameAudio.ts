@@ -18,7 +18,7 @@ export class GameAudio {
   private musicGain: GainNode | null = null;
   private musicDuckGain: GainNode | null = null;
   private noiseBuffer: AudioBuffer | null = null;
-  private readonly gate = new AudioMixGate(10);
+  private readonly gate = new AudioMixGate(8);
   private readonly voices = new Map<number, RuntimeVoice>();
   private unlocked = false;
   private disposed = false;
@@ -225,7 +225,7 @@ export class GameAudio {
       this.setMusicMode(cue.priority >= 3 ? 'boss' : 'combat');
       return;
     }
-    if (cue.id === 'combat.victory' || cue.id === 'combat.defeat') this.setMusicMode('menu');
+    if (cue.id === 'combat.victory' || cue.id === 'combat.defeat' || cue.id === 'boss.defeat') this.setMusicMode('menu');
   }
 
   private ensureMusicScheduled(): void {

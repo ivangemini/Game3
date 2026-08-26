@@ -1,5 +1,7 @@
 import * as Phaser from 'phaser';
 import type { PerkDefinition } from '../domain/perks';
+import { createMaterialSurface } from './materialSurface';
+import { addProductionPlate } from './productionPlate';
 
 const RARITY_COLORS = {
   common: 0xb9b5aa,
@@ -27,12 +29,21 @@ export class PerkChoiceOverlay {
     if (choices.length === 0) return;
     this.visible = true;
 
-    const backdrop = this.scene.add.rectangle(800, 450, 1600, 900, 0x07080d, 0.82)
+    const backdrop = this.scene.add.rectangle(800, 450, 1600, 900, 0x07080d, 0.78)
       .setInteractive()
       .setDepth(200);
-    const panel = this.scene.add.rectangle(800, 450, 1050, 430, 0x171922, 1)
+    const panel = this.scene.add.rectangle(800, 450, 1050, 430, 0x171922, 0.86)
       .setStrokeStyle(6, 0xc36cff)
       .setDepth(201);
+    const paintedPanel = addProductionPlate(this.scene, 800, 450, 1028, 408, {
+      region: 'perk', depth: 201.05, alpha: 0.46,
+    });
+    const panelWear = createMaterialSurface(this.scene, {
+      x: 800, y: 450, width: 1024, height: 404, kind: 'scrap', seed: 'perk-choice:panel',
+      depth: 201.1, alpha: 0.28,
+    });
+    const titleTape = this.scene.add.rectangle(800, 278, 666, 49, 0x4f315b, 0.88)
+      .setStrokeStyle(2, 0xd59bff, 0.62).setAngle(-0.6).setDepth(201.8);
     const title = this.scene.add.text(800, 278, 'TV TYRANT DOWN — CHOOSE ONE WEIRD UPGRADE', {
       fontFamily: 'Arial Black, Impact, sans-serif',
       fontSize: '29px',
@@ -42,51 +53,88 @@ export class PerkChoiceOverlay {
     }).setOrigin(0.5).setDepth(202);
     const subtitle = this.scene.add.text(800, 318, 'The choice is permanent for this run and changes future combat.', {
       fontSize: '15px',
-      color: '#bdb7c7',
+      color: '#e0d6e5',
+      stroke: '#11121a', strokeThickness: 2,
     }).setOrigin(0.5).setDepth(202);
-    this.objects.push(backdrop, panel, title, subtitle);
+    this.objects.push(backdrop, panel, panelWear, titleTape, title, subtitle);
+    if (paintedPanel) this.objects.push(paintedPanel);
 
     choices.forEach((perk, index) => {
       const x = 495 + index * 305;
       const color = RARITY_COLORS[perk.rarity];
-      const card = this.scene.add.rectangle(x, 478, 270, 225, 0x22242e, 1)
+      const card = this.scene.add.rectangle(x, 478, 270, 225, 0x22242e, 0.84)
         .setStrokeStyle(4, color)
         .setInteractive({ useHandCursor: true })
         .setDepth(202);
+      const paintedCard = addProductionPlate(this.scene, x, 478, 254, 209, {
+        region: 'perk',
+        depth: 202.05,
+        alpha: perk.rarity === 'epic' ? 0.6 : 0.46,
+        flipX: index === 2,
+        tint: index === 1 ? color : undefined,
+      });
+      const cardWear = createMaterialSurface(this.scene, {
+        x, y: 478, width: 254, height: 209, kind: 'paper', seed: `perk-choice:${perk.id}`,
+        depth: 202.1, alpha: 0.22,
+      });
+      const rarityTape = this.scene.add.rectangle(x, 393, 108, 22, 0x11131a, 0.76)
+        .setStrokeStyle(1, color, 0.7).setAngle(index === 1 ? 1.4 : -1.4).setDepth(202.8);
       const rarity = this.scene.add.text(x, 393, perk.rarity.toUpperCase(), {
         fontSize: '11px',
         color: `#${color.toString(16).padStart(6, '0')}`,
         fontStyle: 'bold',
+        stroke: '#11121a', strokeThickness: 3,
       }).setOrigin(0.5).setDepth(203);
       const name = this.scene.add.text(x, 433, perk.name.toUpperCase(), {
+        fontFamily: 'Arial Black, Impact, sans-serif',
         fontSize: '20px',
         color: '#fff8ec',
         fontStyle: 'bold',
         align: 'center',
+        stroke: '#11121a', strokeThickness: 4,
         wordWrap: { width: 235 },
       }).setOrigin(0.5).setDepth(203);
       const description = this.scene.add.text(x, 493, perk.description, {
         fontSize: '14px',
-        color: '#d5cedd',
+        color: '#f0e7f2',
         align: 'center',
         lineSpacing: 5,
+        stroke: '#11121a', strokeThickness: 2,
         wordWrap: { width: 220 },
       }).setOrigin(0.5).setDepth(203);
+      const pickPlate = this.scene.add.rectangle(x, 562, 132, 30, 0x27331f, 0.92)
+        .setStrokeStyle(2, 0xb5ff4d, 0.7).setDepth(202.8);
       const pick = this.scene.add.text(x, 562, 'TAKE PERK', {
         fontSize: '14px',
         color: '#dfffc5',
         fontStyle: 'bold',
+        stroke: '#10150d', strokeThickness: 3,
       }).setOrigin(0.5).setDepth(203);
 
-      card.on('pointerover', () => card.setFillStyle(0x303341));
-      card.on('pointerout', () => card.setFillStyle(0x22242e));
-      card.on('pointerdown', () => card.setScale(0.97));
+      card.on('pointerover', () => {
+        card.setFillStyle(0x303341, 0.76);
+        paintedCard?.setAlpha(perk.rarity === 'epic' ? 0.72 : 0.58);
+        pickPlate.setScale(1.04);
+      });
+      card.on('pointerout', () => {
+        card.setFillStyle(0x22242e, 0.84);
+        paintedCard?.setAlpha(perk.rarity === 'epic' ? 0.6 : 0.46);
+        pickPlate.setScale(1);
+      });
+      card.on('pointerdown', () => {
+        card.setScale(0.97);
+        pickPlate.setScale(0.98);
+        pick.setScale(0.98);
+      });
       card.on('pointerup', () => {
         card.setScale(1);
+        pickPlate.setScale(1.04);
+        pick.setScale(1);
         if (!this.visible) return;
         this.onSelected(perk.id);
       });
-      this.objects.push(card, rarity, name, description, pick);
+      this.objects.push(card, cardWear, rarityTape, rarity, name, description, pickPlate, pick);
+      if (paintedCard) this.objects.push(paintedCard);
     });
   }
 

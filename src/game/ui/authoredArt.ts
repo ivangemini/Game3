@@ -1,5 +1,6 @@
 import * as Phaser from 'phaser';
 import { atlasTextureKeyForArtKey } from '../assets/atlasContract';
+import { addProductionPlate } from './productionPlate';
 
 export interface AuthoredArtAsset {
   readonly key: string;
@@ -109,18 +110,35 @@ export function createAuthoredPortraitSlot(
   depth: number,
 ): Phaser.GameObjects.Container {
   const root = scene.add.container(x, y).setDepth(depth);
-  const plate = scene.add.rectangle(0, 0, width, height, 0x171820, 1).setStrokeStyle(3, 0x625c6b);
+  const plate = scene.add.rectangle(0, 0, width, height, 0x171820, 0.82).setStrokeStyle(3, 0x625c6b);
+  const painted = key.startsWith('hero.')
+    ? addProductionPlate(scene, 0, 0, width - 6, height - 6, {
+      region: 'hero',
+      alpha: key.endsWith('scavenger') ? 0.72 : 0.3,
+      flipX: key.endsWith('alchemist') || key.endsWith('beastfriend'),
+      tint: key.endsWith('engineer') ? 0xd9f6ff : key.endsWith('alchemist') ? 0xf3ddff : 0xecffd8,
+    })
+    : null;
   const mark = scene.add.text(0, 0, 'JUNK\nPORTRAIT', {
     fontSize: '12px', color: '#77717f', align: 'center', fontStyle: 'bold',
   }).setOrigin(0.5);
-  root.add([plate, mark]);
+  root.add([plate]);
+  if (painted) {
+    painted.setPosition(0, 0).setDepth(0);
+    root.add(painted);
+  }
+  root.add(mark);
 
   const render = (): void => {
     if (!root.active) return;
     const texture = resolveAuthoredTexture(scene, key);
     if (!texture) return;
-    root.removeAll(true);
-    const image = scene.add.image(0, 0, texture.textureKey, texture.frame).setDisplaySize(width, height);
+    mark.destroy();
+    if (root.getByName('authored-portrait')) return;
+    const image = scene.add.image(0, 0, texture.textureKey, texture.frame)
+      .setDisplaySize(width - 8, height - 8)
+      .setName('authored-portrait');
+    if (key === 'hero.scavenger' && painted) image.setAlpha(0.42);
     root.add(image);
   };
 

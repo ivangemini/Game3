@@ -2,6 +2,7 @@ import * as Phaser from 'phaser';
 import { bossArtKeyForEnemyId, requestAuthoredTexture, resolveAuthoredTexture } from './authoredArt';
 import { bossMotionSpecForArtKey, type BossMotionSpec } from './bossPresentation';
 import { createMaterialSurface } from './materialSurface';
+import { addProductionPlate } from './productionPlate';
 
 export class BossPortraitLayer {
   private root: Phaser.GameObjects.Container | null = null;
@@ -14,6 +15,16 @@ export class BossPortraitLayer {
     private readonly y: number,
     private readonly reducedMotion: boolean,
   ) {
+    // CombatFeedback constructs this layer before CombatPanel. A presentation-only
+    // raster strip at depth 20.15 therefore sits above the flat stage shell but
+    // below enemies/HUD (21+), and the preparation veil (31+) still covers it.
+    addProductionPlate(scene, 1140, 445, 744, 524, {
+      region: 'stage',
+      depth: 20.15,
+      alpha: 0.34,
+      tint: 0xcbd8c8,
+    });
+    scene.add.ellipse(1225, 520, 460, 78, 0x07080b, 0.32).setDepth(20.2);
     scene.events.once('shutdown', () => this.clear());
   }
 
@@ -32,46 +43,68 @@ export class BossPortraitLayer {
       this.destroyRoot();
       const root = this.scene.add.container(this.x, this.y).setDepth(32);
       const accent = this.activeSpec?.accent ?? 0xa85ad1;
-      const backing = this.scene.add.rectangle(4, 6, 286, 214, 0x090a0f, 0.62)
-        .setStrokeStyle(2, 0x090a0f, 0.65);
-      const frame = this.scene.add.rectangle(0, 0, 278, 206, 0x252832, 1)
-        .setStrokeStyle(5, accent);
+      const halo = this.scene.add.ellipse(0, 8, 438, 306, accent, 0.1)
+        .setStrokeStyle(4, accent, 0.28);
+      const backing = this.scene.add.rectangle(7, 10, 420, 316, 0x08090e, 0.82)
+        .setStrokeStyle(3, 0x090a0f, 0.82);
+      const paintedAtmosphere = addProductionPlate(this.scene, 0, 0, 402, 294, {
+        region: 'boss',
+        alpha: key.includes('tv-tyrant') ? 0.28 : 0.18,
+        tint: accent,
+        flipX: key.includes('border-shark') || key.includes('deadline-snail'),
+      });
+      const frame = this.scene.add.rectangle(0, 0, 404, 304, 0x252832, 0.88)
+        .setStrokeStyle(8, accent);
       const frameWear = createMaterialSurface(this.scene, {
         x: 0,
         y: 0,
-        width: 268,
-        height: 196,
+        width: 392,
+        height: 292,
         kind: 'scrap',
         seed: `boss-frame:${key}`,
-        alpha: 0.72,
+        alpha: 0.48,
       });
-      const inner = this.scene.add.rectangle(0, 0, 258, 192, 0x101219, 1)
-        .setStrokeStyle(2, 0x737985, 0.5);
-      const image = this.scene.add.image(0, 0, texture.textureKey, texture.frame).setDisplaySize(250, 186);
+      const inner = this.scene.add.rectangle(0, 0, 382, 282, 0x101219, 0.66)
+        .setStrokeStyle(3, 0x737985, 0.5);
+      const rasterTyrant = key.includes('tv-tyrant')
+        ? addProductionPlate(this.scene, 0, 0, 382, 292, { region: 'boss', alpha: 1 })
+        : null;
+      const image = rasterTyrant
+        ?? this.scene.add.image(0, 0, texture.textureKey, texture.frame).setDisplaySize(370, 274);
       const screenWear = createMaterialSurface(this.scene, {
         x: 0,
         y: 0,
-        width: 244,
-        height: 180,
+        width: 360,
+        height: 264,
         kind: key.includes('tv-tyrant') ? 'screen' : 'scrap',
         seed: `boss-portrait:${key}`,
-        alpha: key.includes('tv-tyrant') ? 0.82 : 0.22,
+        alpha: key.includes('tv-tyrant') ? 0.5 : 0.15,
       });
       const fasteners = [
-        this.scene.add.circle(-128, -92, 4.5, 0x5a606c, 1).setStrokeStyle(1.5, 0xbac1cc, 0.6),
-        this.scene.add.circle(128, -92, 4.5, 0x5a606c, 1).setStrokeStyle(1.5, 0xbac1cc, 0.6),
-        this.scene.add.circle(-128, 92, 4.5, 0x5a606c, 1).setStrokeStyle(1.5, 0xbac1cc, 0.6),
-        this.scene.add.circle(128, 92, 4.5, 0x5a606c, 1).setStrokeStyle(1.5, 0xbac1cc, 0.6),
+        this.scene.add.circle(-190, -142, 6, 0x5a606c, 1).setStrokeStyle(2, 0xbac1cc, 0.6),
+        this.scene.add.circle(190, -142, 6, 0x5a606c, 1).setStrokeStyle(2, 0xbac1cc, 0.6),
+        this.scene.add.circle(-190, 142, 6, 0x5a606c, 1).setStrokeStyle(2, 0xbac1cc, 0.6),
+        this.scene.add.circle(190, 142, 6, 0x5a606c, 1).setStrokeStyle(2, 0xbac1cc, 0.6),
       ];
-      root.add([backing, frame, frameWear, inner, image, screenWear, ...fasteners]);
+      const markBacking = this.scene.add.rectangle(-145, -129, 104, 30, 0x0b0c11, 0.78)
+        .setStrokeStyle(2, accent, 0.72).setAngle(-2);
+      const mark = this.scene.add.text(-194, -139, bossMarkForKey(key), {
+        fontFamily: 'Arial Black, Impact, sans-serif', fontSize: '15px', color: '#fff4f8',
+        fontStyle: 'bold', stroke: '#090a0f', strokeThickness: 4,
+      }).setAngle(-2);
+      root.add([halo, backing]);
+      if (paintedAtmosphere) root.add(paintedAtmosphere);
+      root.add([frame, frameWear, inner, image, screenWear, ...fasteners, markBacking, mark]);
       this.root = root;
       if (!this.reducedMotion) {
-        root.setScale(0.94);
+        root.setScale(0.82).setAlpha(0).setAngle(entranceAngleForKey(key));
         this.scene.tweens.add({
           targets: root,
           scaleX: 1,
           scaleY: 1,
-          duration: 180,
+          alpha: 1,
+          angle: 0,
+          duration: 240,
           ease: 'Back.Out',
           onComplete: () => this.startIdle(),
         });
@@ -148,6 +181,27 @@ export class BossPortraitLayer {
     }
   }
 
+  defeat(): void {
+    const root = this.root;
+    if (!root) return;
+    this.scene.tweens.killTweensOf(root);
+    root.setPosition(this.x, this.y).setAngle(0).setAlpha(1);
+    if (this.reducedMotion) {
+      root.setAlpha(0.42);
+      return;
+    }
+    this.scene.tweens.add({
+      targets: root,
+      scaleX: 1.12,
+      scaleY: 0.9,
+      angle: 4,
+      alpha: 0.22,
+      y: this.y + 18,
+      duration: 320,
+      ease: 'Back.In',
+    });
+  }
+
   fade(alpha: number): void {
     if (!this.root) return;
     this.scene.tweens.killTweensOf(this.root);
@@ -184,4 +238,21 @@ export class BossPortraitLayer {
     this.root.destroy(true);
     this.root = null;
   }
+}
+
+function bossMarkForKey(key: string): string {
+  if (key.includes('tv-tyrant')) return '▣ SIGNAL';
+  if (key.includes('deadline-snail')) return '◷ TIME';
+  if (key.includes('closet-monster')) return '▦ CLUTTER';
+  if (key.includes('baby-moon')) return '◐ ECLIPSE';
+  if (key.includes('copycat-auditor')) return '≡ AUDIT';
+  if (key.includes('border-shark')) return '◩ BORDER';
+  return '◆ BOSS';
+}
+
+function entranceAngleForKey(key: string): number {
+  if (key.includes('border-shark')) return -5;
+  if (key.includes('copycat-auditor')) return 3;
+  if (key.includes('baby-moon')) return -3;
+  return 0;
 }

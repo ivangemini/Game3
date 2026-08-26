@@ -81,6 +81,19 @@ export function synthPatchForCue(cue: AudioCue): SynthPatch {
         ],
         [noise('highpass', 2600, 5200, 0.4, 210, 170, 0.012)],
       );
+    case 'boss.defeat':
+      return patch(
+        [
+          tone('sine', pitch(92), pitch(48), 0, 300, 0.058),
+          tone('triangle', pitch(220), pitch(330), 70, 220, 0.038),
+          tone('triangle', pitch(440), pitch(660), 245, 210, 0.044),
+          tone('sine', pitch(880), pitch(1040), 390, 230, 0.034),
+        ],
+        [
+          noise('lowpass', 1200, 120, 0.8, 0, 260, 0.046),
+          noise('highpass', 2600, 6800, 0.45, 300, 270, 0.026),
+        ],
+      );
     case 'combat.defeat':
       return patch(
         [

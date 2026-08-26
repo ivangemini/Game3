@@ -4,6 +4,7 @@ import { findAvailableFusions, type FusionCandidate, type FusionRecipe } from '.
 import type { ItemDefinition, PlacedItem } from '../domain/types';
 import { createItemGlyph } from './ItemGlyph';
 import { createMaterialSurface } from './materialSurface';
+import { addProductionPlate } from './productionPlate';
 import { PANEL_VISUALS, rarityVisual } from './visualTokens';
 
 export type FusionFeedbackEvent =
@@ -97,9 +98,12 @@ export class FusionPanel {
 
   private drawShell(): void {
     this.scene.add.rectangle(this.left + 103, this.top + 61, 206, 122, PANEL_VISUALS.ink, 0.55).setPosition(this.left + 105, this.top + 64);
-    this.scene.add.rectangle(this.left + 100, this.top + 58, 200, 116, 0x21172a, 1)
+    this.scene.add.rectangle(this.left + 100, this.top + 58, 200, 116, 0x21172a, 0.94)
       .setStrokeStyle(4, 0x8e55ac);
-    this.scene.add.rectangle(this.left + 100, this.top + 58, 188, 104, 0x171522, 1)
+    addProductionPlate(this.scene, this.left + 100, this.top + 58, 188, 104, {
+      region: 'boss', alpha: 0.34, tint: 0xe9c9ff,
+    });
+    this.scene.add.rectangle(this.left + 100, this.top + 58, 188, 104, 0x171522, 0.42)
       .setStrokeStyle(1, 0x3f3149);
     createMaterialSurface(this.scene, {
       x: this.left + 100,
@@ -108,19 +112,23 @@ export class FusionPanel {
       height: 98,
       kind: 'scrap',
       seed: 'fusion-lab:chassis',
-      alpha: 0.68,
+      alpha: 0.42,
     });
 
+    const coilGlow = this.scene.add.ellipse(this.left + 169, this.top + 46, 58, 44, PANEL_VISUALS.neonPurple, 0.1)
+      .setStrokeStyle(1, 0x63d9ff, 0.18);
     const coil = this.scene.add.graphics();
-    coil.lineStyle(2, PANEL_VISUALS.neonPurple, 0.32);
+    coil.lineStyle(2, PANEL_VISUALS.neonPurple, 0.46);
     for (let index = 0; index < 4; index += 1) {
       const y = this.top + 31 + index * 8;
       coil.lineBetween(this.left + 152, y, this.left + 184, y + (index % 2 === 0 ? 5 : -5));
     }
-    coil.lineStyle(1, 0x63d9ff, 0.24);
+    coil.lineStyle(1, 0x63d9ff, 0.34);
     coil.lineBetween(this.left + 149, this.top + 36, this.left + 187, this.top + 54);
+    coilGlow.setDepth(0.1);
+    coil.setDepth(0.2);
 
-    this.scene.add.rectangle(this.left + 100, this.top + 13, 158, 25, 0x4d3156, 1)
+    this.scene.add.rectangle(this.left + 100, this.top + 13, 158, 25, 0x4d3156, 0.96)
       .setStrokeStyle(2, 0xc981e4).setAngle(1.2);
     createMaterialSurface(this.scene, {
       x: this.left + 100,

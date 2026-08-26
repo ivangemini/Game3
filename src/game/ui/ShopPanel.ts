@@ -5,6 +5,7 @@ import { generateShopOffers, type ShopOffer } from '../domain/shop';
 import type { ItemDefinition } from '../domain/types';
 import { createItemGlyph } from './ItemGlyph';
 import { createMaterialSurface } from './materialSurface';
+import { addProductionPlate } from './productionPlate';
 import { PANEL_VISUALS, rarityVisual } from './visualTokens';
 
 const PLATFORM_REGISTRY_KEY = 'junkpack.platform-adapter';
@@ -110,9 +111,14 @@ export class ShopPanel {
     const centerX = this.left + 705;
     const centerY = this.top + 72;
     this.scene.add.rectangle(centerX + 6, centerY + 7, 1410, 144, PANEL_VISUALS.ink, 0.55).setDepth(-3);
-    this.scene.add.rectangle(centerX, centerY, 1410, 144, PANEL_VISUALS.leatherDark, 1)
+    this.scene.add.rectangle(centerX, centerY, 1410, 144, PANEL_VISUALS.leatherDark, 0.72)
       .setStrokeStyle(5, PANEL_VISUALS.leatherEdge).setDepth(-2);
-    this.scene.add.rectangle(centerX, centerY, 1392, 128, 0x171820, 1)
+    addProductionPlate(this.scene, centerX, centerY, 1388, 124, {
+      region: 'backpack',
+      depth: -1.5,
+      alpha: 0.34,
+    });
+    this.scene.add.rectangle(centerX, centerY, 1392, 128, 0x171820, 0.58)
       .setStrokeStyle(2, 0x342c2a).setDepth(-1);
     createMaterialSurface(this.scene, {
       x: centerX,
@@ -122,10 +128,10 @@ export class ShopPanel {
       kind: 'scrap',
       seed: `shop-shell:${String(this.runSeed)}`,
       depth: -0.8,
-      alpha: 0.64,
+      alpha: 0.42,
     });
 
-    const titlePlate = this.scene.add.rectangle(this.left + 142, this.top + 26, 246, 35, 0x5a3b2e, 1)
+    const titlePlate = this.scene.add.rectangle(this.left + 142, this.top + 26, 246, 35, 0x5a3b2e, 0.9)
       .setStrokeStyle(3, 0xc28c5e);
     titlePlate.setAngle(-1.3);
     createMaterialSurface(this.scene, {
@@ -264,9 +270,15 @@ export class ShopPanel {
     const sold = this.soldOfferIds.has(offer.id);
 
     const shadow = this.scene.add.rectangle(x + 4, y + 5, 286, 112, PANEL_VISUALS.ink, 0.62);
-    const card = this.scene.add.rectangle(x, y, 286, 112, sold ? 0x15161b : rarity.fill, 1)
+    const card = this.scene.add.rectangle(x, y, 286, 112, sold ? 0x15161b : rarity.fill, sold ? 0.82 : 0.74)
       .setStrokeStyle(3, sold ? 0x55515b : rarity.stroke);
-    const inner = this.scene.add.rectangle(x, y, 274, 100, sold ? 0x1a1a20 : 0x23242c, 0.8)
+    const painted = addProductionPlate(this.scene, x, y, 270, 96, {
+      region: index % 2 === 0 ? 'backpack' : 'boss',
+      alpha: sold ? 0.08 : 0.27,
+      flipX: index === 1,
+      tint: sold ? 0x6c6870 : rarity.stroke,
+    });
+    const inner = this.scene.add.rectangle(x, y, 274, 100, sold ? 0x1a1a20 : 0x23242c, sold ? 0.66 : 0.46)
       .setStrokeStyle(1, sold ? 0x444149 : rarity.mid);
     const wear = createMaterialSurface(this.scene, {
       x,
@@ -275,7 +287,7 @@ export class ShopPanel {
       height: 90,
       kind: 'scrap',
       seed: `shop-offer:${offer.id}`,
-      alpha: sold ? 0.18 : 0.34,
+      alpha: sold ? 0.14 : 0.24,
     });
     const glyph = createItemGlyph(this.scene, definition, x - 103, y - 2, { size: 62, compact: true });
     glyph.setAlpha(sold ? 0.34 : 1);
@@ -301,7 +313,9 @@ export class ShopPanel {
       fontSize: '11px', color: sold ? '#77727e' : '#e3ffc5', fontStyle: 'bold',
     }).setOrigin(0.5);
 
-    this.offerObjects.push(shadow, card, inner, wear, glyph, title, rarityLabel, tags, price, buyButton, buyLabel);
+    this.offerObjects.push(shadow, card);
+    if (painted) this.offerObjects.push(painted);
+    this.offerObjects.push(inner, wear, glyph, title, rarityLabel, tags, price, buyButton, buyLabel);
     if (sold) return;
     buyButton.setInteractive({ useHandCursor: true });
     buyButton.on('pointerover', () => { buyButton.setFillStyle(0x47653c); card.setStrokeStyle(4, rarity.accent); });

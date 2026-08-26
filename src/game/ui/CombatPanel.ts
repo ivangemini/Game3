@@ -5,6 +5,7 @@ import {
   audioCueForDuplicateDebtEvent,
   audioCueForEdgeRentEvent,
   audioCueForTimeTaxEvent,
+  bossDefeatAudioCue,
   combatStartAudioCue,
   type AudioCue,
 } from '../audio/audioCues';
@@ -78,6 +79,21 @@ export class CombatPanel {
   private readonly onAudioCue?: (cue: AudioCue) => void;
   private readonly backpackGrid: { readonly left: number; readonly top: number; readonly cellSize: number };
   private readonly barGraphics: Phaser.GameObjects.Graphics;
+  private readonly compactHud: boolean;
+  private readonly stageShell: Phaser.GameObjects.Rectangle;
+  private readonly stageTitle: Phaser.GameObjects.Text;
+  private readonly stageSubtitle: Phaser.GameObjects.Text;
+  private readonly telegraphPlate: Phaser.GameObjects.Rectangle;
+  private readonly focusRight: Phaser.GameObjects.Rectangle;
+  private readonly focusBottom: Phaser.GameObjects.Rectangle;
+  private readonly focusTop: Phaser.GameObjects.Rectangle;
+  private readonly focusTitle: Phaser.GameObjects.Text;
+  private readonly focusHint: Phaser.GameObjects.Text;
+  private readonly prepVeil: Phaser.GameObjects.Rectangle;
+  private readonly prepVeilInner: Phaser.GameObjects.Rectangle;
+  private readonly prepVeilTitle: Phaser.GameObjects.Text;
+  private readonly prepVeilHint: Phaser.GameObjects.Text;
+  private readonly prepVeilRule: Phaser.GameObjects.Text;
   private readonly enemyBody: Phaser.GameObjects.Rectangle;
   private readonly enemyNameText: Phaser.GameObjects.Text;
   private readonly playerText: Phaser.GameObjects.Text;
@@ -112,40 +128,97 @@ export class CombatPanel {
     this.onOutcome = options.onOutcome;
     this.onAudioCue = options.onAudioCue;
     this.backpackGrid = options.backpackGrid ?? { left: 90, top: 225, cellSize: 76 };
+    this.compactHud = typeof document !== 'undefined' && document.getElementById('app')?.dataset.compactHud === 'true';
 
-    scene.add.rectangle(centerX, centerY, 720, 530, 0x211d28, 1).setStrokeStyle(5, 0x55365e);
-    scene.add.text(centerX - 325, centerY - 250, 'LIVE COMBAT', {
-      fontSize: '25px', color: '#ff91e6', fontStyle: 'bold',
-    });
-    scene.add.text(centerX - 325, centerY - 216, 'Build + hero + perks snapshot at fight start. Bosses attack backpack rules.', {
-      fontSize: '13px', color: '#aaa5b2',
-    });
+    // Combat mode deliberately masks preparation-only chrome instead of trying to
+    // shrink every subsystem into the same visual hierarchy. The backpack stays
+    // visible at left; run/fusion/shop/meta controls fall behind these focus mats.
+    this.focusRight = scene.add.rectangle(1050, 445, 990, 570, 0x0a0c12, 0.97)
+      .setStrokeStyle(2, 0x32273a, 0.55).setDepth(12).setVisible(false).setInteractive();
+    this.focusBottom = scene.add.rectangle(800, 792, 1510, 166, 0x0a0c12, 0.98)
+      .setStrokeStyle(2, 0x252934, 0.65).setDepth(12).setVisible(false).setInteractive();
+    this.focusTop = scene.add.rectangle(800, 86, 1600, 172, 0x090b10, 0.985)
+      .setDepth(95).setVisible(false).setInteractive();
+    this.focusTitle = scene.add.text(800, 57, 'FIGHT LIVE', {
+      fontFamily: 'Arial Black, Impact, sans-serif', fontSize: '28px', color: '#ff91e6',
+      fontStyle: 'bold', stroke: '#08090d', strokeThickness: 7,
+    }).setOrigin(0.5).setDepth(96).setVisible(false);
+    this.focusHint = scene.add.text(800, 101, 'BACKPACK SNAPSHOT LOCKED  •  READ THE TELEGRAPH  •  LET THE BUILD FIRE', {
+      fontSize: this.compactHud ? '16px' : '12px', color: '#c9c4d0', fontStyle: 'bold', letterSpacing: 1,
+    }).setOrigin(0.5).setDepth(96).setVisible(false);
 
-    this.enemyBody = scene.add.rectangle(centerX + 85, centerY - 42, 250, 190, 0x6f8f50, 1).setStrokeStyle(8, 0x2a2732);
-    scene.add.rectangle(centerX + 85, centerY - 42, 188, 110, 0x9aca68, 1).setStrokeStyle(7, 0x34313c);
-    scene.add.circle(centerX + 45, centerY - 58, 18, 0xffe26d);
-    scene.add.circle(centerX + 125, centerY - 54, 22, 0xffc65c);
-    scene.add.circle(centerX + 48, centerY - 58, 6, 0x1a1922);
-    scene.add.circle(centerX + 121, centerY - 54, 8, 0x1a1922);
-    scene.add.text(centerX + 85, centerY - 15, '▂▂▂', { fontSize: '30px', color: '#302038' }).setOrigin(0.5);
-    this.enemyNameText = scene.add.text(centerX + 85, centerY + 80, 'WAITING FOR ENCOUNTER', {
-      fontSize: '15px', color: '#f5f0e7', fontStyle: 'bold',
-    }).setOrigin(0.5);
+    // Preparation deliberately treats the combat half as quiet negative space.
+    // Run/Fusion/Shop remain actionable while the full theatre stays covered
+    // until a fight actually starts, so the backpack is the first read.
+    this.prepVeil = scene.add.rectangle(centerX, centerY, 770, 550, 0x0d1017, 0.975)
+      .setStrokeStyle(3, 0x313746, 0.62).setDepth(31);
+    this.prepVeilInner = scene.add.rectangle(centerX, centerY, 710, 490, 0x10141c, 0.58)
+      .setStrokeStyle(1, 0x272d38, 0.48).setDepth(32);
+    this.prepVeilTitle = scene.add.text(centerX, centerY - 54, 'FIGHT BAY', {
+      fontFamily: 'Arial Black, Impact, sans-serif', fontSize: this.compactHud ? '40px' : '34px', color: '#d9dde6',
+      fontStyle: 'bold', stroke: '#080a0e', strokeThickness: 7, letterSpacing: 2,
+    }).setOrigin(0.5).setDepth(33);
+    this.prepVeilHint = scene.add.text(centerX, centerY + 2, 'PACK THE BAG.  READ THE RUN.  START WHEN READY.', {
+      fontSize: this.compactHud ? '19px' : '15px', color: '#9aa3b1', fontStyle: 'bold', letterSpacing: 1,
+    }).setOrigin(0.5).setDepth(33);
+    this.prepVeilRule = scene.add.text(centerX, centerY + 50, 'Combat HUD appears only when the encounter is live.', {
+      fontSize: this.compactHud ? '15px' : '11px', color: '#666e7c', fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(33);
 
-    this.barGraphics = scene.add.graphics();
-    this.playerText = scene.add.text(centerX - 325, centerY - 158, '', { fontSize: '17px', color: '#f7f2e8', fontStyle: 'bold' });
-    this.enemyText = scene.add.text(centerX - 325, centerY - 124, '', { fontSize: '17px', color: '#f7f2e8', fontStyle: 'bold' });
-    this.poisonText = scene.add.text(centerX - 325, centerY - 90, '', { fontSize: '14px', color: '#b8ff77' });
-    this.nextActionText = scene.add.text(centerX - 325, centerY + 88, '', { fontSize: '12px', color: '#ffcf69', fontStyle: 'bold' });
-    this.bossStatusText = scene.add.text(centerX - 325, centerY + 110, '', {
-      fontSize: '12px', color: '#f08cff', fontStyle: 'bold', wordWrap: { width: 610 },
-    });
-    this.statusText = scene.add.text(centerX - 325, centerY + 134, 'Ready. Use the RUN panel to start the next encounter.', {
-      fontSize: '13px', color: '#d8d1df', wordWrap: { width: 610 },
-    });
-    this.eventLogText = scene.add.text(centerX - 325, centerY + 166, '', {
-      fontSize: '10px', color: '#aaa5b2', lineSpacing: 3, wordWrap: { width: 610 },
-    });
+    this.stageShell = scene.add.rectangle(centerX, centerY, 770, 550, 0x171821, 0.78)
+      .setStrokeStyle(4, 0x4a3154, 0.72).setDepth(20);
+    scene.add.rectangle(centerX, centerY, 750, 530, 0x0f1219, 0.72)
+      .setStrokeStyle(1, 0x343846, 0.8).setDepth(20);
+    this.stageTitle = scene.add.text(centerX - 345, centerY - 258, 'NEXT THREAT', {
+      fontFamily: 'Arial Black, Impact, sans-serif', fontSize: this.compactHud ? '30px' : '24px', color: '#e8d9ec',
+      fontStyle: 'bold', stroke: '#0b0c10', strokeThickness: 5,
+    }).setDepth(22);
+    this.stageSubtitle = scene.add.text(centerX - 345, centerY - 222, 'Repack first. Start the encounter when the build feels ready.', {
+      fontSize: this.compactHud ? '17px' : '12px', color: '#85818d', fontStyle: 'bold',
+    }).setDepth(22);
+
+    scene.add.rectangle(centerX + 112, centerY - 38, 356, 278, 0x090b10, 0.72)
+      .setStrokeStyle(2, 0x343846, 0.72).setDepth(20);
+    this.enemyBody = scene.add.rectangle(centerX + 112, centerY - 38, 310, 230, 0x6f8f50, 1)
+      .setStrokeStyle(9, 0x2a2732).setDepth(21);
+    scene.add.rectangle(centerX + 112, centerY - 38, 232, 132, 0x9aca68, 1)
+      .setStrokeStyle(7, 0x34313c).setDepth(21);
+    scene.add.circle(centerX + 62, centerY - 58, 21, 0xffe26d).setDepth(22);
+    scene.add.circle(centerX + 157, centerY - 54, 25, 0xffc65c).setDepth(22);
+    scene.add.circle(centerX + 66, centerY - 58, 7, 0x1a1922).setDepth(23);
+    scene.add.circle(centerX + 153, centerY - 54, 9, 0x1a1922).setDepth(23);
+    scene.add.text(centerX + 112, centerY - 5, '▂▂▂', { fontSize: '34px', color: '#302038' })
+      .setOrigin(0.5).setDepth(23);
+    this.enemyNameText = scene.add.text(centerX + 112, centerY + 102, 'NEXT ENCOUNTER', {
+      fontFamily: 'Arial Black, Impact, sans-serif', fontSize: this.compactHud ? '22px' : '17px', color: '#f5f0e7',
+      fontStyle: 'bold', stroke: '#090a0e', strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(34);
+
+    this.barGraphics = scene.add.graphics().setDepth(22);
+    this.playerText = scene.add.text(centerX - 345, centerY - 158, 'BUILD READY', {
+      fontSize: this.compactHud ? '22px' : '18px', color: '#f7f2e8', fontStyle: 'bold', stroke: '#0a0b0f', strokeThickness: 3,
+    }).setDepth(22);
+    this.enemyText = scene.add.text(centerX - 345, centerY - 120, '', {
+      fontSize: this.compactHud ? '22px' : '18px', color: '#f7f2e8', fontStyle: 'bold', stroke: '#0a0b0f', strokeThickness: 3,
+    }).setDepth(22);
+    this.poisonText = scene.add.text(centerX - 345, centerY - 82, '', {
+      fontSize: this.compactHud ? '18px' : '14px', color: '#b8ff77', fontStyle: 'bold',
+    }).setDepth(22);
+
+    this.telegraphPlate = scene.add.rectangle(centerX, centerY + 103, 694, 60, 0x2a1b31, 0.88)
+      .setStrokeStyle(3, 0x8f4aa4, 0.75).setDepth(21).setVisible(false);
+    this.nextActionText = scene.add.text(centerX - 325, centerY + 80, '', {
+      fontSize: this.compactHud ? '18px' : '14px', color: '#ffdc78', fontStyle: 'bold', wordWrap: { width: 650 },
+    }).setDepth(22);
+    this.bossStatusText = scene.add.text(centerX - 325, centerY + 105, '', {
+      fontSize: this.compactHud ? '18px' : '14px', color: '#ff9bea', fontStyle: 'bold', wordWrap: { width: 650 },
+    }).setDepth(22);
+    this.statusText = scene.add.text(centerX - 325, centerY + 145, 'Ready • Start the encounter from RUN.', {
+      fontSize: this.compactHud ? '16px' : '12px', color: '#c6bfcb', fontStyle: 'bold', wordWrap: { width: 650 },
+    }).setDepth(22);
+    this.eventLogText = scene.add.text(centerX - 325, centerY + 174, '', {
+      fontSize: '9px', color: '#817c88', lineSpacing: 2, wordWrap: { width: 650 },
+    }).setDepth(22).setVisible(!this.compactHud);
 
     if (options.showDebugButtons) {
       this.createFightButton(centerX + 98, centerY + 222, 'DEBUG DUMMY', 'debug:dummy', SCRAP_DUMMY, 0x354157, 0x68a8ff);
@@ -192,10 +265,12 @@ export class CombatPanel {
     this.eventLog.length = 0;
     this.eventLogText.setText('');
     const boss = this.isBoss(runtimeEnemy);
+    this.enterCombatFocus(runtimeEnemy, boss);
     this.onAudioCue?.(combatStartAudioCue(runtimeEnemy.id, boss));
+    if (boss) this.showBossReveal(runtimeEnemy);
     this.setLateWorldHazardVisual(this.lateWorldPressure);
     if (boss) {
-      this.bossStatusText.setText(`${this.bossSystems(runtimeEnemy).join(' + ')} armed.`).setColor('#f08cff');
+      this.bossStatusText.setText(`${this.bossRuleSymbol(runtimeEnemy)}  ${this.bossSystems(runtimeEnemy).join(' + ')}  •  WATCH YOUR BACKPACK`).setColor('#ff9bea');
     } else if (this.lateWorldPressure) {
       const pressure = this.lateWorldPressure;
       this.bossStatusText.setText(this.lateWorldPressureStatus(pressure)).setColor(pressure.world === 5 ? '#ffb27a' : '#8ceeff');
@@ -223,7 +298,7 @@ export class CombatPanel {
     const pressureText = this.lateWorldPressure && this.lateWorldPressure.pressureCount > 0
       ? ` • ${this.lateWorldPressure.name} active`
       : '';
-    this.setStatus(`${runtimeEnemy.name}${heroText} • ${build.items.size} items • ${build.synergies.connections.length} links • ${selectedPerks.length} perks${pressureText}.`, '#b8ff8e');
+    this.setStatus(`BUILD LOCKED${heroText} • ${build.items.size} JUNK • ${build.synergies.connections.length} LINKS • ${selectedPerks.length} PERKS${pressureText}`, '#b8ff8e');
     this.renderState();
     this.punchEnemy(this.lateWorldPressure ? 1.06 : 1.03);
     return true;
@@ -328,7 +403,11 @@ export class CombatPanel {
       return;
     }
 
-    this.onAudioCue?.(audioCueForCombatEvent(event));
+    if (event.kind === 'outcome' && event.outcome === 'victory' && this.setup && this.isBoss(this.setup.enemy)) {
+      this.onAudioCue?.(bossDefeatAudioCue(event.atMs, this.setup.enemy.id));
+    } else {
+      this.onAudioCue?.(audioCueForCombatEvent(event));
+    }
     if (event.kind === 'item-triggered') { this.pushLog(`${this.seconds(event.atMs)} • ${event.itemInstanceId} triggered`); return; }
     if (event.kind === 'item-jammed') { this.pushLog(`${this.seconds(event.atMs)} • ${event.itemInstanceId} JAMMED — trigger lost`); return; }
     if (event.kind === 'item-slimed') { this.pushLog(`${this.seconds(event.atMs)} • ${event.itemInstanceId} blocked by SLIME [${event.cell.x},${event.cell.y}]`); return; }
@@ -396,8 +475,133 @@ export class CombatPanel {
     this.bossStatusText.setText('').setColor('#f08cff');
     this.setLateWorldHazardVisual(null);
     this.lateWorldPressure = null;
-    if (won && this.setup && this.isBoss(this.setup.enemy)) this.onBossVictory?.(encounterId, enemyId);
+    const bossVictory = won && this.setup ? this.isBoss(this.setup.enemy) : false;
+    if (bossVictory) this.onBossVictory?.(encounterId, enemyId);
+    this.finishCombatFocus(won, bossVictory);
     this.onOutcome?.({ encounterId, enemyId, outcome: event.outcome });
+  }
+
+  private enterCombatFocus(enemy: EnemyCombatDefinition, boss: boolean): void {
+    const accent = boss ? this.bossAccent(enemy) : 0xb5ff4d;
+    this.focusTitle.setPosition(800, 57);
+    this.focusHint.setPosition(800, 101);
+    this.hidePreparationVeil();
+    this.focusTitle.setText(boss ? `BOSS // ${enemy.name.toUpperCase()}` : `FIGHT // ${enemy.name.toUpperCase()}`).setColor(boss ? '#ff91e6' : '#d8ff96');
+    this.focusHint.setText(boss
+      ? `${this.bossRuleSymbol(enemy)}  ${this.bossSystems(enemy).join(' + ')}   •   READ THE TELEGRAPH ON YOUR BUILD`
+      : 'BACKPACK SNAPSHOT LOCKED   •   WATCH TRIGGERS   •   LET THE BUILD FIRE');
+    this.stageShell.setAlpha(1).setStrokeStyle(5, accent, 0.92);
+    for (const object of [this.focusRight, this.focusBottom, this.focusTop, this.focusTitle, this.focusHint]) {
+      this.scene.tweens.killTweensOf(object);
+      object.setVisible(true);
+      if (!this.reducedMotion) object.setAlpha(0);
+    }
+    if (!this.reducedMotion) {
+      this.scene.tweens.add({
+        targets: [this.focusRight, this.focusBottom, this.focusTop],
+        alpha: { from: 0, to: 1 },
+        duration: 150,
+        ease: 'Quad.Out',
+      });
+      this.scene.tweens.add({
+        targets: [this.focusTitle, this.focusHint],
+        alpha: { from: 0, to: 1 },
+        y: '-=4',
+        duration: 180,
+        ease: 'Cubic.Out',
+      });
+    }
+  }
+
+  private finishCombatFocus(won: boolean, boss: boolean): void {
+    const delay = won ? (boss ? 520 : 360) : 260;
+    this.focusTitle.setText(won ? (boss ? 'BOSS DOWN' : 'CLEAR') : 'DEFEAT')
+      .setColor(won ? '#b5ff4d' : '#ff7185');
+    this.focusHint.setText(won
+      ? (boss ? 'RULE BROKEN   •   REWARD SECURED   •   RETURNING TO THE BACKPACK' : 'REWARD SECURED   •   REPACK FOR THE NEXT THREAT')
+      : 'THE BUILD FAILED   •   REPACK, SHOP OR FUSE, THEN RETRY');
+    this.scene.time.delayedCall(this.reducedMotion ? 120 : delay, () => {
+      const targets = [this.focusRight, this.focusBottom, this.focusTop, this.focusTitle, this.focusHint];
+      if (this.reducedMotion) {
+        for (const object of targets) object.setVisible(false).setAlpha(1);
+      } else {
+        this.scene.tweens.add({
+          targets, alpha: 0, duration: 150, ease: 'Quad.Out',
+          onComplete: () => { for (const object of targets) object.setVisible(false).setAlpha(1); },
+        });
+      }
+      this.stageShell.setAlpha(0.78).setStrokeStyle(4, 0x4a3154, 0.72);
+      this.showPreparationVeil();
+    });
+  }
+
+  private hidePreparationVeil(): void {
+    const objects = [this.prepVeil, this.prepVeilInner, this.prepVeilTitle, this.prepVeilHint, this.prepVeilRule];
+    for (const object of objects) {
+      this.scene.tweens.killTweensOf(object);
+      object.setVisible(false).setAlpha(1);
+    }
+  }
+
+  private showPreparationVeil(): void {
+    const objects = [this.prepVeil, this.prepVeilInner, this.prepVeilTitle, this.prepVeilHint, this.prepVeilRule];
+    for (const object of objects) {
+      this.scene.tweens.killTweensOf(object);
+      object.setVisible(true);
+      if (!this.reducedMotion) object.setAlpha(0);
+    }
+    if (!this.reducedMotion) {
+      this.scene.tweens.add({ targets: objects, alpha: 1, duration: 170, ease: 'Quad.Out' });
+    }
+  }
+
+  private showBossReveal(enemy: EnemyCombatDefinition): void {
+    const accent = this.bossAccent(enemy);
+    const curtain = this.scene.add.rectangle(1140, 432, 650, 176, 0x090a0f, 0.94)
+      .setStrokeStyle(5, accent, 0.95).setDepth(205);
+    const kicker = this.scene.add.text(1140, 388, 'BOSS ENCOUNTER', {
+      fontFamily: 'Arial Black, Impact, sans-serif', fontSize: this.compactHud ? '21px' : '17px', color: '#ffcf69',
+      fontStyle: 'bold', letterSpacing: 2,
+    }).setOrigin(0.5).setDepth(206);
+    const title = this.scene.add.text(1140, 425, enemy.name.toUpperCase(), {
+      fontFamily: 'Arial Black, Impact, sans-serif', fontSize: this.compactHud ? '36px' : '30px', color: '#fff4f8',
+      fontStyle: 'bold', stroke: '#090a0f', strokeThickness: 6,
+    }).setOrigin(0.5).setDepth(206);
+    const rule = this.scene.add.text(1140, 466, `${this.bossRuleSymbol(enemy)}  ${this.bossSystems(enemy).join(' + ')}`, {
+      fontSize: this.compactHud ? '19px' : '14px', color: '#ffd9f7', fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(206);
+    const revealObjects = [curtain, kicker, title, rule];
+    if (!this.reducedMotion) {
+      for (const object of revealObjects) object.setScale(0.96).setAlpha(0);
+      this.scene.tweens.add({ targets: revealObjects, scaleX: 1, scaleY: 1, alpha: 1, duration: 150, ease: 'Back.Out' });
+    }
+    this.scene.time.delayedCall(this.reducedMotion ? 260 : 520, () => {
+      if (this.reducedMotion) { for (const object of revealObjects) object.destroy(); return; }
+      this.scene.tweens.add({ targets: revealObjects, alpha: 0, y: '-=8', duration: 150, ease: 'Quad.In', onComplete: () => { for (const object of revealObjects) object.destroy(); } });
+    });
+  }
+
+  private bossRuleSymbol(enemy: EnemyCombatDefinition): string {
+    if (duplicateDebtDefinitionForEnemyId(enemy.id)) return '≡ AUDIT';
+    if (edgeRentDefinitionForEnemyId(enemy.id)) return '◩ BORDER';
+    if (timeTaxDefinitionForEnemyId(enemy.id)) return '◷ TIMER';
+    if (clutterCrushDefinitionForEnemyId(enemy.id)) return '▦ CLUTTER';
+    if (enemy.tagInterference) return '◐ ECLIPSE';
+    if (enemy.rowInterference) return '↯ MAGNET';
+    if (enemy.cellInterference) return '● SLIME';
+    if (enemy.interference) return '▣ SIGNAL';
+    return '◆ BOSS';
+  }
+
+  private bossAccent(enemy: EnemyCombatDefinition): number {
+    if (duplicateDebtDefinitionForEnemyId(enemy.id)) return 0xff9b5f;
+    if (edgeRentDefinitionForEnemyId(enemy.id)) return 0x58d7ff;
+    if (timeTaxDefinitionForEnemyId(enemy.id)) return 0xffcf69;
+    if (clutterCrushDefinitionForEnemyId(enemy.id)) return 0x7de6ff;
+    if (enemy.tagInterference) return 0xd18cff;
+    if (enemy.rowInterference) return 0x58d7ff;
+    if (enemy.cellInterference) return 0x76ff5b;
+    return 0xff91e6;
   }
 
   private setBackpackLocked(locked: boolean): void {
@@ -456,15 +660,31 @@ export class CombatPanel {
     const enemy = this.setup?.enemy ?? SCRAP_DUMMY;
     const playerHp = state?.playerHp ?? 100;
     const enemyHp = state?.enemyHp ?? enemy.maxHp;
-    this.playerText.setText(`YOU ♥ ${playerHp}/100  ◈ ${state?.playerShield ?? 0}`);
-    this.enemyText.setText(`${enemy.name} ${enemyHp}/${enemy.maxHp}`);
-    this.poisonText.setText(`☣ POISON ${state?.enemyPoison ?? 0}`);
-    const left = this.centerX - 325;
+    const left = this.centerX - 345;
     const boss = this.isBoss(enemy);
     this.barGraphics.clear();
-    this.drawBar(left, this.centerY - 184, 280, playerHp / 100, 0xff5b72);
-    this.drawBar(left, this.centerY - 150, 280, enemyHp / enemy.maxHp, boss ? 0xf06cff : 0xb96cff);
-    if (!state || state.outcome !== 'active') { this.nextActionText.setText(''); return; }
+    if (!state) {
+      this.stageTitle.setText('NEXT THREAT').setColor('#e8d9ec');
+      this.stageSubtitle.setText('Repack first. Start the encounter when the build feels ready.');
+      this.playerText.setText('BUILD READY');
+      this.enemyText.setText('');
+      this.poisonText.setText('');
+      this.nextActionText.setText('');
+      this.bossStatusText.setText('');
+      this.telegraphPlate.setVisible(false);
+      return;
+    }
+
+    this.stageTitle.setText(state.outcome === 'active' ? (boss ? 'BOSS FIGHT' : 'FIGHT LIVE') : state.outcome === 'victory' ? 'VICTORY' : 'RUN BROKEN')
+      .setColor(state.outcome === 'active' ? (boss ? '#ff91e6' : '#d8ff96') : state.outcome === 'victory' ? '#b5ff4d' : '#ff7185');
+    this.stageSubtitle.setText(boss ? `${this.bossRuleSymbol(enemy)}  ${this.bossSystems(enemy).join(' + ')} — telegraphs hit the backpack.` : 'Autobattle running — build triggers resolve from the locked backpack snapshot.');
+    this.playerText.setText(`YOU  ♥ ${playerHp}/100   ◈ ${state.playerShield}`);
+    this.enemyText.setText(`${boss ? 'BOSS  ' : ''}${enemy.name.toUpperCase()}  ${enemyHp}/${enemy.maxHp}`);
+    this.poisonText.setText(state.enemyPoison > 0 ? `☣ POISON ${state.enemyPoison}` : '');
+    this.drawBar(left, this.centerY - 188, 315, playerHp / 100, 0xff5b72);
+    this.drawBar(left, this.centerY - 148, 315, enemyHp / enemy.maxHp, boss ? 0xf06cff : 0xb5ff4d);
+    this.telegraphPlate.setVisible(state.outcome === 'active' && boss);
+    if (state.outcome !== 'active') { this.nextActionText.setText(''); return; }
     const entries: string[] = [];
     const labels: Array<[string, string]> = [
       ['enemy-attack', 'HIT'], ['boss-interference', 'JAM'], ['boss-cell-interference', 'SLIME'],
@@ -494,7 +714,7 @@ export class CombatPanel {
       const nextImpact = (Math.floor(state.timeMs / edgeRent.intervalMs) + 1) * edgeRent.intervalMs;
       entries.push(`RENT ${Math.max(0, (nextImpact - state.timeMs) / 1000).toFixed(1)}s`);
     }
-    this.nextActionText.setText(entries.join(' • '));
+    this.nextActionText.setText(entries.length > 0 ? `NEXT  //  ${entries.join('   •   ')}` : '');
   }
 
   private drawBar(x: number, y: number, width: number, ratio: number, color: number): void {
@@ -569,7 +789,7 @@ export class CombatPanel {
 
   private pushLog(message: string): void {
     this.eventLog.unshift(message);
-    if (this.eventLog.length > 5) this.eventLog.length = 5;
+    if (this.eventLog.length > 3) this.eventLog.length = 3;
     this.eventLogText.setText(this.eventLog.join('\n'));
   }
 

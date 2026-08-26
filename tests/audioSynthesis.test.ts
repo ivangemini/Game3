@@ -31,6 +31,7 @@ const REPRESENTATIVE_IDS: readonly AudioCueId[] = [
   'boss.edge-rent.telegraph',
   'boss.edge-rent.impact',
   'combat.victory',
+  'boss.defeat',
   'combat.defeat',
   'ui.purchase',
   'ui.reroll',

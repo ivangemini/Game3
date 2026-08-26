@@ -9,7 +9,7 @@ describe('Tag Eclipse audio cues', () => {
       tag: 'device',
       impactAtMs: 2200,
       affectedItemCount: 3,
-    })).toMatchObject({ id: 'boss.eclipse.telegraph', priority: 3, group: 'boss', sourceId: 'device' });
+    })).toMatchObject({ id: 'boss.eclipse.telegraph', priority: 4, group: 'boss', sourceId: 'device' });
 
     expect(audioCueForCombatEvent({
       kind: 'boss-tag-eclipsed',
