@@ -183,8 +183,8 @@ function confirmLabelFor(id: HudActionId, compact: boolean): string {
 
 function labelFor(id: HudActionId, compact: boolean, dailyKey: string, dailyActive: boolean): string {
   if (id === 'daily') {
-    if (compact) return dailyActive ? 'DAILY • ACTIVE' : `DAILY • ${dailyKey.slice(5)}`;
-    return dailyActive ? `DAILY ${dailyKey} • ACTIVE` : `DAILY RUN • ${dailyKey}`;
+    if (compact) return dailyActive ? 'DAILY • BOARD' : `DAILY • ${dailyKey.slice(5)}`;
+    return dailyActive ? `DAILY BOARD • ${dailyKey}` : `DAILY RUN • ${dailyKey}`;
   }
   if (id === 'archive') return compact ? 'ARCHIVE' : 'JUNK ARCHIVE';
   if (id === 'trophies') return compact ? 'TROPHIES' : 'TROPHY SHELF';
