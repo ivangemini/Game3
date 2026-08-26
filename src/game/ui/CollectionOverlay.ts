@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { telemetry } from '../../analytics/Telemetry';
 import type { FusionRecipe } from '../domain/fusions';
 import {
   createCollectionSnapshot,
@@ -97,11 +98,13 @@ export class CollectionOverlay {
   }
 
   private notifyTabViewed(snapshot: CollectionSnapshot): void {
-    this.options.onTabViewed?.({
+    const event: CollectionTabViewEvent = {
       tab: this.tab,
       tracedRecipes: snapshot.recipeClueProgress.traced,
       almostSolvedRecipes: snapshot.recipeClueProgress.almostSolved,
-    });
+    };
+    telemetry.track('archive_tab_viewed', event);
+    this.options.onTabViewed?.(event);
   }
 
   private drawChrome(snapshot: CollectionSnapshot): void {
