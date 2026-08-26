@@ -1,6 +1,7 @@
 import * as Phaser from 'phaser';
 import { AssetPreloadScene } from './scenes/AssetPreloadScene';
 import { PrototypeScene } from './scenes/PrototypeScene';
+import { RuntimeArchivePolishScene } from './scenes/RuntimeArchivePolishScene';
 import { RuntimeFlowPolishScene } from './scenes/RuntimeFlowPolishScene';
 import { RuntimePresentationScene } from './scenes/RuntimePresentationScene';
 import { RuntimeSurfacePolishScene } from './scenes/RuntimeSurfacePolishScene';
@@ -17,6 +18,7 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
     RuntimePresentationScene,
     RuntimeSurfacePolishScene,
     RuntimeFlowPolishScene,
+    RuntimeArchivePolishScene,
   ],
   render: {
     antialias: true,
