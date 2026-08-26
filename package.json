@@ -18,6 +18,8 @@
     "release:verify": "node scripts/check-portal-package.mjs",
     "release:package": "npm run build && npm run release:check && npm run release:archive && npm run release:verify",
     "release:soft-launch": "npm run build && npm run release:check:soft-launch && npm run release:archive && npm run release:verify",
+    "release:acceptance:template": "node scripts/release-acceptance-report.mjs template",
+    "release:acceptance:check": "node scripts/release-acceptance-report.mjs check",
     "analytics:receiver": "node services/telemetry-receiver.mjs",
     "analytics:report": "node scripts/soft-launch-report.mjs",
     "dev": "npm run assets:prepare && vite",
