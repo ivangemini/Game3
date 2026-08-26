@@ -4,7 +4,7 @@ A web-first roguelite inventory autobattler / boss-rush about packing absurd jun
 
 ## Status
 
-Soft-launch candidate hardening plus a user-directed deep-content expansion. The complete deterministic campaign/Corrupted Loop gameplay stack, authored item/boss UI art pipeline, versioned recovery-safe saves, portal adapters/ads, telemetry foundation and automated quality gates are implemented. Remaining work is concentrated in real-device acceptance, real portal tester compliance, final authored audio/presentation tuning and data-driven iteration. See `ROADMAP.md`.
+Soft-launch candidate hardening plus a user-directed deep-content and retention expansion. The complete deterministic campaign/Corrupted Loop gameplay stack, authored item/boss/UI art pipeline, versioned recovery-safe saves, Daily Contracts/Reality Rules, portal adapters/ads, telemetry foundation and automated quality gates are implemented. Remaining work is concentrated in real-device acceptance, real portal tester compliance, final authored audio/presentation tuning, late-world gameplay identity and data-driven iteration. See `ROADMAP.md`.
 
 ## Stack
 
@@ -56,9 +56,13 @@ See `docs/PLATFORM_INTEGRATION.md` before changing SDK or ad behavior.
 
 A new player makes one meaningful choice — pick a Junk Pilot — and enters the run immediately. The five-step Field Manual is intentionally opt-in through `HELP` so onboarding does not front-load several modal clicks before the core backpack loop.
 
+## Daily return loop
+
+The UTC Daily Run now has a deterministic three-contract Daily Board, one of 12 Reality Rules that changes real economy/combat/backpack knobs, Reality Stamps and a non-punitive recurring 7-day momentum track. Contract and reward progress survives reloads in save v9; the v8 migration preserves existing builds. Rewards deliberately avoid permanent combat-stat inflation. See `docs/SYSTEMS/DAILY_RETENTION.md`.
+
 ## Soft-launch analytics
 
-Telemetry is disabled externally unless `VITE_ANALYTICS_ENDPOINT` is configured. The client records an ephemeral session funnel for onboarding/help, hero choice, economy, combat pacing, events, fusion, loop depth and ad outcomes without a persistent user identity. See `.env.example` and `docs/ANALYTICS.md`.
+Telemetry is disabled externally unless `VITE_ANALYTICS_ENDPOINT` is configured. The client records an ephemeral session funnel for onboarding/help, hero choice, economy, combat pacing, events, fusion, loop depth, Daily Board/contract/claim behavior and ad outcomes without a persistent user identity. Return-age and streak buckets are operational aggregates, not claimed D1/D7 cohort retention. See `.env.example` and `docs/ANALYTICS.md`.
 
 ## Agent workflow
 
@@ -73,12 +77,13 @@ Read `AGENTS.md` first. It routes work to specialized files in `skills/` and the
 - 8 alternate non-boss corrupted enemy families from Loop 3 onward;
 - deterministic seeded shops, events, combat and progression;
 - tactile 6×5 backpack with progressive pocket unlocks and authored 60/60 item art;
-- versioned v8 local saves with legacy migrations and automatic valid-backup recovery;
-- Junk Archive, achievements, Daily runs and collection/meta progression;
+- versioned v9 local saves with v8 retention migration, older legacy migrations and automatic valid-backup recovery;
+- Junk Archive, achievements, Daily Contracts, 12 Reality Rules, Reality Stamps and non-punitive 7-day momentum progression;
+- 82 authored runtime SVG sources packed into 3 atlas requests: 60 item frames, 10 portrait frames and 12 UI frames;
 - Yandex Games, CrazyGames and standalone adapters with loading/gameplay markup;
 - optional rewarded shop reroll and conservative natural-break interstitial policy;
 - autoplay-safe adaptive audio with priority-aware music ducking and portal/ad pause-resume lifecycle;
 - branded loading/store-art pipelines and asset/bundle budgets;
-- privacy-minimal soft-launch telemetry and deterministic summary tooling;
+- privacy-minimal soft-launch telemetry with first-session, six-world continuation and Daily-return funnels;
 - unit/domain tests plus multi-browser Playwright release/performance/portal smoke coverage;
 - CI-built and cryptographically verified portal candidate ZIP + store-art bundle.
