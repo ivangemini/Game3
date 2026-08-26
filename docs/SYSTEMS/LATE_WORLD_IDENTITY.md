@@ -19,8 +19,8 @@ The campaign remains 6 worlds / 18 encounters. This system does not lengthen the
 - Each copy beyond the first adds **+8% enemy attack speed**, capped at **+24%**.
 - Counter: break up the largest duplicate stack.
 
-### Copycat Auditor — Duplicate Debt
-The boss keeps the stronger existing rule: periodic telegraph + direct duplicate pressure. The two preceding fights have already taught the player what exact copies are and which items are causing the problem.
+### Copycat Auditor — Duplicate Debt → Final Audit
+The first cycle uses the familiar **4 damage per extra exact copy**. From cycle 2 onward, the telegraph explicitly changes to **FINAL AUDIT** and announces **6 damage per extra copy** before impact. The target rule never changes: diversify exact definitions to erase the debt, or use shield as the secondary mitigation path. The two preceding fights have already taught the player which items create the duplicate stack.
 
 ## World 6 — Perimeter District
 
@@ -34,8 +34,8 @@ The boss keeps the stronger existing rule: periodic telegraph + direct duplicate
 - Each edge item adds **+3% enemy HP**, capped at **+30%**.
 - Counter: reduce perimeter occupancy rather than simply buying more power.
 
-### Border Shark — Edge Rent
-The boss keeps the stronger existing rule: periodic telegraph + direct perimeter rent damage. World 6 therefore teaches the geometry twice before the final test.
+### Border Shark — Edge Rent → Border Lockdown
+The first cycle charges **2 damage per perimeter item**. From cycle 2 onward, the telegraph explicitly changes to **BORDER LOCKDOWN** and announces **3 damage per perimeter item** before impact. The geometry remains identical: move items inward to erase rent, or use shield as the secondary mitigation path. World 6 therefore teaches the same readable counter twice before the final escalating test.
 
 ## Event affinity
 
@@ -85,6 +85,7 @@ Reduced Motion keeps the emblem and color/state text but removes the looping pul
 - Non-boss pressure may alter enemy HP/damage/cadence only; no surprise direct damage.
 - Every pressure has an arrangement counter available before combat.
 - Caps are deliberately below the corresponding boss threat's qualitative severity.
+- Copycat Auditor and Border Shark phase two begins on mechanic cycle 2, not at a hidden HP threshold, so the stronger price is fully telegraphed and render-chunk invariant.
 - The system should create a decision, not force a single exact layout.
 - Do not raise base campaign length or add mandatory extra encounters to support this feature.
 

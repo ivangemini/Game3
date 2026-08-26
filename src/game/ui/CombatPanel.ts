@@ -292,12 +292,14 @@ export class CombatPanel {
         const label = event.definitionId
           ? `${event.definitionId.toUpperCase()} ×${event.copyCount} • ${event.extraCopyCount} EXTRA`
           : 'NO DUPLICATES';
-        this.bossStatusText.setText(`DUPLICATE DEBT → ${label} • IMPACT IN ${((event.impactAtMs - event.atMs) / 1000).toFixed(1)}s`);
-        this.showBackpackItems(event.itemInstanceIds, 0xffb86b, Math.max(120, event.impactAtMs - event.atMs), true);
-        this.pushLog(`${this.seconds(event.atMs)} • auditor finds ${event.extraCopyCount} duplicate debt`);
+        const phaseLabel = event.phase === 2 ? 'FINAL AUDIT' : 'DUPLICATE DEBT';
+        const rate = event.damagePerExtraCopy ?? 4;
+        this.bossStatusText.setText(`${phaseLabel} → ${label} • ${rate}/EXTRA • IMPACT IN ${((event.impactAtMs - event.atMs) / 1000).toFixed(1)}s`);
+        this.showBackpackItems(event.itemInstanceIds, event.phase === 2 ? 0xff785b : 0xffb86b, Math.max(120, event.impactAtMs - event.atMs), true);
+        this.pushLog(`${this.seconds(event.atMs)} • ${event.phase === 2 ? 'FINAL AUDIT' : 'auditor'} finds ${event.extraCopyCount} duplicate debt`);
         return;
       }
-      this.bossStatusText.setText(`DUPLICATE DEBT → ${event.totalDamage} fine • ${event.absorbedByShield} shielded`);
+      this.bossStatusText.setText(`${event.phase === 2 ? 'FINAL AUDIT' : 'DUPLICATE DEBT'} → ${event.totalDamage} fine • ${event.absorbedByShield} shielded`);
       this.showBackpackItems(event.itemInstanceIds, 0xff7a59, 520, false);
       this.pushLog(`${this.seconds(event.atMs)} • duplicate fine ${event.healthDamage} HP`);
       if (!this.reducedMotion && event.healthDamage > 0) {
@@ -310,12 +312,14 @@ export class CombatPanel {
       this.onAudioCue?.(audioCueForEdgeRentEvent(event));
       if (event.kind === 'boss-edge-telegraph') {
         const label = event.affectedItemCount > 0 ? `${event.affectedItemCount} BORDER ITEMS` : 'CENTERED BUILD';
-        this.bossStatusText.setText(`EDGE RENT → ${label} • IMPACT IN ${((event.impactAtMs - event.atMs) / 1000).toFixed(1)}s`);
-        this.showBackpackItems(event.itemInstanceIds, 0x6be7ff, Math.max(120, event.impactAtMs - event.atMs), true);
-        this.pushLog(`${this.seconds(event.atMs)} • shark rents ${event.affectedItemCount} edge items`);
+        const phaseLabel = event.phase === 2 ? 'BORDER LOCKDOWN' : 'EDGE RENT';
+        const rate = event.damagePerEdgeItem ?? 2;
+        this.bossStatusText.setText(`${phaseLabel} → ${label} • ${rate}/EDGE • IMPACT IN ${((event.impactAtMs - event.atMs) / 1000).toFixed(1)}s`);
+        this.showBackpackItems(event.itemInstanceIds, event.phase === 2 ? 0x2fc8ff : 0x6be7ff, Math.max(120, event.impactAtMs - event.atMs), true);
+        this.pushLog(`${this.seconds(event.atMs)} • ${event.phase === 2 ? 'BORDER LOCKDOWN' : 'shark'} rents ${event.affectedItemCount} edge items`);
         return;
       }
-      this.bossStatusText.setText(`EDGE RENT → ${event.totalDamage} rent • ${event.absorbedByShield} shielded`);
+      this.bossStatusText.setText(`${event.phase === 2 ? 'BORDER LOCKDOWN' : 'EDGE RENT'} → ${event.totalDamage} rent • ${event.absorbedByShield} shielded`);
       this.showBackpackItems(event.itemInstanceIds, 0x36b8ff, 540, false);
       this.pushLog(`${this.seconds(event.atMs)} • border rent ${event.healthDamage} HP`);
       if (!this.reducedMotion && event.healthDamage > 0) {
