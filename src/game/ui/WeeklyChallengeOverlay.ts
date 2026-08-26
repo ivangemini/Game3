@@ -2,7 +2,7 @@ import * as Phaser from 'phaser';
 import { telemetry } from '../../analytics/Telemetry';
 import { PROTOTYPE_HERO_MAP } from '../data/heroes';
 import { PROTOTYPE_PERK_MAP } from '../data/perks';
-import { weeklyAttemptsBucket, weeklyTierRank, type WeeklyBoardSnapshot, type WeeklyTier } from '../domain/weeklyChallenge';
+import { weeklyAttemptsBucket, weeklyLateWorldFocusForConstraint, weeklyTierRank, type WeeklyBoardSnapshot, type WeeklyTier } from '../domain/weeklyChallenge';
 import { resolveAuthoredTexture, uiArtKey } from './authoredArt';
 import { dismissOverlay, pressPulse, revealOverlay } from './uiMotion';
 
@@ -96,6 +96,7 @@ export class WeeklyChallengeOverlay {
     const c = snapshot.constraint;
     const hero = PROTOTYPE_HERO_MAP.get(c.heroId);
     const perk = PROTOTYPE_PERK_MAP.get(c.startingPerkId);
+    const focus = weeklyLateWorldFocusForConstraint(c);
     const y = 160;
     this.content.add(this.scene.add.rectangle(800, y + 92, 1424, 184, 0x251f19, 1).setStrokeStyle(3, 0xffc768));
     this.content.add(this.scene.add.rectangle(800, y + 92, 1404, 164, 0x17191f, 0.86).setStrokeStyle(1, 0x5c4a2d));
@@ -109,8 +110,14 @@ export class WeeklyChallengeOverlay {
 
     this.badge(1030, y + 62, 'HERO', (hero?.name ?? c.heroId).toUpperCase());
     this.badge(1266, y + 62, 'STARTING PERK', (perk?.name ?? c.startingPerkId).toUpperCase());
-    this.content.add(this.scene.add.text(1010, y + 115, 'No permanent combat bonuses. Everyone gets the same seed and loadout this week.', {
-      fontSize: '10px', color: '#938c80', wordWrap: { width: 430 },
+    this.content.add(this.scene.add.text(1010, y + 108, `WORLD ${focus.world} FOCUS • ${focus.name.toUpperCase()}`, {
+      fontSize: '10px', color: focus.world === 5 ? '#ffb27a' : '#8ceeff', fontStyle: 'bold', wordWrap: { width: 430 },
+    }));
+    this.content.add(this.scene.add.text(1010, y + 130, focus.description, {
+      fontSize: '9px', color: '#b5afaa', wordWrap: { width: 430 },
+    }));
+    this.content.add(this.scene.add.text(1010, y + 160, 'Same seed/loadout • no permanent combat bonus.', {
+      fontSize: '9px', color: '#746f68',
     }));
   }
 

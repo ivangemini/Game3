@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_WEEKLY_CHALLENGE,
   WEEKLY_HISTORY_LIMIT,
+  WEEKLY_LOADOUTS,
   createWeeklyBoardSnapshot,
   isWeeklyChallengeState,
   recordWeeklyAttempt,
@@ -10,6 +11,7 @@ import {
   weeklyChallengeIdentity,
   weeklyChallengeIdentityFromKey,
   weeklyKeyFromSeed,
+  weeklyLateWorldFocusForConstraint,
   weeklyTierForScore,
 } from '../src/game/domain/weeklyChallenge';
 
@@ -34,6 +36,14 @@ describe('weekly challenge', () => {
     expect(first.seed).toBe('weekly:2026-W35');
     expect(first.constraint.heroId).toMatch(/^(scavenger|engineer|alchemist|beastfriend)$/);
     expect(first.constraint.startingPerkId.length).toBeGreaterThan(0);
+    expect(['duplicate-district', 'perimeter-district']).toContain(first.constraint.lateWorldFocus);
+  });
+
+  it('reuses both late-world counterplay families across the fixed Weekly loadout pool', () => {
+    const focuses = WEEKLY_LOADOUTS.map((constraint) => weeklyLateWorldFocusForConstraint(constraint));
+    expect(focuses.filter((focus) => focus.world === 5)).toHaveLength(4);
+    expect(focuses.filter((focus) => focus.world === 6)).toHaveLength(4);
+    expect(new Set(focuses.map((focus) => focus.id))).toEqual(new Set(['duplicate-district', 'perimeter-district']));
   });
 
   it('maps scores into monotonic Bronze/Silver/Gold/Reality-Broken tiers', () => {

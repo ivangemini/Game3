@@ -3,6 +3,7 @@ import type { HeroId } from './heroes';
 
 export type WeeklyTier = 'none' | 'bronze' | 'silver' | 'gold' | 'reality-broken';
 export type WeeklyRewardKind = 'sticker' | 'title' | 'frame' | 'vfx';
+export type WeeklyLateWorldFocusId = 'duplicate-district' | 'perimeter-district';
 
 export interface WeeklyChallengeIdentity {
   readonly key: string;
@@ -16,6 +17,15 @@ export interface WeeklyLoadoutConstraint {
   readonly description: string;
   readonly heroId: HeroId;
   readonly startingPerkId: string;
+  readonly lateWorldFocus: WeeklyLateWorldFocusId;
+}
+
+export interface WeeklyLateWorldFocusDefinition {
+  readonly id: WeeklyLateWorldFocusId;
+  readonly world: 5 | 6;
+  readonly name: string;
+  readonly kicker: string;
+  readonly description: string;
 }
 
 export interface WeeklyTierThresholds {
@@ -72,46 +82,71 @@ export interface WeeklyBoardSnapshot extends WeeklyChallengeDefinition {
 export const DEFAULT_WEEKLY_CHALLENGE: WeeklyChallengeState = { history: [] };
 export const WEEKLY_HISTORY_LIMIT = 12;
 
+export const WEEKLY_LATE_WORLD_FOCUSES: Readonly<Record<WeeklyLateWorldFocusId, WeeklyLateWorldFocusDefinition>> = {
+  'duplicate-district': {
+    id: 'duplicate-district',
+    world: 5,
+    name: 'Duplicate Discipline',
+    kicker: 'WORLD 5 • FINAL AUDIT IS WATCHING',
+    description: 'Avoid leaning on exact duplicate stacks before Copycat Auditor escalates. Shield is the fallback, not the plan.',
+  },
+  'perimeter-district': {
+    id: 'perimeter-district',
+    world: 6,
+    name: 'Centerline Discipline',
+    kicker: 'WORLD 6 • BORDER LOCKDOWN IS COMING',
+    description: 'Keep valuable junk off the outer backpack cells before Border Shark escalates. Shield can soften mistakes.',
+  },
+};
+
 export const WEEKLY_LOADOUTS: readonly WeeklyLoadoutConstraint[] = [
   {
     id: 'salvage-plating', name: 'Salvage Plating', kicker: 'MAKE THE TRASH SURVIVE ITS OWN PLAN',
     description: 'Scavenger starts with Scrap Plating. Build around metal durability and spatial value.',
     heroId: 'scavenger', startingPerkId: 'scrap-plating',
+    lateWorldFocus: 'perimeter-district',
   },
   {
     id: 'engineer-overclock', name: 'Overclock Permit', kicker: 'THE WARRANTY ENDS ON MONDAY',
     description: 'Engineer starts with Overclock. Device timing is your weekly routing puzzle.',
     heroId: 'engineer', startingPerkId: 'overclock',
+    lateWorldFocus: 'duplicate-district',
   },
   {
     id: 'toxic-warranty', name: 'Toxic Warranty', kicker: 'EVERY WEAPON NOW HAS PAPERWORK',
     description: 'Alchemist starts with Toxic Warranty. Weapons become poison delivery systems from fight one.',
     heroId: 'alchemist', startingPerkId: 'toxic-warranty',
+    lateWorldFocus: 'perimeter-district',
   },
   {
     id: 'pet-laser-license', name: 'Pet Laser License', kicker: 'THE ANIMAL HAS BEEN ARMED LEGALLY ENOUGH',
     description: 'Beastfriend starts with Laser Pet. Route pets into a repeatable trigger engine.',
     heroId: 'beastfriend', startingPerkId: 'laser-pet',
+    lateWorldFocus: 'duplicate-district',
   },
   {
     id: 'salvage-bad-idea', name: 'Bad Idea Salvage', kicker: 'FASTER TRASH, SAME INSURANCE',
     description: 'Scavenger starts with Bad Idea Energy. Every trigger speeds up, so layout quality matters earlier.',
     heroId: 'scavenger', startingPerkId: 'bad-idea-energy',
+    lateWorldFocus: 'duplicate-district',
   },
   {
     id: 'signal-engineer', name: 'Signal Engineer', kicker: 'ANTENNAS ARE NOW A LABOR REQUIREMENT',
     description: 'Engineer starts with Signal Booster. Antenna tempo is the fixed weekly constraint.',
     heroId: 'engineer', startingPerkId: 'signal-booster',
+    lateWorldFocus: 'perimeter-district',
   },
   {
     id: 'slime-alchemist', name: 'Slime Rights', kicker: 'THE OOZE HAS UNIONIZED',
     description: 'Alchemist starts with Slime Rights. Slime items become high-priority poison anchors.',
     heroId: 'alchemist', startingPerkId: 'slime-rights',
+    lateWorldFocus: 'perimeter-district',
   },
   {
     id: 'catnip-beastfriend', name: 'Catnip Optics', kicker: 'CATS HAVE ENTERED THE ARMS RACE',
     description: 'Beastfriend starts with Catnip Optics. Cat placement defines the weekly damage ceiling.',
     heroId: 'beastfriend', startingPerkId: 'catnip-optics',
+    lateWorldFocus: 'duplicate-district',
   },
 ] as const;
 
@@ -142,6 +177,12 @@ export function weeklyKeyFromSeed(seed: string | number): string | null {
   } catch {
     return null;
   }
+}
+
+export function weeklyLateWorldFocusForConstraint(
+  constraint: WeeklyLoadoutConstraint,
+): WeeklyLateWorldFocusDefinition {
+  return WEEKLY_LATE_WORLD_FOCUSES[constraint.lateWorldFocus];
 }
 
 export function weeklyChallengeForKey(key: string): WeeklyChallengeDefinition {
