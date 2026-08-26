@@ -13,6 +13,7 @@ import { PANEL_VISUALS } from '../ui/visualTokens';
 export class RuntimeSurfacePolishScene extends Phaser.Scene {
   private target: Phaser.Scene | null = null;
   private marker: Phaser.GameObjects.Rectangle | null = null;
+  private readonly arenaObjects: Array<Phaser.GameObjects.Shape | Phaser.GameObjects.Graphics | Phaser.GameObjects.Text> = [];
 
   constructor() {
     super('runtime-surface-polish');
@@ -22,6 +23,7 @@ export class RuntimeSurfacePolishScene extends Phaser.Scene {
     const target = this.scene.get('prototype');
     if (!target.sys.isActive()) return;
     if (this.target !== target || !this.marker?.active) this.install(target);
+    this.syncArenaStage(target);
   }
 
   private install(scene: Phaser.Scene): void {
@@ -37,6 +39,7 @@ export class RuntimeSurfacePolishScene extends Phaser.Scene {
 
     scene.events.once('shutdown', () => {
       if (this.target !== scene) return;
+      this.arenaObjects.length = 0;
       this.marker = null;
       this.target = null;
     });
@@ -156,11 +159,11 @@ export class RuntimeSurfacePolishScene extends Phaser.Scene {
   }
 
   private drawArenaStage(scene: Phaser.Scene): void {
-    // A low floor plane makes the authored boss read as a stage figure rather than a card.
-    scene.add.ellipse(1225, 537, 360, 64, 0x020306, 0.64)
+    // A low floor plane makes authored bosses read as stage figures instead of cards.
+    const outer = scene.add.ellipse(1225, 537, 360, 64, 0x020306, 0.64)
       .setStrokeStyle(3, PANEL_VISUALS.neonPurple, 0.22)
       .setDepth(20);
-    scene.add.ellipse(1225, 531, 278, 42, PANEL_VISUALS.neonPurple, 0.07)
+    const inner = scene.add.ellipse(1225, 531, 278, 42, PANEL_VISUALS.neonPurple, 0.07)
       .setStrokeStyle(2, PANEL_VISUALS.electricBlue, 0.16)
       .setDepth(20.1);
 
@@ -170,16 +173,33 @@ export class RuntimeSurfacePolishScene extends Phaser.Scene {
     warning.lineStyle(3, 0xe9b83f, 0.7);
     for (let x = 1080; x < 1380; x += 36) warning.lineBetween(x, 554, x + 18, 562);
 
+    const floorLabel = scene.add.text(1225, 568, 'BOSS FLOOR // KEEP THE BAG ALIVE', {
+      fontFamily: 'Arial Black, Impact, sans-serif',
+      fontSize: '10px', color: '#ba9fc5', stroke: '#07070a', strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(20.3);
+
+    this.arenaObjects.push(outer, inner, warning, floorLabel);
     const bolts = [
       [1065, 558], [1385, 558], [1078, 513], [1372, 513],
     ] as const;
     for (const [x, y] of bolts) {
-      scene.add.circle(x, y, 5, 0x4c515b, 1).setStrokeStyle(1, 0xaab1bc, 0.55).setDepth(20.2);
+      const bolt = scene.add.circle(x, y, 5, 0x4c515b, 1)
+        .setStrokeStyle(1, 0xaab1bc, 0.55)
+        .setDepth(20.2);
+      this.arenaObjects.push(bolt);
     }
 
-    scene.add.text(1225, 568, 'BOSS FLOOR // KEEP THE BAG ALIVE', {
-      fontFamily: 'Arial Black, Impact, sans-serif',
-      fontSize: '10px', color: '#ba9fc5', stroke: '#07070a', strokeThickness: 4,
-    }).setOrigin(0.5).setDepth(20.3);
+    for (const object of this.arenaObjects) object.setVisible(false);
+  }
+
+  private syncArenaStage(scene: Phaser.Scene): void {
+    let bossLive = false;
+    for (const object of scene.children.list) {
+      if (!(object instanceof Phaser.GameObjects.Text)) continue;
+      if (!object.text.startsWith('☠  BOSS //')) continue;
+      bossLive = !object.text.includes('STANDBY');
+      break;
+    }
+    for (const object of this.arenaObjects) object.setVisible(bossLive);
   }
 }
