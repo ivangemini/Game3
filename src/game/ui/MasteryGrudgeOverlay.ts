@@ -3,7 +3,7 @@ import { PROTOTYPE_HERO_MAP } from '../data/heroes';
 import { createBossGrudgeSnapshots, type BossHistoryState } from '../domain/bossGrudges';
 import { createHeroMasterySnapshot, type HeroMasteryXpState } from '../domain/heroMastery';
 import type { HeroId } from '../domain/heroes';
-import { bossArtKeyForEnemyId, createAuthoredPortraitSlot, heroArtKey } from './authoredArt';
+import { bossArtKeyForEnemyId, createAuthoredPortraitSlot, heroArtKey, resolveAuthoredTexture, uiArtKey } from './authoredArt';
 import { dismissOverlay, pressPulse, revealOverlay } from './uiMotion';
 
 const DEPTH = 1225;
@@ -14,6 +14,7 @@ export interface MasteryGrudgeOverlayOptions {
   readonly getHeroMasteryXp: () => HeroMasteryXpState;
   readonly getBossHistory: () => readonly BossHistoryState[];
   readonly reducedMotion: boolean;
+  readonly onOpenArchiveTrophies?: () => void;
 }
 
 export class MasteryGrudgeOverlay {
@@ -56,6 +57,7 @@ export class MasteryGrudgeOverlay {
     }));
     this.addTab(98, 'HERO MASTERY', 'heroes');
     this.addTab(326, 'BOSS GRUDGES', 'bosses');
+    if (this.options.onOpenArchiveTrophies) this.addArchiveButton(554);
     const close = this.scene.add.rectangle(1450, 93, 116, 40, 0x2b2e3a, 1).setStrokeStyle(2, 0x7f8496).setInteractive({ useHandCursor: true });
     const label = this.scene.add.text(1450, 93, 'CLOSE  ×', { fontSize: '13px', color: '#f7f2e8', fontStyle: 'bold' }).setOrigin(0.5);
     close.on('pointerover', () => close.setFillStyle(0x414655));
@@ -69,9 +71,29 @@ export class MasteryGrudgeOverlay {
     const active = this.tab === tab;
     const rect = this.scene.add.rectangle(x + 106, 151, 212, 38, active ? 0x48304f : 0x252832, 1)
       .setStrokeStyle(2, active ? 0xff91e6 : 0x555a68).setInteractive({ useHandCursor: true });
-    const text = this.scene.add.text(x + 106, 151, label, { fontSize: '11px', color: active ? '#ffe7fb' : '#a9aeba', fontStyle: 'bold' }).setOrigin(0.5);
-    rect.on('pointerdown', () => pressPulse(this.scene, [rect, text], this.options.reducedMotion));
+    const text = this.scene.add.text(x + 118, 151, label, { fontSize: '10px', color: active ? '#ffe7fb' : '#a9aeba', fontStyle: 'bold' }).setOrigin(0.5);
+    const iconId = tab === 'heroes' ? 'mastery' : 'grudge';
+    const texture = resolveAuthoredTexture(this.scene, uiArtKey(iconId));
+    const icon = texture
+      ? this.scene.add.image(x + 28, 151, texture.textureKey, texture.frame).setDisplaySize(26, 26)
+      : this.scene.add.text(x + 28, 151, tab === 'heroes' ? '★' : '!', {
+        fontSize: '16px', color: active ? '#ffd56e' : '#9ca1ad', fontStyle: 'bold',
+      }).setOrigin(0.5);
+    rect.on('pointerdown', () => pressPulse(this.scene, [rect, text, icon], this.options.reducedMotion));
     rect.on('pointerup', () => { this.tab = tab; this.refresh(); });
+    this.content.add([rect, text, icon]);
+  }
+
+  private addArchiveButton(x: number): void {
+    const rect = this.scene.add.rectangle(x + 110, 151, 220, 38, 0x202832, 1)
+      .setStrokeStyle(2, 0x65707d).setInteractive({ useHandCursor: true });
+    const text = this.scene.add.text(x + 110, 151, 'ARCHIVE TROPHIES ›', {
+      fontSize: '10px', color: '#b9c7d3', fontStyle: 'bold',
+    }).setOrigin(0.5);
+    rect.on('pointerover', () => rect.setFillStyle(0x2d3742));
+    rect.on('pointerout', () => rect.setFillStyle(0x202832));
+    rect.on('pointerdown', () => pressPulse(this.scene, [rect, text], this.options.reducedMotion));
+    rect.on('pointerup', () => this.options.onOpenArchiveTrophies?.());
     this.content.add([rect, text]);
   }
 
