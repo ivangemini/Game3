@@ -49,6 +49,21 @@ export interface DailyRetentionMetric {
   readonly streakBuckets: Readonly<Record<string, number>>;
 }
 
+export interface WeeklyChallengeMetric {
+  readonly sessionsStartingWeekly: number;
+  readonly weeklyStartSessionRate: number;
+  readonly sessionsOpeningBoard: number;
+  readonly boardOpenRateAmongWeeklySessions: number;
+  readonly sessionsFinishingAttempt: number;
+  readonly finishSessionRateAmongWeeklySessions: number;
+  readonly attemptStarts: number;
+  readonly attemptFinishes: number;
+  readonly finishToStartVolumeRatio: number;
+  readonly attemptsBuckets: Readonly<Record<string, number>>;
+  readonly scoreBuckets: Readonly<Record<string, number>>;
+  readonly tierDistribution: Readonly<Record<string, number>>;
+}
+
 export interface HeroMasteryMetric {
   readonly sessionsLevelingUp: number;
   readonly sessionLevelUpRate: number;
@@ -113,7 +128,9 @@ export interface SoftLaunchSummary {
   readonly campaignWorlds: readonly CampaignWorldMetric[];
   readonly standardRunsStarted: number;
   readonly dailyRunsStarted: number;
+  readonly weeklyRunsStarted: number;
   readonly dailyRetention: DailyRetentionMetric;
+  readonly weeklyChallenge: WeeklyChallengeMetric;
   readonly heroMastery: HeroMasteryMetric;
   readonly bossGrudges: BossGrudgeMetric;
   readonly archiveDiscovery: ArchiveDiscoveryMetric;
@@ -149,6 +166,9 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
   let returningSessions = 0;
   let standardRunsStarted = 0;
   let dailyRunsStarted = 0;
+  let weeklyRunsStarted = 0;
+  let weeklyAttemptStarts = 0;
+  let weeklyAttemptFinishes = 0;
   let dailyContractCompletions = 0;
   let dailyContractClaims = 0;
   let dailyTrackRewardClaims = 0;
@@ -183,6 +203,12 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
   const sessionStartedAt = new Map<string, number>();
   const runStartedAt = new Map<string, number>();
   const dailyRunSessions = new Set<string>();
+  const weeklyRunSessions = new Set<string>();
+  const weeklyBoardSessions = new Set<string>();
+  const weeklyFinishedSessions = new Set<string>();
+  const weeklyAttemptsBuckets: Record<string, number> = {};
+  const weeklyScoreBuckets: Record<string, number> = {};
+  const weeklyTierDistribution: Record<string, number> = {};
   const dailyBoardSessions = new Set<string>();
   const dailyContractCompletedSessions = new Set<string>();
   const dailyContractClaimedSessions = new Set<string>();
@@ -215,10 +241,13 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
         break;
       }
       case 'run_started': {
-        const payload = event.payload as { mode: 'standard' | 'daily' };
+        const payload = event.payload as { mode: 'standard' | 'daily' | 'weekly' };
         if (payload.mode === 'daily') {
           dailyRunsStarted += 1;
           dailyRunSessions.add(event.sessionId);
+        } else if (payload.mode === 'weekly') {
+          weeklyRunsStarted += 1;
+          weeklyRunSessions.add(event.sessionId);
         } else standardRunsStarted += 1;
         rememberEarliest(runStartedAt, event.sessionId, event.timestampMs);
         break;
@@ -242,6 +271,24 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
       case 'daily_track_claimed': {
         dailyTrackRewardClaims += 1;
         dailyTrackClaimedSessions.add(event.sessionId);
+        break;
+      }
+      case 'weekly_board_opened': {
+        weeklyBoardSessions.add(event.sessionId);
+        break;
+      }
+      case 'weekly_attempt_started': {
+        const payload = event.payload as { attemptsBucket: string };
+        weeklyAttemptStarts += 1;
+        weeklyAttemptsBuckets[payload.attemptsBucket] = (weeklyAttemptsBuckets[payload.attemptsBucket] ?? 0) + 1;
+        break;
+      }
+      case 'weekly_attempt_finished': {
+        const payload = event.payload as { tier: string; scoreBucket: string };
+        weeklyAttemptFinishes += 1;
+        weeklyFinishedSessions.add(event.sessionId);
+        weeklyScoreBuckets[payload.scoreBucket] = (weeklyScoreBuckets[payload.scoreBucket] ?? 0) + 1;
+        weeklyTierDistribution[payload.tier] = (weeklyTierDistribution[payload.tier] ?? 0) + 1;
         break;
       }
       case 'hero_mastery_level_up': {
@@ -409,6 +456,7 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
     campaignWorlds,
     standardRunsStarted,
     dailyRunsStarted,
+    weeklyRunsStarted,
     dailyRetention: {
       sessionsStartingDaily: dailyRunSessions.size,
       dailyStartSessionRate: ratio(dailyRunSessions.size, sessions),
@@ -423,6 +471,20 @@ export function summarizeTelemetry(events: readonly TelemetryEnvelope[]): SoftLa
       contractClaims: dailyContractClaims,
       trackRewardClaims: dailyTrackRewardClaims,
       streakBuckets: sortRecord(dailyStreakBuckets),
+    },
+    weeklyChallenge: {
+      sessionsStartingWeekly: weeklyRunSessions.size,
+      weeklyStartSessionRate: ratio(weeklyRunSessions.size, sessions),
+      sessionsOpeningBoard: weeklyBoardSessions.size,
+      boardOpenRateAmongWeeklySessions: ratio(weeklyBoardSessions.size, weeklyRunSessions.size),
+      sessionsFinishingAttempt: weeklyFinishedSessions.size,
+      finishSessionRateAmongWeeklySessions: ratio(weeklyFinishedSessions.size, weeklyRunSessions.size),
+      attemptStarts: weeklyAttemptStarts,
+      attemptFinishes: weeklyAttemptFinishes,
+      finishToStartVolumeRatio: ratio(weeklyAttemptFinishes, weeklyAttemptStarts),
+      attemptsBuckets: sortRecord(weeklyAttemptsBuckets),
+      scoreBuckets: sortRecord(weeklyScoreBuckets),
+      tierDistribution: sortRecord(weeklyTierDistribution),
     },
     heroMastery: {
       sessionsLevelingUp: masteryLevelUpSessions.size,
