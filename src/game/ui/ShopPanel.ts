@@ -63,12 +63,12 @@ export class ShopPanel {
     this.onFeedback = options.onFeedback;
 
     this.drawShopShell();
-    this.coinText = this.scene.add.text(left + 22, top + 49, '', {
+    this.coinText = this.scene.add.text(left + 24, top + 48, '', {
       fontFamily: 'Arial Black, Impact, sans-serif',
-      fontSize: '18px', color: '#fff4cf', fontStyle: 'bold', stroke: '#141218', strokeThickness: 4,
+      fontSize: '18px', color: '#fff0b5', fontStyle: 'bold', stroke: '#141218', strokeThickness: 4,
     });
-    this.statusText = this.scene.add.text(left + 22, top + 113, 'BUY • PACK • REBUILD. REROLLS STAY FIXED TO THIS RUN.', {
-      fontSize: '11px', color: '#bcb2a6', fontStyle: 'bold', wordWrap: { width: 288 },
+    this.statusText = this.scene.add.text(left + 22, top + 115, 'PACK A CRATE • REBUILD THE BAG • KEEP MOVING.', {
+      fontSize: '10px', color: '#bcb2a6', fontStyle: 'bold', wordWrap: { width: 286 },
     });
 
     this.createRerollButtons();
@@ -109,11 +109,11 @@ export class ShopPanel {
   private drawShopShell(): void {
     const centerX = this.left + 705;
     const centerY = this.top + 72;
-    this.scene.add.rectangle(centerX + 6, centerY + 7, 1410, 144, PANEL_VISUALS.ink, 0.55).setDepth(-3);
+    this.scene.add.rectangle(centerX + 7, centerY + 8, 1410, 144, PANEL_VISUALS.ink, 0.62).setDepth(-3);
     this.scene.add.rectangle(centerX, centerY, 1410, 144, PANEL_VISUALS.leatherDark, 1)
       .setStrokeStyle(5, PANEL_VISUALS.leatherEdge).setDepth(-2);
-    this.scene.add.rectangle(centerX, centerY, 1392, 128, 0x171820, 1)
-      .setStrokeStyle(2, 0x342c2a).setDepth(-1);
+    this.scene.add.rectangle(centerX, centerY, 1392, 128, 0x15171d, 1)
+      .setStrokeStyle(2, 0x433532).setDepth(-1);
     createMaterialSurface(this.scene, {
       x: centerX,
       y: centerY,
@@ -122,7 +122,7 @@ export class ShopPanel {
       kind: 'scrap',
       seed: `shop-shell:${String(this.runSeed)}`,
       depth: -0.8,
-      alpha: 0.64,
+      alpha: 0.72,
     });
 
     const titlePlate = this.scene.add.rectangle(this.left + 142, this.top + 26, 246, 35, 0x5a3b2e, 1)
@@ -137,10 +137,18 @@ export class ShopPanel {
       seed: 'shop:title-plate',
       alpha: 0.52,
     }).setAngle(-1.3);
-    this.scene.add.text(this.left + 142, this.top + 25, 'JUNK SHOP', {
+    this.scene.add.text(this.left + 142, this.top + 25, 'JUNK MARKET', {
       fontFamily: 'Arial Black, Impact, sans-serif', fontSize: '21px', color: '#ffd56e',
       stroke: '#261611', strokeThickness: 5,
     }).setOrigin(0.5).setAngle(-1.3);
+
+    // Coin well: the dynamic text sits on top of this hardware.
+    this.scene.add.rectangle(this.left + 100, this.top + 53, 176, 30, 0x0d0f14, 0.96)
+      .setStrokeStyle(2, 0x705d39);
+    this.scene.add.circle(this.left + 278, this.top + 53, 15, 0x7f5a20, 1)
+      .setStrokeStyle(3, 0xf0c653);
+    this.scene.add.circle(this.left + 278, this.top + 53, 8, 0x312416, 1)
+      .setStrokeStyle(1, 0xffe18a, 0.8);
 
     for (const x of [this.left + 12, this.left + 304]) {
       this.scene.add.circle(x, this.top + 12, 5, PANEL_VISUALS.scrap, 1).setStrokeStyle(2, PANEL_VISUALS.scrapEdge);
@@ -244,7 +252,7 @@ export class ShopPanel {
   private renderOffers(): void {
     for (const object of this.offerObjects) object.destroy();
     this.offerObjects.length = 0;
-    this.coinText.setText(`SCRAP  ◈ ${this.coins}`);
+    this.coinText.setText(`SCRAP // ${this.coins}`);
 
     const offers = generateShopOffers([...this.definitionsById.values()], this.runSeed, this.shopIndex, 3);
     const activeOfferIds = new Set(offers.map((offer) => offer.id));
@@ -262,12 +270,13 @@ export class ShopPanel {
     const y = this.top + 72;
     const rarity = rarityVisual(definition.rarity);
     const sold = this.soldOfferIds.has(offer.id);
+    const edge = sold ? 0x55515b : rarity.stroke;
 
-    const shadow = this.scene.add.rectangle(x + 4, y + 5, 286, 112, PANEL_VISUALS.ink, 0.62);
-    const card = this.scene.add.rectangle(x, y, 286, 112, sold ? 0x15161b : rarity.fill, 1)
-      .setStrokeStyle(3, sold ? 0x55515b : rarity.stroke);
-    const inner = this.scene.add.rectangle(x, y, 274, 100, sold ? 0x1a1a20 : 0x23242c, 0.8)
-      .setStrokeStyle(1, sold ? 0x444149 : rarity.mid);
+    const shadow = this.scene.add.rectangle(x + 5, y + 6, 286, 112, PANEL_VISUALS.ink, 0.72);
+    const card = this.scene.add.rectangle(x, y, 286, 112, sold ? 0x15161b : 0x262127, 1)
+      .setStrokeStyle(4, edge);
+    const inner = this.scene.add.rectangle(x, y, 272, 98, sold ? 0x191a20 : 0x1b1e26, 1)
+      .setStrokeStyle(1, sold ? 0x444149 : rarity.mid, 0.9);
     const wear = createMaterialSurface(this.scene, {
       x,
       y,
@@ -275,40 +284,95 @@ export class ShopPanel {
       height: 90,
       kind: 'scrap',
       seed: `shop-offer:${offer.id}`,
-      alpha: sold ? 0.18 : 0.34,
+      alpha: sold ? 0.15 : 0.48,
     });
-    const glyph = createItemGlyph(this.scene, definition, x - 103, y - 2, { size: 62, compact: true });
-    glyph.setAlpha(sold ? 0.34 : 1);
 
-    const title = this.scene.add.text(x - 61, y - 44, definition.name.toUpperCase(), {
-      fontSize: '14px', color: sold ? '#77727e' : rarity.text, fontStyle: 'bold',
-      stroke: '#141218', strokeThickness: 3, wordWrap: { width: 150 },
+    // Item bay and crate braces make each offer read as physical loot.
+    const bay = this.scene.add.rectangle(x - 101, y, 78, 82, sold ? 0x17181d : rarity.fill, 1)
+      .setStrokeStyle(3, sold ? 0x4d4b52 : rarity.stroke, sold ? 0.55 : 0.82);
+    const bayInner = this.scene.add.rectangle(x - 101, y, 66, 70, 0x101219, 0.9)
+      .setStrokeStyle(1, sold ? 0x3d3c42 : rarity.accent, sold ? 0.35 : 0.45);
+    const glyph = createItemGlyph(this.scene, definition, x - 101, y - 1, { size: 64, compact: true });
+    glyph.setAlpha(sold ? 0.3 : 1);
+
+    const braces = this.scene.add.graphics();
+    braces.lineStyle(4, sold ? 0x3d3e44 : 0x555b65, sold ? 0.4 : 0.72);
+    braces.lineBetween(x - 139, y - 50, x - 119, y - 38);
+    braces.lineBetween(x - 139, y + 50, x - 119, y + 38);
+    braces.lineBetween(x + 139, y - 50, x + 119, y - 38);
+    braces.lineBetween(x + 139, y + 50, x + 119, y + 38);
+    braces.lineStyle(1, 0xcbd1da, sold ? 0.12 : 0.22);
+    braces.lineBetween(x - 132, y - 46, x + 132, y - 46);
+
+    const title = this.scene.add.text(x - 53, y - 41, definition.name.toUpperCase(), {
+      fontFamily: 'Arial Black, Impact, sans-serif',
+      fontSize: '13px', color: sold ? '#77727e' : rarity.text, fontStyle: 'bold',
+      stroke: '#101117', strokeThickness: 4, wordWrap: { width: 158 },
     });
-    const rarityLabel = this.scene.add.text(x - 61, y - 19, rarity.label, {
-      fontSize: '9px', color: sold ? '#66616b' : `#${rarity.stroke.toString(16).padStart(6, '0')}`,
+
+    const rarityPlate = this.scene.add.rectangle(x + 82, y - 32, 82, 18, sold ? 0x202127 : rarity.fill, 0.96)
+      .setStrokeStyle(1, sold ? 0x4b4950 : rarity.stroke, 0.8);
+    const rarityLabel = this.scene.add.text(x + 82, y - 32, rarity.label, {
+      fontSize: '8px', color: sold ? '#66616b' : `#${rarity.stroke.toString(16).padStart(6, '0')}`,
       fontStyle: 'bold',
-    });
-    const tags = this.scene.add.text(x - 61, y - 2, definition.tags.slice(0, 3).join(' • ').toUpperCase(), {
-      fontSize: '9px', color: sold ? '#66616b' : '#b9b5c1', wordWrap: { width: 142 },
-    });
-    const price = this.scene.add.text(x - 61, y + 27, sold ? 'SOLD' : `◈ ${offer.price}`, {
-      fontFamily: 'Arial Black, Impact, sans-serif', fontSize: '15px', color: sold ? '#77727e' : '#ffd56e',
-      fontStyle: 'bold', stroke: '#15131a', strokeThickness: 3,
-    });
-    const buyButton = this.scene.add.rectangle(x + 95, y + 31, 76, 34, sold ? 0x29282d : 0x30452b, 1)
-      .setStrokeStyle(2, sold ? 0x55515b : PANEL_VISUALS.neonLime);
-    const buyLabel = this.scene.add.text(x + 95, y + 31, sold ? 'SOLD' : 'PACK IT', {
-      fontSize: '11px', color: sold ? '#77727e' : '#e3ffc5', fontStyle: 'bold',
     }).setOrigin(0.5);
 
-    this.offerObjects.push(shadow, card, inner, wear, glyph, title, rarityLabel, tags, price, buyButton, buyLabel);
+    const tags = this.scene.add.text(x - 53, y - 8, definition.tags.slice(0, 3).join('  •  ').toUpperCase(), {
+      fontSize: '8px', color: sold ? '#66616b' : '#bbb7c3', wordWrap: { width: 166 }, fontStyle: 'bold',
+    });
+
+    const pricePlate = this.scene.add.rectangle(x - 7, y + 31, 88, 32, sold ? 0x202126 : 0x2d271f, 1)
+      .setStrokeStyle(2, sold ? 0x505057 : 0x9e7837);
+    const price = this.scene.add.text(x - 7, y + 31, sold ? 'SOLD' : `◈ ${offer.price}`, {
+      fontFamily: 'Arial Black, Impact, sans-serif', fontSize: '14px', color: sold ? '#77727e' : '#ffd56e',
+      fontStyle: 'bold', stroke: '#15131a', strokeThickness: 3,
+    }).setOrigin(0.5);
+
+    const buyButton = this.scene.add.rectangle(x + 96, y + 31, 94, 38, sold ? 0x29282d : 0x30452b, 1)
+      .setStrokeStyle(3, sold ? 0x55515b : PANEL_VISUALS.neonLime);
+    const buyLabel = this.scene.add.text(x + 96, y + 31, sold ? 'PACKED' : 'PACK IT', {
+      fontFamily: 'Arial Black, Impact, sans-serif',
+      fontSize: '10px', color: sold ? '#77727e' : '#e3ffc5', fontStyle: 'bold',
+      stroke: '#10150e', strokeThickness: 3,
+    }).setOrigin(0.5);
+
+    const bolts: Phaser.GameObjects.Arc[] = [];
+    for (const [boltX, boltY] of [
+      [x - 133, y - 48], [x + 133, y - 48], [x - 133, y + 48], [x + 133, y + 48],
+    ] as const) {
+      bolts.push(this.scene.add.circle(boltX, boltY, 3.5, 0x555a64, 1).setStrokeStyle(1, 0xa9b0ba, 0.6));
+    }
+
+    this.offerObjects.push(
+      shadow, card, inner, wear, bay, bayInner, glyph, braces, title, rarityPlate, rarityLabel, tags,
+      pricePlate, price, buyButton, buyLabel, ...bolts,
+    );
     if (sold) return;
+
     buyButton.setInteractive({ useHandCursor: true });
-    buyButton.on('pointerover', () => { buyButton.setFillStyle(0x47653c); card.setStrokeStyle(4, rarity.accent); });
-    buyButton.on('pointerout', () => { buyButton.setFillStyle(0x30452b); card.setStrokeStyle(3, rarity.stroke); });
-    buyButton.on('pointerdown', () => { buyButton.setScale(0.96); buyLabel.setScale(0.96); glyph.setScale(1.04); });
+    buyButton.on('pointerover', () => {
+      buyButton.setFillStyle(0x47653c);
+      card.setStrokeStyle(5, rarity.accent);
+      glyph.setScale(1.04);
+    });
+    buyButton.on('pointerout', () => {
+      buyButton.setFillStyle(0x30452b);
+      card.setStrokeStyle(4, rarity.stroke);
+      glyph.setScale(1);
+    });
+    buyButton.on('pointerdown', () => {
+      buyButton.setScale(0.96);
+      buyLabel.setScale(0.96);
+      glyph.setScale(1.08);
+    });
+    const restore = (): void => {
+      buyButton.setScale(1);
+      buyLabel.setScale(1);
+      glyph.setScale(1);
+    };
+    buyButton.on('pointerupoutside', restore);
     buyButton.on('pointerup', () => {
-      buyButton.setScale(1); buyLabel.setScale(1); glyph.setScale(1);
+      restore();
       this.tryPurchase(offer, definition);
     });
   }
