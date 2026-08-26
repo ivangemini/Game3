@@ -63,7 +63,13 @@ describe('daily retention', () => {
     state = incrementDailyCounter(state, key, 'fusionUses', 99);
     state = incrementDailyCounter(state, key, 'perkChoices', 99);
     state = incrementDailyCounter(state, key, 'bossVictories', 99);
-    const progress = { ...createInitialRunProgress(), campaignEncounterIndex: 17, score: 99_999 } as const;
+    const progress = {
+      mode: 'loop' as const,
+      campaignEncounterIndex: 17,
+      loopNumber: 2,
+      loopEncounterIndex: 0,
+      score: 99_999,
+    };
     const evaluation = evaluateDailyContracts(state, key, { progress });
     state = evaluation.state;
     expect(evaluation.newlyCompleted).toHaveLength(3);
