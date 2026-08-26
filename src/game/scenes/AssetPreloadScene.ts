@@ -102,6 +102,7 @@ export class AssetPreloadScene extends Phaser.Scene {
       console.warn(`[platform] ${platform?.id ?? 'unknown'} ready signal failed; continuing.`, error);
     }
     this.scene.launch('runtime-presentation');
+    this.scene.launch('runtime-surface-polish');
     this.scene.start('prototype');
   }
 }
