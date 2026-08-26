@@ -1,6 +1,6 @@
 import { dailyKeyFromSeed, dailyRunIdentityFromKey } from './dailyRun';
 import { createSeededRng } from './rng';
-import { completedCampaignWorldCount, type RunProgressState } from './runProgression';
+import { completedCampaignWorldCount, createInitialRunProgress, type RunProgressState } from './runProgression';
 
 export type DailyCounterKey = 'bossVictories' | 'fusionUses' | 'eventChoices' | 'shopPurchases' | 'perkChoices';
 export type DailyContractArchetype = 'boss' | 'fusion' | 'event' | 'shop' | 'perk' | 'world' | 'score' | 'loop';
@@ -404,6 +404,16 @@ export function claimDailyTrackReward(
     claimed: true,
     reward,
   };
+}
+
+export function dailyBoardProgressForRun(
+  runSeed: string | number,
+  key: string,
+  progress: RunProgressState,
+): RunProgressState {
+  return typeof runSeed === 'string' && dailyKeyFromSeed(runSeed) === key
+    ? progress
+    : createInitialRunProgress();
 }
 
 export function createDailyBoardSnapshot(
