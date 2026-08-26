@@ -528,6 +528,15 @@ export class PrototypeScene extends Phaser.Scene {
         const nextProgress = registerRunVictory(previousProgress, current.scoreValue);
         activeRun = { ...activeRun, progress: nextProgress };
         const nextPocketCount = effectivePocketCount();
+        if (current.kind === 'boss') {
+          if (nextProgress.mode === 'deep-choice' && previousProgress.mode === 'campaign') {
+            runFeedback.milestone('CAMPAIGN CLEARED', 'SIX WORLDS • REALITY BROKEN', 0xff91e6);
+          } else if (nextProgress.mode === 'deep-choice' && previousProgress.mode === 'loop') {
+            runFeedback.milestone('CORRUPTED LOOP CLEARED', `LOOP ${previousProgress.loopNumber} SURVIVED`, 0xd47cff);
+          } else {
+            runFeedback.milestone('WORLD CLEARED', `WORLD ${current.world} • BOSS DOWN`, 0xffd56e);
+          }
+        }
 
         awardHeroMastery(
           current.kind === 'boss' ? 'boss-victory' : current.kind === 'elite' ? 'elite-victory' : 'fight-victory',
@@ -614,6 +623,7 @@ export class PrototypeScene extends Phaser.Scene {
           || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return;
         activeRun = { ...activeRun, progress: enterCorruptedLoop(activeRun.progress) };
         telemetry.track('loop_entered', { loopNumber: activeRun.progress.loopNumber });
+        runFeedback.milestone('CORRUPTED LOOP', `LOOP ${activeRun.progress.loopNumber} • REALITY BENDS`, 0xd47cff);
         syncDailyContracts();
         syncWeeklyProgress();
         persistRun();

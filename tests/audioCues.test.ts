@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   audioCueForCombatEvent,
+  bossDefeatAudioCue,
   combatStartAudioCue,
 } from '../src/game/audio/audioCues';
 import type { CombatPresentationEvent } from '../src/game/domain/combat';
@@ -65,6 +66,9 @@ describe('combat audio cue contract', () => {
     expect(item.priority).toBe(1);
     expect(item.cooldownMs).toBeGreaterThan(0);
     expect(boss.priority).toBe(4);
+    expect(audioCueForCombatEvent({ kind: 'boss-row-telegraph', atMs: 180, row: 1, impactAtMs: 600, magneticPriority: true }).priority).toBe(4);
+    expect(audioCueForCombatEvent({ kind: 'outcome', atMs: 250, outcome: 'victory' }).priority).toBe(3);
+    expect(bossDefeatAudioCue(300, 'tv-tyrant')).toMatchObject({ id: 'boss.defeat', priority: 4, group: 'outcome', sourceId: 'tv-tyrant' });
     expect(defeat).toMatchObject({ id: 'combat.defeat', priority: 4, group: 'outcome', cooldownMs: 0 });
   });
 });

@@ -60,15 +60,17 @@ describe('music ducking policy', () => {
     expect(musicDuckForCue(cue())).toBeNull();
   });
 
-  it('ducks softly for readable priority-three boss telegraphs and player hits', () => {
-    expect(musicDuckForCue(cue({ id: 'boss.jam.telegraph', priority: 3, group: 'boss' })))
-      .toEqual({ target: 0.58, attackMs: 24, holdMs: 120, releaseMs: 300 });
+  it('gives must-read boss telegraphs a clear pocket while routine major hits duck softly', () => {
+    expect(musicDuckForCue(cue({ id: 'boss.jam.telegraph', priority: 4, group: 'boss' })))
+      .toEqual({ target: 0.22, attackMs: 20, holdMs: 260, releaseMs: 520 });
     expect(musicDuckForCue(cue({ id: 'player.hit', priority: 3, group: 'impact' })))
-      .toEqual({ target: 0.58, attackMs: 24, holdMs: 120, releaseMs: 300 });
+      .toEqual({ target: 0.58, attackMs: 24, holdMs: 140, releaseMs: 320 });
   });
 
   it('ducks harder for must-read outcomes and boss impacts', () => {
     expect(musicDuckForCue(cue({ id: 'combat.victory', priority: 4, group: 'outcome' })))
       .toEqual({ target: 0.34, attackMs: 28, holdMs: 210, releaseMs: 420 });
+    expect(musicDuckForCue(cue({ id: 'boss.defeat', priority: 4, group: 'outcome' })))
+      .toEqual({ target: 0.22, attackMs: 20, holdMs: 260, releaseMs: 520 });
   });
 });
