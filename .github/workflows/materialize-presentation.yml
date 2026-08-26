@@ -1,0 +1,39 @@
+name: Materialize presentation source
+
+on:
+  push:
+    branches: [polish/presentation-ux-gamefeel-pass]
+    paths:
+      - 'agent/*.patch'
+      - '.github/workflows/materialize-presentation.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply staged presentation patches
+        shell: bash
+        run: |
+          set -euo pipefail
+          patches=(
+            agent/combat-a.patch
+            agent/combat-b.patch
+            agent/combat-c.patch
+            agent/combat-d.patch
+            agent/remaining-small.patch
+          )
+          for patch in "${patches[@]}"; do
+            git apply "$patch"
+          done
+          git add src/game/ui/CombatPanel.ts src/game/scenes/PrototypeScene.ts tests/audioCues.test.ts tests/audioMix.test.ts tests/audioSynthesis.test.ts
+          git rm "${patches[@]}" .github/workflows/materialize-presentation.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "feat: materialize presentation focus pass"
+          git push
