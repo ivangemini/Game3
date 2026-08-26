@@ -15,6 +15,16 @@ export class BossPortraitLayer {
     private readonly y: number,
     private readonly reducedMotion: boolean,
   ) {
+    // CombatFeedback constructs this layer before CombatPanel. A presentation-only
+    // raster strip at depth 20.15 therefore sits above the flat stage shell but
+    // below enemies/HUD (21+), and the preparation veil (31+) still covers it.
+    addProductionPlate(scene, 1140, 445, 744, 524, {
+      region: 'stage',
+      depth: 20.15,
+      alpha: 0.34,
+      tint: 0xcbd8c8,
+    });
+    scene.add.ellipse(1225, 520, 460, 78, 0x07080b, 0.32).setDepth(20.2);
     scene.events.once('shutdown', () => this.clear());
   }
 
