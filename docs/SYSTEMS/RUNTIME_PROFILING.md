@@ -43,4 +43,13 @@ Do not fail a build because one physical run has a single scheduler spike. Treat
 - input becoming unresponsive after orientation recovery.
 
 ## Reporting
-Attach the device/browser/build SHA and scenario to each measurement. P8 `real-device performance profiling` remains open until the physical-device pass is completed; the automated browser baseline can be green independently.
+Attach the device/browser/build SHA and scenario to each measurement. Use the shared release-acceptance evidence file so measurements are tied to the exact CI candidate rather than copied into free-form notes:
+
+```bash
+npm run release:acceptance:template
+npm run release:acceptance:check -- reports/release-acceptance.json --out reports/release-acceptance.md
+```
+
+The validator converts sustained sub-30-FPS medians, repeated >150 ms p95 stalls and failed lifecycle/WebGL observations into explicit blockers while leaving tool-unavailable heap/texture estimates optional. See `docs/RELEASE_ACCEPTANCE.md` for the schema and status semantics.
+
+P8 `real-device performance profiling` remains open until the physical-device pass is actually recorded; a green automated browser baseline or an empty evidence template cannot close it.

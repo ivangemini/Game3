@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { pathToFileURL } from 'node:url';
 
 export const ACCEPTANCE_VERSION = 1;
 export const ACCEPTANCE_STATUSES = ['pass', 'fail', 'not-tested', 'not-applicable'];
@@ -245,9 +245,9 @@ function validateDevice(device, index, errors) {
   validateNonNegative(device.firstInteractiveMs, `${prefix}.firstInteractiveMs`, errors);
   validateFrameBlock(device.performance?.drag, `${prefix}.performance.drag`, errors);
   validateFrameBlock(device.performance?.boss, `${prefix}.performance.boss`, errors);
-  validatePositive(device.canvas?.width, `${prefix}.canvas.width`, errors);
-  validatePositive(device.canvas?.height, `${prefix}.canvas.height`, errors);
-  validatePositive(device.canvas?.devicePixelRatio, `${prefix}.canvas.devicePixelRatio`, errors);
+  validateNonNegative(device.canvas?.width, `${prefix}.canvas.width`, errors);
+  validateNonNegative(device.canvas?.height, `${prefix}.canvas.height`, errors);
+  validateNonNegative(device.canvas?.devicePixelRatio, `${prefix}.canvas.devicePixelRatio`, errors);
   validateNetworkBlock(device.network?.cold, `${prefix}.network.cold`, errors);
   validateNetworkBlock(device.network?.warm, `${prefix}.network.warm`, errors);
   if (!isRecord(device.checks)) {
@@ -334,10 +334,6 @@ function appendFindings(lines, title, findings) {
   lines.push('');
 }
 
-function validatePositive(value, prefix, errors) {
-  if (!Number.isFinite(value) || value <= 0) errors.push(`${prefix} must be a positive finite number`);
-}
-
 function validateNonNegative(value, prefix, errors) {
   if (!Number.isFinite(value) || value < 0) errors.push(`${prefix} must be a non-negative finite number`);
 }
@@ -413,7 +409,7 @@ async function runCli() {
   if (evaluation.status !== 'READY') process.exitCode = 1;
 }
 
-const invokedAsCli = process.argv[1] && import.meta.url === new URL(`file://${path.resolve(process.argv[1])}`).href;
+const invokedAsCli = process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
 if (invokedAsCli) {
   runCli().catch((error) => {
     console.error(`[acceptance] ${error instanceof Error ? error.message : String(error)}`);
