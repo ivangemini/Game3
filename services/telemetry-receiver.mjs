@@ -18,6 +18,7 @@ const EVENT_NAMES = new Set([
   'hero_selected',
   'hero_mastery_level_up',
   'boss_grudge_changed',
+  'archive_tab_viewed',
   'shop_purchase',
   'shop_reroll',
   'combat_started',
@@ -178,6 +179,12 @@ function validatePayload(name, payload) {
       return onlyKeys(payload, ['bossId', 'state'])
         && BOSS_IDS.has(payload.bossId)
         && (payload.state === 'started' || payload.state === 'resolved');
+    case 'archive_tab_viewed':
+      return onlyKeys(payload, ['tab', 'tracedRecipes', 'almostSolvedRecipes'])
+        && (payload.tab === 'items' || payload.tab === 'recipes')
+        && validInteger(payload.tracedRecipes, 0, 24)
+        && validInteger(payload.almostSolvedRecipes, 0, 24)
+        && payload.tracedRecipes + payload.almostSolvedRecipes <= 24;
     case 'shop_purchase':
       return onlyKeys(payload, ['definitionId', 'price'])
         && validToken(payload.definitionId, 1, 96)
