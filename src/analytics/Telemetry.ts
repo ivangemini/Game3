@@ -14,6 +14,8 @@ export interface TelemetryEventMap {
   readonly tutorial_completed: { readonly stepCount: number };
   readonly tutorial_skipped: { readonly step: number };
   readonly hero_selected: { readonly heroId: string };
+  readonly hero_mastery_level_up: { readonly heroId: string; readonly level: number; readonly rewardCount: number };
+  readonly boss_grudge_changed: { readonly bossId: string; readonly state: 'started' | 'resolved' };
   readonly shop_purchase: { readonly definitionId: string; readonly price: number };
   readonly shop_reroll: { readonly source: 'coins' | 'rewarded'; readonly shopIndex: number };
   readonly combat_started: { readonly encounterId: string; readonly stage: string };

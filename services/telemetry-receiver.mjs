@@ -16,6 +16,8 @@ const EVENT_NAMES = new Set([
   'tutorial_completed',
   'tutorial_skipped',
   'hero_selected',
+  'hero_mastery_level_up',
+  'boss_grudge_changed',
   'shop_purchase',
   'shop_reroll',
   'combat_started',
@@ -30,6 +32,8 @@ const EVENT_NAMES = new Set([
 const RETURN_AGE_BUCKETS = new Set(['new', 'under-24h', '1-2d', '3-7d', '8-30d', '30d-plus', 'unknown']);
 const STREAK_BUCKETS = new Set(['0', '1-2', '3-6', '7-13', '14+']);
 const DAILY_ARCHETYPES = new Set(['boss', 'fusion', 'event', 'shop', 'perk', 'world', 'score', 'loop']);
+const HERO_IDS = new Set(['scavenger', 'engineer', 'alchemist', 'beastfriend']);
+const BOSS_IDS = new Set(['tv-tyrant', 'deadline-snail', 'closet-monster', 'baby-moon', 'copycat-auditor', 'border-shark']);
 const SAFE_ID = /^[A-Za-z0-9._:-]+$/;
 const SAFE_SESSION_ID = /^[A-Za-z0-9._-]+$/;
 
@@ -165,6 +169,15 @@ function validatePayload(name, payload) {
       return onlyKeys(payload, ['stepCount']) && validInteger(payload.stepCount, 1, 20);
     case 'hero_selected':
       return onlyKeys(payload, ['heroId']) && validToken(payload.heroId, 1, 64);
+    case 'hero_mastery_level_up':
+      return onlyKeys(payload, ['heroId', 'level', 'rewardCount'])
+        && HERO_IDS.has(payload.heroId)
+        && validInteger(payload.level, 2, 20)
+        && validInteger(payload.rewardCount, 0, 7);
+    case 'boss_grudge_changed':
+      return onlyKeys(payload, ['bossId', 'state'])
+        && BOSS_IDS.has(payload.bossId)
+        && (payload.state === 'started' || payload.state === 'resolved');
     case 'shop_purchase':
       return onlyKeys(payload, ['definitionId', 'price'])
         && validToken(payload.definitionId, 1, 96)
