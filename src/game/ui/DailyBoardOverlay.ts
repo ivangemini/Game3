@@ -1,8 +1,10 @@
 import * as Phaser from 'phaser';
-import type {
-  DailyBoardSnapshot,
-  DailyContractProgressSnapshot,
-  DailyTrackRewardSnapshot,
+import { telemetry } from '../../analytics/Telemetry';
+import {
+  streakBucket,
+  type DailyBoardSnapshot,
+  type DailyContractProgressSnapshot,
+  type DailyTrackRewardSnapshot,
 } from '../domain/dailyRetention';
 import { resolveAuthoredTexture, uiArtKey } from './authoredArt';
 import { dismissOverlay, pressPulse, revealOverlay } from './uiMotion';
@@ -19,6 +21,7 @@ export interface DailyBoardOverlayOptions {
 export class DailyBoardOverlay {
   private readonly root: Phaser.GameObjects.Container;
   private readonly content: Phaser.GameObjects.Container;
+  private readonly reportedCompletedIds = new Set<string>();
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -41,6 +44,11 @@ export class DailyBoardOverlay {
   }
 
   show(): void {
+    const snapshot = this.options.getSnapshot();
+    telemetry.track('daily_board_opened', {
+      ruleId: snapshot.rule.id,
+      streakBucket: streakBucket(snapshot.streakCount),
+    });
     this.refresh();
     revealOverlay(this.scene, this.root, this.content);
   }
@@ -57,11 +65,23 @@ export class DailyBoardOverlay {
   refresh(): void {
     this.content.removeAll(true);
     const snapshot = this.options.getSnapshot();
+    this.reportCompletions(snapshot);
     this.drawHeader(snapshot);
     this.drawRealityRule(snapshot);
     snapshot.contracts.forEach((contract, index) => this.drawContract(contract, index));
     this.drawTrack(snapshot);
     this.drawUnclaimedRewards(snapshot);
+  }
+
+  private reportCompletions(snapshot: DailyBoardSnapshot): void {
+    for (const contract of snapshot.contracts) {
+      if (!contract.completed || this.reportedCompletedIds.has(contract.id)) continue;
+      this.reportedCompletedIds.add(contract.id);
+      telemetry.track('daily_contract_completed', {
+        archetype: contract.archetype,
+        target: contract.target,
+      });
+    }
   }
 
   private drawHeader(snapshot: DailyBoardSnapshot): void {
@@ -201,6 +221,12 @@ export class DailyBoardOverlay {
     button.on('pointerdown', () => pressPulse(this.scene, [button, label], this.options.reducedMotion));
     button.on('pointerup', () => {
       if (!this.options.onClaimContract(contract.id)) return;
+      const after = this.options.getSnapshot();
+      telemetry.track('daily_contract_claimed', {
+        archetype: contract.archetype,
+        streakBucket: streakBucket(after.streakCount),
+        rewardTrackDay: after.rewardTrackDay,
+      });
       this.refresh();
       this.celebrate('CONTRACT STAMPED', '+1 REALITY STAMP');
     });
@@ -267,6 +293,11 @@ export class DailyBoardOverlay {
     button.on('pointerdown', () => pressPulse(this.scene, [button, text], this.options.reducedMotion));
     button.on('pointerup', () => {
       if (!this.options.onClaimTrackReward(reward.id)) return;
+      telemetry.track('daily_track_claimed', {
+        milestone: reward.milestone,
+        cycle: reward.cycle,
+        stampReward: reward.stampReward,
+      });
       this.refresh();
       this.celebrate('MOMENTUM BONUS', `+${reward.stampReward} REALITY STAMPS`);
     });
