@@ -1,5 +1,5 @@
 import type { FusionRecipe } from './fusions';
-import type { ItemDefinition } from './types';
+import type { Cell, ItemDefinition, ItemTag, Rarity } from './types';
 
 export interface CollectionDiscoveryState {
   readonly discoveredItemIds: readonly string[];
@@ -12,10 +12,36 @@ export interface CollectionProgress {
   readonly percent: number;
 }
 
+export interface RecipeClueProgress {
+  readonly traced: number;
+  readonly almostSolved: number;
+}
+
+export interface MissingIngredientClue {
+  readonly rarity: Rarity;
+  readonly primaryTag: ItemTag;
+  readonly cellCount: number;
+}
+
+export type RecipeDiscoveryClue =
+  | { readonly state: 'locked' }
+  | {
+      readonly state: 'traced';
+      readonly knownIngredientDefinitions: readonly ItemDefinition[];
+      readonly missingIngredientClues: readonly MissingIngredientClue[];
+    }
+  | {
+      readonly state: 'almost-solved';
+      readonly ingredientDefinitions: readonly ItemDefinition[];
+      readonly authoredHint: string;
+      readonly stage: 'first-stage' | 'second-stage';
+    };
+
 export type ItemdexEntry =
   | {
       readonly definitionId: string;
       readonly discovered: false;
+      readonly silhouetteShape: readonly Cell[];
     }
   | {
       readonly definitionId: string;
@@ -28,6 +54,7 @@ export type RecipeBookEntry =
   | {
       readonly recipeId: string;
       readonly discovered: false;
+      readonly clue: RecipeDiscoveryClue;
     }
   | {
       readonly recipeId: string;
@@ -43,6 +70,7 @@ export interface CollectionSnapshot {
   readonly recipes: readonly RecipeBookEntry[];
   readonly itemProgress: CollectionProgress;
   readonly recipeProgress: CollectionProgress;
+  readonly recipeClueProgress: RecipeClueProgress;
 }
 
 export function createCollectionSnapshot(
@@ -65,35 +93,93 @@ export function createCollectionSnapshot(
         source: shopIds.has(definition.id) ? 'shop' : 'fusion',
         definition,
       }
-    : { definitionId: definition.id, discovered: false });
+    : {
+        definitionId: definition.id,
+        discovered: false,
+        silhouetteShape: definition.shape.map((cell) => ({ ...cell })),
+      });
 
   const recipeEntries: RecipeBookEntry[] = recipes.map((recipe) => {
-    if (!discoveredRecipeIds.has(recipe.id)) return { recipeId: recipe.id, discovered: false };
     const ingredientDefinitions = recipe.ingredientDefinitionIds
       .map((id) => itemMap.get(id))
       .filter((definition): definition is ItemDefinition => definition !== undefined);
     const resultDefinition = itemMap.get(recipe.resultDefinitionId);
-    if (ingredientDefinitions.length !== recipe.ingredientDefinitionIds.length || !resultDefinition) {
-      return { recipeId: recipe.id, discovered: false };
-    }
     const stage = recipe.ingredientDefinitionIds.every((id) => fusionIds.has(id))
-      ? 'second-stage'
-      : 'first-stage';
+      ? 'second-stage' as const
+      : 'first-stage' as const;
+
+    if (discoveredRecipeIds.has(recipe.id)
+      && ingredientDefinitions.length === recipe.ingredientDefinitionIds.length
+      && resultDefinition) {
+      return {
+        recipeId: recipe.id,
+        discovered: true,
+        recipe,
+        ingredientDefinitions,
+        resultDefinition,
+        stage,
+      };
+    }
+
     return {
       recipeId: recipe.id,
-      discovered: true,
-      recipe,
-      ingredientDefinitions,
-      resultDefinition,
-      stage,
+      discovered: false,
+      clue: createRecipeDiscoveryClue(
+        recipe,
+        itemMap,
+        discoveredItemIds,
+        fusionIds,
+      ),
     };
   });
+
+  const traced = recipeEntries.filter((entry) => !entry.discovered && entry.clue.state === 'traced').length;
+  const almostSolved = recipeEntries.filter((entry) => !entry.discovered && entry.clue.state === 'almost-solved').length;
 
   return {
     items,
     recipes: recipeEntries,
     itemProgress: progress(items.filter((entry) => entry.discovered).length, items.length),
     recipeProgress: progress(recipeEntries.filter((entry) => entry.discovered).length, recipeEntries.length),
+    recipeClueProgress: { traced, almostSolved },
+  };
+}
+
+function createRecipeDiscoveryClue(
+  recipe: FusionRecipe,
+  itemMap: ReadonlyMap<string, ItemDefinition>,
+  discoveredItemIds: ReadonlySet<string>,
+  fusionIds: ReadonlySet<string>,
+): RecipeDiscoveryClue {
+  const ingredientDefinitions = recipe.ingredientDefinitionIds
+    .map((id) => itemMap.get(id))
+    .filter((definition): definition is ItemDefinition => definition !== undefined);
+  if (ingredientDefinitions.length !== recipe.ingredientDefinitionIds.length) return { state: 'locked' };
+
+  const known = ingredientDefinitions.filter((definition) => discoveredItemIds.has(definition.id));
+  if (known.length === 0) return { state: 'locked' };
+
+  if (known.length === ingredientDefinitions.length) {
+    const stage = recipe.ingredientDefinitionIds.every((id) => fusionIds.has(id))
+      ? 'second-stage' as const
+      : 'first-stage' as const;
+    return {
+      state: 'almost-solved',
+      ingredientDefinitions,
+      authoredHint: recipe.hint,
+      stage,
+    };
+  }
+
+  const missing = ingredientDefinitions.filter((definition) => !discoveredItemIds.has(definition.id));
+  return {
+    state: 'traced',
+    knownIngredientDefinitions: known,
+    missingIngredientClues: missing.map((definition) => ({
+      rarity: definition.rarity,
+      primaryTag: definition.tags[0] ?? 'chaos',
+      cellCount: definition.shape.length,
+    })),
   };
 }
 
