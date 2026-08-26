@@ -24,7 +24,13 @@ jobs:
           node-version: 22
 
       - name: Apply runtime integration
-        run: python .github/scripts/apply_weekly_r3_runtime.py
+        run: |
+          python .github/scripts/apply_weekly_r3_runtime.py
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('src/game/ui/WeeklyChallengeOverlay.ts')
+          path.write_text(path.read_text(encoding='utf-8').rstrip() + '\n', encoding='utf-8')
+          PY
 
       - name: Check patch whitespace
         run: git diff --check
