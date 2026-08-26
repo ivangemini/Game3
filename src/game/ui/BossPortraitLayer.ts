@@ -49,7 +49,12 @@ export class BossPortraitLayer {
       });
       const inner = this.scene.add.rectangle(0, 0, 372, 272, 0x101219, 1)
         .setStrokeStyle(3, 0x737985, 0.5);
-      const image = this.scene.add.image(0, 0, texture.textureKey, texture.frame).setDisplaySize(360, 264);
+      const useRasterTyrant = key.includes('tv-tyrant') && this.scene.textures.exists('junkpack-production-plate');
+      const image = useRasterTyrant
+        ? this.scene.add.image(0, 0, 'junkpack-production-plate')
+          .setCrop(392, 58, 240, 238)
+          .setDisplaySize(372, 282)
+        : this.scene.add.image(0, 0, texture.textureKey, texture.frame).setDisplaySize(360, 264);
       const screenWear = createMaterialSurface(this.scene, {
         x: 0,
         y: 0,
