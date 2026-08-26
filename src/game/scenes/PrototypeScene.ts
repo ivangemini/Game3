@@ -17,8 +17,16 @@ import { PROTOTYPE_PERKS, PROTOTYPE_PERK_MAP } from '../data/perks';
 import { getRuntimeRunEncounter } from '../data/dailyRunEncounters';
 import { PROTOTYPE_RUN_EVENT_MAP, PROTOTYPE_RUN_EVENTS } from '../data/runEvents';
 import { BACKPACK_HEIGHT, BACKPACK_WIDTH, blockedCellsForPocketUnlockCount } from '../domain/backpackLayout';
+import { recordBossOutcome } from '../domain/bossGrudges';
 import { createDailyRunIdentity, dailyKeyFromSeed } from '../domain/dailyRun';
 import { applyFusion, type FusionRecipe } from '../domain/fusions';
+import {
+  addHeroMasteryXp,
+  createHeroMasterySnapshot,
+  heroMasteryAwardForAction,
+  type HeroMasteryAction,
+  type HeroMasteryAwardContext,
+} from '../domain/heroMastery';
 import type { HeroId } from '../domain/heroes';
 import type { InventoryState } from '../domain/inventory';
 import { shouldAutoShowOnboarding } from '../domain/onboarding';
@@ -40,6 +48,8 @@ import { CombatPanel } from '../ui/CombatPanel';
 import { DailyBoardOverlay } from '../ui/DailyBoardOverlay';
 import { FusionPanel } from '../ui/FusionPanel';
 import { HeroChoiceOverlay } from '../ui/HeroChoiceOverlay';
+import { MasteryGrudgeOverlay } from '../ui/MasteryGrudgeOverlay';
+import { MetaProgressFeedback } from '../ui/MetaProgressFeedback';
 import { MetaProgressOverlay } from '../ui/MetaProgressOverlay';
 import { PerkChoiceOverlay } from '../ui/PerkChoiceOverlay';
 import { RunEventOverlay } from '../ui/RunEventOverlay';
@@ -165,6 +175,16 @@ export class PrototypeScene extends Phaser.Scene {
         bestCorruptedLoop: save.bestCorruptedLoop,
       }),
     );
+    let masteryOverlay!: MasteryGrudgeOverlay;
+    masteryOverlay = new MasteryGrudgeOverlay(this, {
+      getHeroMasteryXp: () => save.heroMasteryXp,
+      getBossHistory: () => save.bossHistory,
+      reducedMotion: save.settings.reducedMotion,
+      onOpenArchiveTrophies: () => {
+        masteryOverlay.hide();
+        this.time.delayedCall(save.settings.reducedMotion ? 0 : 160, () => metaOverlay.show());
+      },
+    });
     const tutorialOverlay = new TutorialOverlay(this, save.settings.reducedMotion);
     const settingsOverlay = new SettingsOverlay(this, {
       getSettings: () => save.settings,
@@ -200,6 +220,20 @@ export class PrototypeScene extends Phaser.Scene {
       playerPoint: { x: 845, y: 287 },
     });
     const runFeedback = new RunFeedback(this, save.settings.reducedMotion);
+    const metaFeedback = new MetaProgressFeedback(this, save.settings.reducedMotion);
+    const awardHeroMastery = (action: HeroMasteryAction, context: HeroMasteryAwardContext = {}): void => {
+      const heroId = activeRun.heroId;
+      if (!heroId) return;
+      const award = heroMasteryAwardForAction(action, context);
+      const result = addHeroMasteryXp(save.heroMasteryXp, heroId, award);
+      if (result.gainedXp <= 0) return;
+      save = { ...save, heroMasteryXp: result.state };
+      if (result.levelsGained > 0 || result.rewardsUnlocked.length > 0) {
+        const heroName = PROTOTYPE_HERO_MAP.get(heroId)?.name ?? heroId;
+        const mastery = createHeroMasterySnapshot(heroId, result.state);
+        metaFeedback.masteryLevel(heroName, mastery.level, result.rewardsUnlocked[result.rewardsUnlocked.length - 1]?.name);
+      }
+    };
 
     const shop = new ShopPanel(
       this,
@@ -253,6 +287,7 @@ export class PrototypeScene extends Phaser.Scene {
         const result = claimDailyContract(save.dailyRetention, todayDaily.key, contractId);
         if (!result.claimed) return false;
         save = { ...save, dailyRetention: result.state };
+        awardHeroMastery('daily-contract');
         writeSave({ ...save, activeRun });
         audio.playCue(uiAudioCue('ui.reward', 'daily-contract'));
         return true;
@@ -307,6 +342,7 @@ export class PrototypeScene extends Phaser.Scene {
         pendingEventId: null,
         resolvedEventIds: [...activeRun.resolvedEventIds, event.id],
       };
+      awardHeroMastery('event-choice');
       recordDailyCounter('eventChoices');
       persistRun();
       runPanel.refresh('Event resolved. Repack, shop or fuse before the next encounter.');
@@ -348,27 +384,50 @@ export class PrototypeScene extends Phaser.Scene {
         perkOverlay.show(activeRun.pendingPerkOfferIds);
       },
       onOutcome: ({ encounterId, outcome }) => {
+        const combatDurationMs = activeCombatEncounterId === encounterId && activeCombatStartedAtMs !== null
+          ? Math.max(0, Math.round(runtimeNowMs() - activeCombatStartedAtMs))
+          : 0;
         if (activeCombatEncounterId === encounterId && activeCombatStartedAtMs !== null) {
           telemetry.track('combat_finished', {
             encounterId,
             outcome,
-            durationMs: Math.max(0, Math.round(runtimeNowMs() - activeCombatStartedAtMs)),
+            durationMs: combatDurationMs,
           });
+        }
+        const current = getRuntimeRunEncounter(activeRun.progress, activeRun.runSeed);
+        const currentMatches = current?.encounterId === encounterId;
+        if (currentMatches && current?.kind === 'boss') {
+          const grudge = recordBossOutcome(save.bossHistory, current.enemy.id, outcome, combatDurationMs);
+          if (grudge.tracked) {
+            save = { ...save, bossHistory: grudge.history };
+            if (grudge.revengeStarted) metaFeedback.grudge(current.title, false);
+            if (grudge.revengeResolved) metaFeedback.grudge(current.title, true);
+          }
         }
         activeCombatStartedAtMs = null;
         activeCombatEncounterId = null;
 
         if (outcome !== 'victory') {
+          if (currentMatches) writeSave({ ...save, activeRun });
           runPanel.refresh('Defeat. Repack, shop or fuse, then retry the same encounter.');
           return;
         }
-        const current = getRuntimeRunEncounter(activeRun.progress, activeRun.runSeed);
-        if (!current || current.encounterId !== encounterId) return;
+        if (!currentMatches || !current) return;
         const previousProgress = activeRun.progress;
         const previousPocketCount = effectivePocketCount();
         const nextProgress = registerRunVictory(previousProgress, current.scoreValue);
         activeRun = { ...activeRun, progress: nextProgress };
         const nextPocketCount = effectivePocketCount();
+
+        awardHeroMastery(
+          current.kind === 'boss' ? 'boss-victory' : current.kind === 'elite' ? 'elite-victory' : 'fight-victory',
+          { loopNumber: previousProgress.loopNumber },
+        );
+        if (nextProgress.mode === 'deep-choice' && previousProgress.mode === 'campaign') {
+          awardHeroMastery('campaign-clear', { loopNumber: 1 });
+        } else if (nextProgress.mode === 'deep-choice' && previousProgress.mode === 'loop') {
+          awardHeroMastery('loop-clear', { loopNumber: previousProgress.loopNumber });
+        }
 
         let scheduledEventId: string | null = null;
         if (current.slot === 1 && activeRun.pendingEventId === null) {
@@ -408,6 +467,7 @@ export class PrototypeScene extends Phaser.Scene {
 
     const metaBlocked = (): boolean => collectionOverlay.isVisible()
       || metaOverlay.isVisible()
+      || masteryOverlay.isVisible()
       || tutorialOverlay.isVisible()
       || settingsOverlay.isVisible()
       || dailyOverlay?.isVisible() === true;
@@ -442,9 +502,11 @@ export class PrototypeScene extends Phaser.Scene {
       },
       onCashOut: () => {
         if (activeRun.heroId === null || combatPanel.isRunning() || metaBlocked()
-          || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return;
+          || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null
+          || activeRun.progress.mode !== 'deep-choice') return;
         const completedLoop = activeRun.progress.loopNumber;
         const finalScore = activeRun.progress.score;
+        awardHeroMastery('cashout', { loopNumber: completedLoop });
         activeRun = { ...activeRun, progress: cashOutRun(activeRun.progress) };
         telemetry.track('run_cashout', { loopNumber: completedLoop, score: finalScore });
         syncDailyContracts();
@@ -476,6 +538,7 @@ export class PrototypeScene extends Phaser.Scene {
         activeRun = { ...activeRun, backpackItems: result.state.items, nextLootSequence: snapshot.nextLootSequence + 1 };
         markDiscoveredRecipe(recipe.id);
         markDiscoveredItem(recipe.resultDefinitionId);
+        awardHeroMastery('fusion');
         recordDailyCounter('fusionUses');
         persistRun();
         this.time.delayedCall(save.settings.reducedMotion ? 160 : 460, () => this.scene.restart());
@@ -527,7 +590,7 @@ export class PrototypeScene extends Phaser.Scene {
       onTrophies: () => {
         if (activeRun.heroId === null || combatPanel.isRunning() || eventOverlay.isVisible() || metaBlocked()
           || activeRun.pendingPerkOfferIds.length > 0 || activeRun.pendingEventId !== null) return;
-        metaOverlay.show();
+        masteryOverlay.show();
       },
       onHelp: () => {
         if (combatPanel.isRunning() || eventOverlay.isVisible() || metaBlocked()
