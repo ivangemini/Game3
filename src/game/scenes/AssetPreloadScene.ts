@@ -103,6 +103,7 @@ export class AssetPreloadScene extends Phaser.Scene {
     }
     this.scene.launch('runtime-presentation');
     this.scene.launch('runtime-surface-polish');
+    this.scene.launch('runtime-hud-legibility');
     this.scene.launch('runtime-flow-polish');
     this.scene.launch('runtime-archive-polish');
     this.scene.start('prototype');
