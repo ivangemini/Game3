@@ -32,46 +32,54 @@ export class BossPortraitLayer {
       this.destroyRoot();
       const root = this.scene.add.container(this.x, this.y).setDepth(32);
       const accent = this.activeSpec?.accent ?? 0xa85ad1;
-      const backing = this.scene.add.rectangle(4, 6, 286, 214, 0x090a0f, 0.62)
-        .setStrokeStyle(2, 0x090a0f, 0.65);
-      const frame = this.scene.add.rectangle(0, 0, 278, 206, 0x252832, 1)
-        .setStrokeStyle(5, accent);
+      const halo = this.scene.add.ellipse(0, 8, 420, 292, accent, 0.08)
+        .setStrokeStyle(3, accent, 0.22);
+      const backing = this.scene.add.rectangle(6, 8, 404, 304, 0x090a0f, 0.72)
+        .setStrokeStyle(3, 0x090a0f, 0.72);
+      const frame = this.scene.add.rectangle(0, 0, 394, 294, 0x252832, 1)
+        .setStrokeStyle(7, accent);
       const frameWear = createMaterialSurface(this.scene, {
         x: 0,
         y: 0,
-        width: 268,
-        height: 196,
+        width: 382,
+        height: 282,
         kind: 'scrap',
         seed: `boss-frame:${key}`,
         alpha: 0.72,
       });
-      const inner = this.scene.add.rectangle(0, 0, 258, 192, 0x101219, 1)
-        .setStrokeStyle(2, 0x737985, 0.5);
-      const image = this.scene.add.image(0, 0, texture.textureKey, texture.frame).setDisplaySize(250, 186);
+      const inner = this.scene.add.rectangle(0, 0, 372, 272, 0x101219, 1)
+        .setStrokeStyle(3, 0x737985, 0.5);
+      const image = this.scene.add.image(0, 0, texture.textureKey, texture.frame).setDisplaySize(360, 264);
       const screenWear = createMaterialSurface(this.scene, {
         x: 0,
         y: 0,
-        width: 244,
-        height: 180,
+        width: 350,
+        height: 254,
         kind: key.includes('tv-tyrant') ? 'screen' : 'scrap',
         seed: `boss-portrait:${key}`,
         alpha: key.includes('tv-tyrant') ? 0.82 : 0.22,
       });
       const fasteners = [
-        this.scene.add.circle(-128, -92, 4.5, 0x5a606c, 1).setStrokeStyle(1.5, 0xbac1cc, 0.6),
-        this.scene.add.circle(128, -92, 4.5, 0x5a606c, 1).setStrokeStyle(1.5, 0xbac1cc, 0.6),
-        this.scene.add.circle(-128, 92, 4.5, 0x5a606c, 1).setStrokeStyle(1.5, 0xbac1cc, 0.6),
-        this.scene.add.circle(128, 92, 4.5, 0x5a606c, 1).setStrokeStyle(1.5, 0xbac1cc, 0.6),
+        this.scene.add.circle(-185, -137, 5.5, 0x5a606c, 1).setStrokeStyle(2, 0xbac1cc, 0.6),
+        this.scene.add.circle(185, -137, 5.5, 0x5a606c, 1).setStrokeStyle(2, 0xbac1cc, 0.6),
+        this.scene.add.circle(-185, 137, 5.5, 0x5a606c, 1).setStrokeStyle(2, 0xbac1cc, 0.6),
+        this.scene.add.circle(185, 137, 5.5, 0x5a606c, 1).setStrokeStyle(2, 0xbac1cc, 0.6),
       ];
-      root.add([backing, frame, frameWear, inner, image, screenWear, ...fasteners]);
+      const mark = this.scene.add.text(-174, -128, bossMarkForKey(key), {
+        fontFamily: 'Arial Black, Impact, sans-serif', fontSize: '15px', color: '#fff4f8',
+        fontStyle: 'bold', stroke: '#090a0f', strokeThickness: 4,
+      });
+      root.add([halo, backing, frame, frameWear, inner, image, screenWear, ...fasteners, mark]);
       this.root = root;
       if (!this.reducedMotion) {
-        root.setScale(0.94);
+        root.setScale(0.82).setAlpha(0).setAngle(entranceAngleForKey(key));
         this.scene.tweens.add({
           targets: root,
           scaleX: 1,
           scaleY: 1,
-          duration: 180,
+          alpha: 1,
+          angle: 0,
+          duration: 240,
           ease: 'Back.Out',
           onComplete: () => this.startIdle(),
         });
@@ -148,6 +156,27 @@ export class BossPortraitLayer {
     }
   }
 
+  defeat(): void {
+    const root = this.root;
+    if (!root) return;
+    this.scene.tweens.killTweensOf(root);
+    root.setPosition(this.x, this.y).setAngle(0).setAlpha(1);
+    if (this.reducedMotion) {
+      root.setAlpha(0.42);
+      return;
+    }
+    this.scene.tweens.add({
+      targets: root,
+      scaleX: 1.12,
+      scaleY: 0.9,
+      angle: 4,
+      alpha: 0.22,
+      y: this.y + 18,
+      duration: 320,
+      ease: 'Back.In',
+    });
+  }
+
   fade(alpha: number): void {
     if (!this.root) return;
     this.scene.tweens.killTweensOf(this.root);
@@ -184,4 +213,21 @@ export class BossPortraitLayer {
     this.root.destroy(true);
     this.root = null;
   }
+}
+
+function bossMarkForKey(key: string): string {
+  if (key.includes('tv-tyrant')) return '▣ SIGNAL';
+  if (key.includes('deadline-snail')) return '◷ TIME';
+  if (key.includes('closet-monster')) return '▦ CLUTTER';
+  if (key.includes('baby-moon')) return '◐ ECLIPSE';
+  if (key.includes('copycat-auditor')) return '≡ AUDIT';
+  if (key.includes('border-shark')) return '◩ BORDER';
+  return '◆ BOSS';
+}
+
+function entranceAngleForKey(key: string): number {
+  if (key.includes('border-shark')) return -5;
+  if (key.includes('copycat-auditor')) return 3;
+  if (key.includes('baby-moon')) return -3;
+  return 0;
 }
