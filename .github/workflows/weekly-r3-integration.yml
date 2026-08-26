@@ -28,8 +28,13 @@ jobs:
           python .github/scripts/apply_weekly_r3_runtime.py
           python - <<'PY'
           from pathlib import Path
-          path = Path('src/game/ui/WeeklyChallengeOverlay.ts')
-          path.write_text(path.read_text(encoding='utf-8').rstrip() + '\n', encoding='utf-8')
+          weekly = Path('src/game/ui/WeeklyChallengeOverlay.ts')
+          weekly.write_text(weekly.read_text(encoding='utf-8').rstrip() + '\n', encoding='utf-8')
+          daily = Path('src/game/ui/DailyBoardOverlay.ts')
+          text = daily.read_text(encoding='utf-8')
+          text = text.replace("'Today's deterministic run is active.'", '"Today\'s deterministic run is active."')
+          text = text.replace("'Starts today's seed and replaces the current run.'", '"Starts today\'s seed and replaces the current run."')
+          daily.write_text(text, encoding='utf-8')
           PY
 
       - name: Check patch whitespace
