@@ -213,8 +213,8 @@
 - [x] Portal archive/compliance gates (**root index, required runtime atlases, path charset/whitespace, no source maps/source-art/store-art in runtime ZIP, Yandex/Crazy size/file-count ceilings, 20 MiB mobile target, context-menu suppression and one-click first launch are enforced by release/browser tests**)
 - [x] Production dependency security gate (**Node 22 + exact direct tool versions; `npm audit --omit=dev --audit-level=high` is CI-required and current resolver reports 0 vulnerabilities**)
 - [x] Save migrations/recovery UX (**v1–v7 legacy migration → v8 semantic compatibility → v9 retention migration, previous-valid backup slot, corrupt-primary recovery, safe reset fallback and visible web-shell recovery/write warnings**)
-- [ ] real-device performance profiling (**frame time, peak WebGL memory, portal network waterfall, low-memory lifecycle; automated regression baseline + capture protocol exist**)
-- [ ] portal-specific compliance checks (**repository/unit/browser harness implemented; real Yandex debug panel / CrazyGames SDK tester acceptance still required**)
+- [ ] real-device performance profiling (**frame time, peak WebGL memory, portal network waterfall, low-memory lifecycle; automated regression baseline + capture protocol + structured `READY/INCOMPLETE/BLOCKED` evidence validator/report exist; physical iOS/Android pass is still required**)
+- [ ] portal-specific compliance checks (**repository/unit/browser harness + structured evidence validator/report implemented; real Yandex debug panel / CrazyGames SDK tester acceptance still required**)
 
 ## P9 — Soft launch & iteration
 - [x] Repository-built portal candidate pipeline (**production build → readiness/security checks → runtime-only ZIP + separate store art → v2 per-file SHA-256 manifest → integrity verification → CI artifact; strict `release:soft-launch` additionally requires HTTPS analytics endpoint**)

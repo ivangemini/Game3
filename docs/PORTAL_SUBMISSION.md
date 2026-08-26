@@ -77,6 +77,19 @@ Current references:
 - https://docs.crazygames.com/requirements/ads/
 - https://docs.crazygames.com/requirements/intro/
 
+## Release acceptance evidence record
+
+Before calling a candidate technically accepted, generate one shared evidence file and fill it from the exact candidate/run used for physical and portal tests:
+
+```bash
+npm run release:acceptance:template
+npm run release:acceptance:check -- reports/release-acceptance.json --out reports/release-acceptance.md
+```
+
+The validator requires a real commit SHA, CI run ID, verified portal-artifact SHA-256, physical iOS + Android profiles, and the required Yandex/CrazyGames check sets. A failed real check becomes `BLOCKED`; missing evidence remains `INCOMPLETE`; only complete evidence with no blocker becomes `READY`. Full field definitions live in `docs/RELEASE_ACCEPTANCE.md`.
+
+Do not copy a previous candidate's acceptance forward after code changes. Re-run the relevant physical/portal pass against the new SHA.
+
 ## Deliberately not automated
 
-Repository CI cannot prove real ad inventory behavior, portal iframe policies, moderation UI crops, low-memory behavior on physical devices, human small-text legibility, or the portals' current legal/content declarations. Those remain release acceptance tasks, not code-complete checkboxes.
+Repository CI cannot prove real ad inventory behavior, portal iframe policies, moderation UI crops, low-memory behavior on physical devices, human small-text legibility, or the portals' current legal/content declarations. The evidence validator records those observations but cannot manufacture them. Those remain release acceptance tasks, not code-complete checkboxes.
