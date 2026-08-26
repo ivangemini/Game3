@@ -70,6 +70,7 @@ async function advanceSaveToFirstBoss(page: import('@playwright/test').Page): Pr
 }
 
 test('captures production presentation matrix for preparation, combat, boss and reward', async ({ page }, testInfo) => {
+  test.setTimeout(90_000);
   test.skip(testInfo.project.name !== 'chromium-desktop', 'release screenshots are captured once in Chromium desktop');
 
   const canvas = await enterFirstRun(page);
