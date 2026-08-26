@@ -7,6 +7,11 @@ const EVENT_NAMES = new Set([
   'session_start',
   'session_age',
   'run_started',
+  'daily_rule_started',
+  'daily_board_opened',
+  'daily_contract_completed',
+  'daily_contract_claimed',
+  'daily_track_claimed',
   'tutorial_opened',
   'tutorial_completed',
   'tutorial_skipped',
@@ -23,6 +28,8 @@ const EVENT_NAMES = new Set([
 ]);
 
 const RETURN_AGE_BUCKETS = new Set(['new', 'under-24h', '1-2d', '3-7d', '8-30d', '30d-plus', 'unknown']);
+const STREAK_BUCKETS = new Set(['0', '1-2', '3-6', '7-13', '14+']);
+const DAILY_ARCHETYPES = new Set(['boss', 'fusion', 'event', 'shop', 'perk', 'world', 'score', 'loop']);
 const SAFE_ID = /^[A-Za-z0-9._:-]+$/;
 const SAFE_SESSION_ID = /^[A-Za-z0-9._-]+$/;
 
@@ -131,6 +138,26 @@ function validatePayload(name, payload) {
       return onlyKeys(payload, ['bucket']) && RETURN_AGE_BUCKETS.has(payload.bucket);
     case 'run_started':
       return onlyKeys(payload, ['mode']) && (payload.mode === 'standard' || payload.mode === 'daily');
+    case 'daily_rule_started':
+      return onlyKeys(payload, ['ruleId']) && validToken(payload.ruleId, 1, 64);
+    case 'daily_board_opened':
+      return onlyKeys(payload, ['ruleId', 'streakBucket'])
+        && validToken(payload.ruleId, 1, 64)
+        && STREAK_BUCKETS.has(payload.streakBucket);
+    case 'daily_contract_completed':
+      return onlyKeys(payload, ['archetype', 'target'])
+        && DAILY_ARCHETYPES.has(payload.archetype)
+        && validNumber(payload.target, 1, 1_000_000);
+    case 'daily_contract_claimed':
+      return onlyKeys(payload, ['archetype', 'streakBucket', 'rewardTrackDay'])
+        && DAILY_ARCHETYPES.has(payload.archetype)
+        && STREAK_BUCKETS.has(payload.streakBucket)
+        && validInteger(payload.rewardTrackDay, 0, 7);
+    case 'daily_track_claimed':
+      return onlyKeys(payload, ['milestone', 'cycle', 'stampReward'])
+        && [3, 5, 7].includes(payload.milestone)
+        && validInteger(payload.cycle, 0, 100_000)
+        && validInteger(payload.stampReward, 1, 100);
     case 'tutorial_opened':
     case 'tutorial_skipped':
       return onlyKeys(payload, ['step']) && validInteger(payload.step, 1, 20);
