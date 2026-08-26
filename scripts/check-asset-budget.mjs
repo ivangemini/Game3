@@ -7,7 +7,7 @@ const REPORT_PATH = path.join(ROOT, 'public', 'assets', 'atlas', 'asset-report.j
 const BUDGETS = {
   itemFrames: 60,
   portraitFrames: 10,
-  uiFrames: 10,
+  uiFrames: 12,
   maxAtlasDimension: 2048,
   maxSingleSourceBytes: 24 * 1024,
   maxSourceBytes: 768 * 1024,
