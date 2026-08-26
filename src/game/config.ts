@@ -3,6 +3,7 @@ import { AssetPreloadScene } from './scenes/AssetPreloadScene';
 import { PrototypeScene } from './scenes/PrototypeScene';
 import { RuntimeArchivePolishScene } from './scenes/RuntimeArchivePolishScene';
 import { RuntimeFlowPolishScene } from './scenes/RuntimeFlowPolishScene';
+import { RuntimeHudLegibilityScene } from './scenes/RuntimeHudLegibilityScene';
 import { RuntimePresentationScene } from './scenes/RuntimePresentationScene';
 import { RuntimeSurfacePolishScene } from './scenes/RuntimeSurfacePolishScene';
 
@@ -17,6 +18,7 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
     PrototypeScene,
     RuntimePresentationScene,
     RuntimeSurfacePolishScene,
+    RuntimeHudLegibilityScene,
     RuntimeFlowPolishScene,
     RuntimeArchivePolishScene,
   ],
