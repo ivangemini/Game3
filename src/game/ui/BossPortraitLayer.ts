@@ -2,6 +2,7 @@ import * as Phaser from 'phaser';
 import { bossArtKeyForEnemyId, requestAuthoredTexture, resolveAuthoredTexture } from './authoredArt';
 import { bossMotionSpecForArtKey, type BossMotionSpec } from './bossPresentation';
 import { createMaterialSurface } from './materialSurface';
+import { addProductionPlate } from './productionPlate';
 
 export class BossPortraitLayer {
   private root: Phaser.GameObjects.Container | null = null;
@@ -32,49 +33,59 @@ export class BossPortraitLayer {
       this.destroyRoot();
       const root = this.scene.add.container(this.x, this.y).setDepth(32);
       const accent = this.activeSpec?.accent ?? 0xa85ad1;
-      const halo = this.scene.add.ellipse(0, 8, 420, 292, accent, 0.08)
-        .setStrokeStyle(3, accent, 0.22);
-      const backing = this.scene.add.rectangle(6, 8, 404, 304, 0x090a0f, 0.72)
-        .setStrokeStyle(3, 0x090a0f, 0.72);
-      const frame = this.scene.add.rectangle(0, 0, 394, 294, 0x252832, 1)
-        .setStrokeStyle(7, accent);
+      const halo = this.scene.add.ellipse(0, 8, 438, 306, accent, 0.1)
+        .setStrokeStyle(4, accent, 0.28);
+      const backing = this.scene.add.rectangle(7, 10, 420, 316, 0x08090e, 0.82)
+        .setStrokeStyle(3, 0x090a0f, 0.82);
+      const paintedAtmosphere = addProductionPlate(this.scene, 0, 0, 402, 294, {
+        region: key.includes('tv-tyrant') ? 'boss' : 'backpack',
+        alpha: key.includes('tv-tyrant') ? 0.28 : 0.22,
+        tint: accent,
+        flipX: key.includes('border-shark') || key.includes('deadline-snail'),
+      });
+      const frame = this.scene.add.rectangle(0, 0, 404, 304, 0x252832, 0.88)
+        .setStrokeStyle(8, accent);
       const frameWear = createMaterialSurface(this.scene, {
         x: 0,
         y: 0,
-        width: 382,
-        height: 282,
+        width: 392,
+        height: 292,
         kind: 'scrap',
         seed: `boss-frame:${key}`,
-        alpha: 0.72,
+        alpha: 0.48,
       });
-      const inner = this.scene.add.rectangle(0, 0, 372, 272, 0x101219, 1)
+      const inner = this.scene.add.rectangle(0, 0, 382, 282, 0x101219, 0.66)
         .setStrokeStyle(3, 0x737985, 0.5);
       const useRasterTyrant = key.includes('tv-tyrant') && this.scene.textures.exists('junkpack-production-plate');
       const image = useRasterTyrant
         ? this.scene.add.image(0, 0, 'junkpack-production-plate')
           .setCrop(392, 58, 240, 238)
-          .setDisplaySize(372, 282)
-        : this.scene.add.image(0, 0, texture.textureKey, texture.frame).setDisplaySize(360, 264);
+          .setDisplaySize(382, 292)
+        : this.scene.add.image(0, 0, texture.textureKey, texture.frame).setDisplaySize(370, 274);
       const screenWear = createMaterialSurface(this.scene, {
         x: 0,
         y: 0,
-        width: 350,
-        height: 254,
+        width: 360,
+        height: 264,
         kind: key.includes('tv-tyrant') ? 'screen' : 'scrap',
         seed: `boss-portrait:${key}`,
-        alpha: key.includes('tv-tyrant') ? 0.82 : 0.22,
+        alpha: key.includes('tv-tyrant') ? 0.68 : 0.15,
       });
       const fasteners = [
-        this.scene.add.circle(-185, -137, 5.5, 0x5a606c, 1).setStrokeStyle(2, 0xbac1cc, 0.6),
-        this.scene.add.circle(185, -137, 5.5, 0x5a606c, 1).setStrokeStyle(2, 0xbac1cc, 0.6),
-        this.scene.add.circle(-185, 137, 5.5, 0x5a606c, 1).setStrokeStyle(2, 0xbac1cc, 0.6),
-        this.scene.add.circle(185, 137, 5.5, 0x5a606c, 1).setStrokeStyle(2, 0xbac1cc, 0.6),
+        this.scene.add.circle(-190, -142, 6, 0x5a606c, 1).setStrokeStyle(2, 0xbac1cc, 0.6),
+        this.scene.add.circle(190, -142, 6, 0x5a606c, 1).setStrokeStyle(2, 0xbac1cc, 0.6),
+        this.scene.add.circle(-190, 142, 6, 0x5a606c, 1).setStrokeStyle(2, 0xbac1cc, 0.6),
+        this.scene.add.circle(190, 142, 6, 0x5a606c, 1).setStrokeStyle(2, 0xbac1cc, 0.6),
       ];
-      const mark = this.scene.add.text(-174, -128, bossMarkForKey(key), {
+      const markBacking = this.scene.add.rectangle(-145, -129, 104, 30, 0x0b0c11, 0.78)
+        .setStrokeStyle(2, accent, 0.72).setAngle(-2);
+      const mark = this.scene.add.text(-194, -139, bossMarkForKey(key), {
         fontFamily: 'Arial Black, Impact, sans-serif', fontSize: '15px', color: '#fff4f8',
         fontStyle: 'bold', stroke: '#090a0f', strokeThickness: 4,
-      });
-      root.add([halo, backing, frame, frameWear, inner, image, screenWear, ...fasteners, mark]);
+      }).setAngle(-2);
+      root.add([halo, backing]);
+      if (paintedAtmosphere) root.add(paintedAtmosphere);
+      root.add([frame, frameWear, inner, image, screenWear, ...fasteners, markBacking, mark]);
       this.root = root;
       if (!this.reducedMotion) {
         root.setScale(0.82).setAlpha(0).setAngle(entranceAngleForKey(key));
