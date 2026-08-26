@@ -17,13 +17,16 @@ export class BackpackSkin {
     const cx = gridLeft + width / 2;
     const cy = gridTop + height / 2;
 
-    scene.add.rectangle(cx + 7, cy + 10, width + 64, height + 66, PANEL_VISUALS.ink, 0.6)
+    scene.add.rectangle(cx + 9, cy + 13, width + 74, height + 78, PANEL_VISUALS.ink, 0.72)
+      .setDepth(-4.4);
+    scene.add.rectangle(cx, cy, width + 66, height + 68, PANEL_VISUALS.leatherDark, 1)
+      .setStrokeStyle(9, 0x2a1917)
       .setDepth(-4);
-    scene.add.rectangle(cx, cy, width + 58, height + 58, PANEL_VISUALS.leatherDark, 1)
-      .setStrokeStyle(8, PANEL_VISUALS.leatherEdge)
+    scene.add.rectangle(cx, cy, width + 58, height + 58, PANEL_VISUALS.leather, 1)
+      .setStrokeStyle(7, PANEL_VISUALS.leatherEdge)
       .setDepth(-3);
-    scene.add.rectangle(cx, cy, width + 42, height + 42, PANEL_VISUALS.leather, 1)
-      .setStrokeStyle(3, 0xc08a62, 0.6)
+    scene.add.rectangle(cx, cy, width + 42, height + 42, 0x46312d, 1)
+      .setStrokeStyle(3, 0xc08a62, 0.62)
       .setDepth(-2);
 
     createMaterialSurface(scene, {
@@ -36,6 +39,39 @@ export class BackpackSkin {
       depth: -1.6,
       alpha: 0.95,
     });
+
+    // Heavy carry handle: the bag should read as a physical object before the grid is parsed.
+    scene.add.rectangle(cx + 4, gridTop - 47, 188, 48, 0x08090c, 0.66)
+      .setStrokeStyle(3, 0x08090c, 0.7)
+      .setDepth(-3.8);
+    scene.add.rectangle(cx, gridTop - 51, 184, 46, 0x6c493d, 1)
+      .setStrokeStyle(6, 0x291b19)
+      .setDepth(-3.2);
+    createMaterialSurface(scene, {
+      x: cx,
+      y: gridTop - 51,
+      width: 166,
+      height: 30,
+      kind: 'leather',
+      seed: 'backpack-handle',
+      depth: -3,
+      alpha: 0.8,
+    });
+    scene.add.rectangle(cx, gridTop - 50, 114, 18, 0x171316, 1)
+      .setStrokeStyle(2, 0xb07a58, 0.48)
+      .setDepth(-2.8);
+
+    const fieldTag = scene.add.rectangle(cx, gridTop - 29, 224, 31, 0x181315, 0.96)
+      .setStrokeStyle(3, 0xb77c54)
+      .setDepth(1.1);
+    fieldTag.setAngle(-0.6);
+    scene.add.text(cx, gridTop - 29, 'JUNKPACK // FIELD BAG', {
+      fontFamily: 'Arial Black, Impact, sans-serif',
+      fontSize: '13px',
+      color: '#f2d1a5',
+      stroke: '#140c0a',
+      strokeThickness: 4,
+    }).setOrigin(0.5).setAngle(-0.6).setDepth(1.2);
 
     const cornerScuffs = scene.add.graphics().setDepth(-1.4);
     cornerScuffs.lineStyle(3, 0xe2b087, 0.18);
@@ -71,16 +107,17 @@ export class BackpackSkin {
       [gridLeft + width + 18, gridTop + height + 18],
     ] as const;
     for (const [x, y] of rivets) {
-      scene.add.circle(x, y, 7, PANEL_VISUALS.scrap, 1)
-        .setStrokeStyle(2, PANEL_VISUALS.scrapEdge)
+      scene.add.circle(x, y, 8, 0x20232a, 1)
+        .setStrokeStyle(3, PANEL_VISUALS.scrapEdge)
         .setDepth(0);
-      scene.add.circle(x - 2, y - 2, 2, 0xd8dde5, 0.65).setDepth(0);
+      scene.add.circle(x, y, 5, PANEL_VISUALS.scrap, 1).setDepth(0.1);
+      scene.add.circle(x - 2, y - 2, 2, 0xd8dde5, 0.65).setDepth(0.2);
     }
 
-    // Side straps visually explain that this is a physical bag, not a dashboard grid.
-    scene.add.rectangle(gridLeft - 31, cy, 18, height * 0.58, 0x6f493b, 1)
+    // Side straps and buckles sell the suitcase silhouette instead of a floating dashboard grid.
+    scene.add.rectangle(gridLeft - 31, cy, 20, height * 0.62, 0x6f493b, 1)
       .setStrokeStyle(3, 0x2a1b19).setDepth(-1);
-    scene.add.rectangle(gridLeft + width + 31, cy, 18, height * 0.58, 0x6f493b, 1)
+    scene.add.rectangle(gridLeft + width + 31, cy, 20, height * 0.62, 0x6f493b, 1)
       .setStrokeStyle(3, 0x2a1b19).setDepth(-1);
 
     const strapWear = scene.add.graphics().setDepth(-0.8);
@@ -88,6 +125,23 @@ export class BackpackSkin {
     for (const strapX of [gridLeft - 31, gridLeft + width + 31]) {
       strapWear.lineBetween(strapX - 5, cy - height * 0.2, strapX + 5, cy - height * 0.14);
       strapWear.lineBetween(strapX + 4, cy + height * 0.08, strapX - 5, cy + height * 0.15);
+      scene.add.rectangle(strapX, cy - 58, 27, 34, 0x30343c, 1)
+        .setStrokeStyle(3, 0x9aa1ad, 0.7)
+        .setDepth(0.3);
+      scene.add.rectangle(strapX, cy - 58, 13, 20, 0x191b20, 1)
+        .setStrokeStyle(1, 0xc6ccd4, 0.45)
+        .setDepth(0.4);
+    }
+
+    // Bottom latches visually secure the unlockable pocket row.
+    for (const latchX of [cx - 82, cx + 82]) {
+      scene.add.rectangle(latchX + 3, gridTop + height + 31, 54, 30, 0x08090b, 0.6).setDepth(-0.2);
+      scene.add.rectangle(latchX, gridTop + height + 27, 52, 28, 0x3d424c, 1)
+        .setStrokeStyle(3, 0x929aa7)
+        .setDepth(0.2);
+      scene.add.rectangle(latchX, gridTop + height + 27, 22, 12, 0x17191e, 1)
+        .setStrokeStyle(1, 0xd0d5dc, 0.45)
+        .setDepth(0.3);
     }
   }
 }
