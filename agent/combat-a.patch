@@ -1,0 +1,86 @@
+diff --git a/src/game/ui/CombatPanel.ts b/src/game/ui/CombatPanel.ts
+index 3630cd9..22da90a 100644
+--- a/src/game/ui/CombatPanel.ts
++++ b/src/game/ui/CombatPanel.ts
+@@ -5,6 +5,7 @@ import {
+   audioCueForDuplicateDebtEvent,
+   audioCueForEdgeRentEvent,
+   audioCueForTimeTaxEvent,
++  bossDefeatAudioCue,
+   combatStartAudioCue,
+   type AudioCue,
+ } from '../audio/audioCues';
+diff --git a/src/game/ui/CombatPanel.ts b/src/game/ui/CombatPanel.ts
+index 3630cd9..22da90a 100644
+--- a/src/game/ui/CombatPanel.ts
++++ b/src/game/ui/CombatPanel.ts
+@@ -78,6 +79,21 @@ export class CombatPanel {
+   private readonly onAudioCue?: (cue: AudioCue) => void;
+   private readonly backpackGrid: { readonly left: number; readonly top: number; readonly cellSize: number };
+   private readonly barGraphics: Phaser.GameObjects.Graphics;
++  private readonly compactHud: boolean;
++  private readonly stageShell: Phaser.GameObjects.Rectangle;
++  private readonly stageTitle: Phaser.GameObjects.Text;
++  private readonly stageSubtitle: Phaser.GameObjects.Text;
++  private readonly telegraphPlate: Phaser.GameObjects.Rectangle;
++  private readonly focusRight: Phaser.GameObjects.Rectangle;
++  private readonly focusBottom: Phaser.GameObjects.Rectangle;
++  private readonly focusTop: Phaser.GameObjects.Rectangle;
++  private readonly focusTitle: Phaser.GameObjects.Text;
++  private readonly focusHint: Phaser.GameObjects.Text;
++  private readonly prepVeil: Phaser.GameObjects.Rectangle;
++  private readonly prepVeilInner: Phaser.GameObjects.Rectangle;
++  private readonly prepVeilTitle: Phaser.GameObjects.Text;
++  private readonly prepVeilHint: Phaser.GameObjects.Text;
++  private readonly prepVeilRule: Phaser.GameObjects.Text;
+   private readonly enemyBody: Phaser.GameObjects.Rectangle;
+   private readonly enemyNameText: Phaser.GameObjects.Text;
+   private readonly playerText: Phaser.GameObjects.Text;
+diff --git a/src/game/ui/CombatPanel.ts b/src/game/ui/CombatPanel.ts
+index 3630cd9..22da90a 100644
+--- a/src/game/ui/CombatPanel.ts
++++ b/src/game/ui/CombatPanel.ts
+@@ -192,10 +265,12 @@ export class CombatPanel {
+     this.eventLog.length = 0;
+     this.eventLogText.setText('');
+     const boss = this.isBoss(runtimeEnemy);
++    this.enterCombatFocus(runtimeEnemy, boss);
+     this.onAudioCue?.(combatStartAudioCue(runtimeEnemy.id, boss));
++    if (boss) this.showBossReveal(runtimeEnemy);
+     this.setLateWorldHazardVisual(this.lateWorldPressure);
+     if (boss) {
+-      this.bossStatusText.setText(`${this.bossSystems(runtimeEnemy).join(' + ')} armed.`).setColor('#f08cff');
++      this.bossStatusText.setText(`${this.bossRuleSymbol(runtimeEnemy)}  ${this.bossSystems(runtimeEnemy).join(' + ')}  •  WATCH YOUR BACKPACK`).setColor('#ff9bea');
+     } else if (this.lateWorldPressure) {
+       const pressure = this.lateWorldPressure;
+       this.bossStatusText.setText(this.lateWorldPressureStatus(pressure)).setColor(pressure.world === 5 ? '#ffb27a' : '#8ceeff');
+diff --git a/src/game/ui/CombatPanel.ts b/src/game/ui/CombatPanel.ts
+index 3630cd9..22da90a 100644
+--- a/src/game/ui/CombatPanel.ts
++++ b/src/game/ui/CombatPanel.ts
+@@ -223,7 +298,7 @@ export class CombatPanel {
+     const pressureText = this.lateWorldPressure && this.lateWorldPressure.pressureCount > 0
+       ? ` • ${this.lateWorldPressure.name} active`
+       : '';
+-    this.setStatus(`${runtimeEnemy.name}${heroText} • ${build.items.size} items • ${build.synergies.connections.length} links • ${selectedPerks.length} perks${pressureText}.`, '#b8ff8e');
++    this.setStatus(`BUILD LOCKED${heroText} • ${build.items.size} JUNK • ${build.synergies.connections.length} LINKS • ${selectedPerks.length} PERKS${pressureText}`, '#b8ff8e');
+     this.renderState();
+     this.punchEnemy(this.lateWorldPressure ? 1.06 : 1.03);
+     return true;
+diff --git a/src/game/ui/CombatPanel.ts b/src/game/ui/CombatPanel.ts
+index 3630cd9..22da90a 100644
+--- a/src/game/ui/CombatPanel.ts
++++ b/src/game/ui/CombatPanel.ts
+@@ -328,7 +403,11 @@ export class CombatPanel {
+       return;
+     }
+ 
+-    this.onAudioCue?.(audioCueForCombatEvent(event));
++    if (event.kind === 'outcome' && event.outcome === 'victory' && this.setup && this.isBoss(this.setup.enemy)) {
++      this.onAudioCue?.(bossDefeatAudioCue(event.atMs, this.setup.enemy.id));
++    } else {
++      this.onAudioCue?.(audioCueForCombatEvent(event));
++    }
+     if (event.kind === 'item-triggered') { this.pushLog(`${this.seconds(event.atMs)} • ${event.itemInstanceId} triggered`); return; }
+     if (event.kind === 'item-jammed') { this.pushLog(`${this.seconds(event.atMs)} • ${event.itemInstanceId} JAMMED — trigger lost`); return; }
+     if (event.kind === 'item-slimed') { this.pushLog(`${this.seconds(event.atMs)} • ${event.itemInstanceId} blocked by SLIME [${event.cell.x},${event.cell.y}]`); return; }
