@@ -99,6 +99,40 @@ export class RunFeedback {
     this.burst(440, 640, 0xff91e6, 10);
   }
 
+  milestone(kicker: string, value: string, color: number): void {
+    const centerX = 800;
+    const centerY = 430;
+    const hex = this.toHex(color);
+    const root = this.scene.add.container(centerX, centerY).setDepth(FEEDBACK_DEPTH + 24);
+    const shadow = this.scene.add.rectangle(7, 9, 520, 114, 0x050609, 0.78);
+    const plate = this.scene.add.rectangle(0, 0, 520, 114, 0x11141c, 0.985).setStrokeStyle(5, color, 0.95);
+    const inner = this.scene.add.rectangle(0, 0, 496, 90, 0x1b2029, 0.88).setStrokeStyle(1, color, 0.28);
+    const kickerText = this.scene.add.text(0, -27, kicker.toUpperCase(), {
+      fontSize: '13px', color: hex, fontStyle: 'bold', letterSpacing: 2,
+      stroke: '#08090d', strokeThickness: 4,
+    }).setOrigin(0.5);
+    const valueText = this.scene.add.text(0, 16, value.toUpperCase(), {
+      fontFamily: 'Arial Black, Impact, sans-serif', fontSize: '28px', color: '#fff8ef',
+      fontStyle: 'bold', stroke: '#08090d', strokeThickness: 6,
+    }).setOrigin(0.5);
+    root.add([shadow, plate, inner, kickerText, valueText]);
+
+    const flash = this.scene.add.rectangle(centerX, centerY, 1600, 900, color, this.reducedMotion ? 0.035 : 0.08)
+      .setDepth(FEEDBACK_DEPTH + 18);
+    if (!this.reducedMotion) {
+      root.setScale(0.86).setAlpha(0);
+      this.scene.tweens.add({ targets: root, scaleX: 1.03, scaleY: 1.03, alpha: 1, duration: 210, ease: 'Back.Out' });
+      this.scene.tweens.add({ targets: root, scaleX: 1, scaleY: 1, duration: 90, delay: 210, ease: 'Quad.Out' });
+      this.scene.tweens.add({ targets: flash, alpha: 0, duration: 280, ease: 'Quad.Out' });
+      this.scene.tweens.add({ targets: root, y: centerY - 8, alpha: 0, delay: 780, duration: 220, ease: 'Quad.In' });
+      this.burst(centerX, centerY, color, 20);
+    }
+    this.scene.time.delayedCall(this.reducedMotion ? 680 : 1040, () => {
+      root.destroy();
+      flash.destroy();
+    });
+  }
+
   private itemReveal(kicker: string, name: string, color: number, y: number): void {
     const card = this.createRevealCard(kicker, name, color, 800, y);
     card.setDepth(FEEDBACK_DEPTH + 4);
